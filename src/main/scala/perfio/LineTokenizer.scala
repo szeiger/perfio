@@ -2,14 +2,14 @@ package perfio
 
 import jdk.incubator.vector.ByteVector
 
-import java.io.{Closeable, InputStream}
+import java.io.InputStream
 import java.lang.foreign.MemorySegment
 import java.nio.charset.{Charset, StandardCharsets}
 import java.nio.file.Path
 import scala.sys.BooleanProp
 
 /** Return lines of text from an input. */
-abstract class LineTokenizer extends Closeable {
+abstract class LineTokenizer extends AutoCloseable {
   /** Returns the next line of text, or null if the end of the input has been reached. */
   def readLine(): String
 }
@@ -65,12 +65,15 @@ object LineTokenizer {
    * @param buf               MemorySegment from which to read data.
    * @param charset           Charset for decoding the strings. Must be compatible with ASCII line splitting.
    *                          The behavior for incompatible charsets is undefined.
+   * @param closeable         An object to close when the LineTokenizer is closed, or null.
    */
-  def fromMemorySegment(buf: MemorySegment, charset: Charset = StandardCharsets.UTF_8): LineTokenizer =
-    if(useVectorized) VectorizedForeignLineTokenizer.fromMemorySegment(buf, charset)
-    else ScalarForeignLineTokenizer.fromMemorySegment(buf, charset)
+  def fromMemorySegment(buf: MemorySegment, charset: Charset = StandardCharsets.UTF_8, closeable: AutoCloseable = null): LineTokenizer =
+    if(useVectorized) VectorizedForeignLineTokenizer.fromMemorySegment(buf, charset, closeable)
+    else ScalarForeignLineTokenizer.fromMemorySegment(buf, charset, closeable)
 
-  /** Read text from a memory-mapped file and split it into lines. See [[apply]] for details.
+  /** Read text from a memory-mapped file and split it into lines. The mapped MemorySegment uses the auto-arena
+   * so it gets garbage-collected like a heap object. Calling close() on the LineTokenizer does not unmap the file.
+   * See [[apply]] for details.
    *
    * @param file              File from which to read data.
    * @param charset           Charset for decoding the strings. Must be compatible with ASCII line splitting.

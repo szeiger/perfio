@@ -31,8 +31,10 @@ class BufferedInputStringBenchmark {
   @Benchmark
   def array_DataInputStream(bh: Blackhole): Unit = {
     val din = new DataInputStream(new ByteArrayInputStream(testData))
-    for(i <- 0 until count) {
+    var i = 0
+    while(i < count) {
       bh.consume(din.readUTF())
+      i += 1
     }
     din.close()
   }
@@ -40,9 +42,11 @@ class BufferedInputStringBenchmark {
   @Benchmark
   def array_BufferedInput(bh: Blackhole): Unit = {
     val bin = BufferedInput(new ByteArrayInputStream(testData))
-    for(i <- 0 until count) {
+    var i = 0
+    while(i < count) {
       val len = bin.uint16()
       bh.consume(bin.string(len))
+      i += 1
     }
     bin.close()
   }
@@ -50,9 +54,11 @@ class BufferedInputStringBenchmark {
   @Benchmark
   def array_BufferedInput_fromArray(bh: Blackhole): Unit = {
     val bin = BufferedInput.fromArray(testData)
-    for(i <- 0 until count) {
+    var i = 0
+    while(i < count) {
       val len = bin.uint16()
       bh.consume(bin.string(len))
+      i += 1
     }
     bin.close()
   }

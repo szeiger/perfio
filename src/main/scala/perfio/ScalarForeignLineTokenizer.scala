@@ -1,30 +1,18 @@
 package perfio
 
-import java.lang.foreign.{Arena, MemorySegment, ValueLayout}
-import java.nio.channels.FileChannel
+import java.lang.foreign.{MemorySegment, ValueLayout}
 import java.nio.charset.{Charset, StandardCharsets}
-import java.nio.file.{Path, StandardOpenOption}
+import java.nio.file.Path
 
 /** MemorySegment-based version of ScalarLineTokenizer. */
 object ScalarForeignLineTokenizer {
   /** Create a ScalarForeignLineTokenizer. See [[LineTokenizer.fromMemorySegment]] for details. */
-  def fromMemorySegment(buf: MemorySegment, charset: Charset = StandardCharsets.UTF_8): ScalarForeignLineTokenizer =
-    create(buf, null, charset)
+  def fromMemorySegment(buf: MemorySegment, charset: Charset = StandardCharsets.UTF_8, closeable: AutoCloseable = null): ScalarForeignLineTokenizer =
+    create(buf, closeable, charset)
 
   /** Create a ScalarForeignLineTokenizer. See [[LineTokenizer.fromMappedFile]] for details. */
-  def fromMappedFile(file: Path, charset: Charset = StandardCharsets.UTF_8): ScalarForeignLineTokenizer = {
-    val a = Arena.ofAuto()
-    val ch = FileChannel.open(file, StandardOpenOption.READ)
-    var close = ch
-    try {
-      val ms = ch.map(FileChannel.MapMode.READ_ONLY, 0, ch.size(), a)
-      val lt = create(ms, ch, charset)
-      close = null
-      lt
-    } finally {
-      if(close != null) close.close()
-    }
-  }
+  def fromMappedFile(file: Path, charset: Charset = StandardCharsets.UTF_8): ScalarForeignLineTokenizer =
+    create(ForeignSupport.mapRO(file), null, charset)
 
   private[this] def create(buf: MemorySegment, closeable: AutoCloseable, cs: Charset): ScalarForeignLineTokenizer =
     if(cs eq StandardCharsets.ISO_8859_1)

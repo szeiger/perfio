@@ -5,28 +5,27 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.junit.runners.JUnit4
 
-import java.io.{ByteArrayInputStream, ByteArrayOutputStream, DataInputStream, DataOutputStream}
+abstract class AbstractBufferedInputTest extends TestUtil {
+  val count = 1000
+  def createBufferedInput(td: TestData): BufferedInput
 
-abstract class AbstractBufferedInputTest {
-  val count: Int
-  def createBuferedInput(): BufferedInput
-
-  lazy val testData: Array[Byte] = {
-    val out = new ByteArrayOutputStream()
-    val dout = new DataOutputStream(out)
+  lazy val testData = createTestData("small") { dout =>
     for(i <- 0 until count) {
       dout.writeByte(i)
       dout.writeInt(i+2)
       dout.writeLong(i+3)
     }
-    out.toByteArray
   }
 
-  def createDataInput() = new DataInputStream(new ByteArrayInputStream(testData))
+  lazy val stringTestData = createTestData("string") { dout =>
+    for(i <- 0 until count) {
+      dout.writeUTF("abcdefghijklmnopqrstuvwxyz")
+    }
+  }
 
   @Test def simple(): Unit = {
-    val din = createDataInput()
-    val bin = createBuferedInput()
+    val din = testData.createDataInput()
+    val bin = createBufferedInput(testData)
     assertEquals(0, bin.totalBytesRead)
     for(i <- 1 to count) {
       val b1 = din.readByte()
@@ -45,8 +44,8 @@ abstract class AbstractBufferedInputTest {
   }
 
   @Test def nested(): Unit = {
-    val din = createDataInput()
-    val bin = createBuferedInput()
+    val din = testData.createDataInput()
+    val bin = createBufferedInput(testData)
     assertEquals(0, bin.totalBytesRead)
     for(i <- 1 to count) {
       val b1 = din.readByte()
@@ -70,8 +69,8 @@ abstract class AbstractBufferedInputTest {
   }
 
   @Test def nestedNoSkip(): Unit = {
-    val din = createDataInput()
-    val bin = createBuferedInput()
+    val din = testData.createDataInput()
+    val bin = createBufferedInput(testData)
     assertEquals(0, bin.totalBytesRead)
     for(i <- 1 to count) {
       val b1 = din.readByte()
@@ -95,8 +94,8 @@ abstract class AbstractBufferedInputTest {
   }
 
   @Test def nestedSkip(): Unit = {
-    val din = createDataInput()
-    val bin = createBuferedInput()
+    val din = testData.createDataInput()
+    val bin = createBufferedInput(testData)
     assertEquals(0, bin.totalBytesRead)
     for(i <- 1 to count) {
       val b1 = din.readByte()
@@ -116,16 +115,31 @@ abstract class AbstractBufferedInputTest {
     assert(!bin.hasMore)
     assertEquals(testData.length, bin.totalBytesRead)
   }
+
+  @Test def string(): Unit = {
+    val din = stringTestData.createDataInput()
+    val bin = createBufferedInput(stringTestData)
+    for(i <- 1 to count) {
+      val str1 = din.readUTF()
+      val len2 = bin.uint16()
+      val str2 = bin.string(len2)
+      assertEquals(str1, str2)
+    }
+    assert(!bin.hasMore)
+  }
 }
 
 @RunWith(classOf[JUnit4])
 class BufferedInputFromInputStreamTest extends AbstractBufferedInputTest {
-  val count = 1000
-  def createBuferedInput(): BufferedInput = BufferedInput(new ByteArrayInputStream(testData), initialBufferSize = 64)
+  def createBufferedInput(td: TestData): BufferedInput = td.createBufferedInputFromByteArrayInputStream()
+}
+
+@RunWith(classOf[JUnit4])
+class BufferedInputFromMappedFileTest extends AbstractBufferedInputTest {
+  def createBufferedInput(td: TestData): BufferedInput = td.createBufferedInputFromMappedFile()
 }
 
 @RunWith(classOf[JUnit4])
 class BufferedInputFromArrayTest extends AbstractBufferedInputTest {
-  val count = 1000
-  def createBuferedInput(): BufferedInput = BufferedInput.fromArray(testData)
+  def createBufferedInput(td: TestData): BufferedInput = td.createBufferedInputFromArray()
 }

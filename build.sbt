@@ -8,6 +8,8 @@ val jvmopts = Seq(
 javaOptions in Global ++= jvmopts
 javacOptions in Global ++= jvmopts
 
+// javaOptions in Global += "-Djmh.blackhole.autoDetect=false"
+
 scalacOptions ++= Seq("-feature")
 
 Test / fork := true
@@ -22,7 +24,7 @@ lazy val main = (project in file("."))
   .settings(
     libraryDependencies += "com.github.sbt" % "junit-interface" % "0.13.2" % "test",
     testOptions += Tests.Argument(TestFrameworks.JUnit, "-a", "-v"),
-    scalacOptions ++= Seq("-feature", "-opt:l:inline", "-opt-inline-from:de.szeiger.ioperf.*", "-opt-inline-from:de.szeiger.ioperf.**"),
+    scalacOptions ++= Seq("-feature", "-opt:l:inline", "-opt-inline-from:perfio.*"),
     libraryDependencies ++= Seq(
       "qa.hedgehog" %% "hedgehog-core" % hedgehogVersion % "test",
       "qa.hedgehog" %% "hedgehog-runner" % hedgehogVersion % "test",
@@ -36,6 +38,7 @@ lazy val bench = (project in file("bench"))
   .dependsOn(main)
   .enablePlugins(JmhPlugin)
   .settings(
+    scalacOptions ++= Seq("-feature", "-opt:l:inline", "-opt-inline-from:perfio.*"),
     libraryDependencies ++= Seq(
       "com.google.guava" % "guava" % "33.3.0-jre"
     ),

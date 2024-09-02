@@ -4,7 +4,7 @@ import org.openjdk.jmh.annotations._
 import org.openjdk.jmh.infra._
 
 import java.io._
-import java.lang.foreign.{Arena, MemorySegment, ValueLayout}
+import java.lang.foreign.MemorySegment
 import java.nio.charset.{Charset, StandardCharsets}
 import java.nio.file.Files
 import java.util.concurrent.TimeUnit
@@ -16,14 +16,13 @@ import java.util.concurrent.TimeUnit
 @Measurement(iterations = 7, time = 1)
 @OutputTimeUnit(TimeUnit.MILLISECONDS)
 @State(Scope.Benchmark)
-class LineTokenizerBenchmark {
+class LineTokenizerBenchmark extends BenchUtil {
   @Param(Array("UTF-8", "ISO-8859-1"))
   var charset: String = _
   var cs: Charset = _
 
   private[this] var testData: Array[Byte] = _
-  private[this] val diskTestDataSmall = new File("/tmp/testdata-small")
-  private[this] val diskTestDataLarge = new File("/tmp/testdata-large")
+  private[this] var diskTestDataMedium, diskTestDataLarge: File = _
   private[this] var testDataOffHeap: MemorySegment = _
 
   @Setup(Level.Trial)
@@ -42,22 +41,9 @@ class LineTokenizerBenchmark {
     }
     wr.close()
     testData = bout.toByteArray
-    writeFile(diskTestDataSmall, 1024*1024)
-    writeFile(diskTestDataLarge, Int.MaxValue.toLong+1)
-    testDataOffHeap = Arena.global().allocate(testData.length, 8)
-    MemorySegment.copy(testData, 0, testDataOffHeap, ValueLayout.JAVA_BYTE, 0, testData.length)
-  }
-
-  private[this] def writeFile(f: File, minLength: Long): Unit = {
-    if(!f.exists()) {
-      val out = new FileOutputStream(f)
-      var written = 0L
-      while(written < minLength) {
-        out.write(testData)
-        written += testData.length
-      }
-      out.close()
-    }
+    diskTestDataMedium = writeFileIfMissing("medium", testData, 1024*1024)
+    diskTestDataLarge = writeFileIfMissing("large", testData, Int.MaxValue.toLong+1)
+    testDataOffHeap = toGlobal(testData)
   }
 
   private[this] def count(in: BufferedReader): Int = {
@@ -104,22 +90,22 @@ class LineTokenizerBenchmark {
     bh.consume(count(VectorizedForeignLineTokenizer.fromMemorySegment(testDataOffHeap, cs)))
 
   @Benchmark
-  def smallFile_BufferedReader(bh: Blackhole): Unit =
-    bh.consume(count(new BufferedReader(new InputStreamReader(new FileInputStream(diskTestDataSmall), cs))))
+  def mediumFile_BufferedReader(bh: Blackhole): Unit =
+    bh.consume(count(new BufferedReader(new InputStreamReader(new FileInputStream(diskTestDataMedium), cs))))
   @Benchmark
-  def smallFile_Lines(bh: Blackhole): Unit =
-    bh.consume(Files.lines(diskTestDataSmall.toPath, cs).count())
+  def mediumFile_Lines(bh: Blackhole): Unit =
+    bh.consume(Files.lines(diskTestDataMedium.toPath, cs).count())
   @Benchmark
-  def smallFile_ScalarLineTokenizer(bh: Blackhole): Unit =
-    bh.consume(count(ScalarLineTokenizer(new FileInputStream(diskTestDataSmall), cs)))
+  def mediumFile_ScalarLineTokenizer(bh: Blackhole): Unit =
+    bh.consume(count(ScalarLineTokenizer(new FileInputStream(diskTestDataMedium), cs)))
   @Benchmark
-  def smallFile_ScalarForeignLineTokenizer(bh: Blackhole): Unit =
-    bh.consume(count(ScalarForeignLineTokenizer.fromMappedFile(diskTestDataSmall.toPath, cs)))
+  def mediumFile_ScalarForeignLineTokenizer(bh: Blackhole): Unit =
+    bh.consume(count(ScalarForeignLineTokenizer.fromMappedFile(diskTestDataMedium.toPath, cs)))
   @Benchmark
   def smallFileVectorizedLineTokenizer(bh: Blackhole): Unit =
-    bh.consume(count(VectorizedLineTokenizer(new FileInputStream(diskTestDataSmall), cs)))
-  def smallFile_VectorizedForeignLineTokenizer(bh: Blackhole): Unit =
-    bh.consume(count(VectorizedForeignLineTokenizer.fromMappedFile(diskTestDataSmall.toPath, cs)))
+    bh.consume(count(VectorizedLineTokenizer(new FileInputStream(diskTestDataMedium), cs)))
+  def mediumFile_VectorizedForeignLineTokenizer(bh: Blackhole): Unit =
+    bh.consume(count(VectorizedForeignLineTokenizer.fromMappedFile(diskTestDataMedium.toPath, cs)))
 
   @Benchmark
   def largeFile_BufferedReader(bh: Blackhole): Unit =

@@ -14,57 +14,74 @@ import java.util.concurrent.TimeUnit
 @Measurement(iterations = 7, time = 1)
 @OutputTimeUnit(TimeUnit.MILLISECONDS)
 @State(Scope.Benchmark)
-class BufferedInputNumBenchmark {
+class BufferedInputNumBenchmark extends BenchUtil {
 
   private[this] var testData: Array[Byte] = _
+  private[this] var diskTestDataMedium: File = _
+
   val count = 20000000
 
   @Setup(Level.Trial)
   def buildTestData(): Unit = {
     val out = new ByteArrayOutputStream()
     val dout = new DataOutputStream(out)
-    for(i <- 0 until count) {
+    var i = 0
+    while(i < count) {
       dout.writeByte(i)
       dout.writeInt(i+100)
       dout.writeLong(i+101)
+      i += 1
     }
     testData = out.toByteArray
+    diskTestDataMedium = writeFileIfMissing("medium", testData)
   }
 
   private[this] def run(bh: Blackhole, bin: BufferedInput): Unit = {
-    for(i <- 0 until count) {
+    var i = 0
+    while(i < count) {
       bh.consume(bin.int8())
       bh.consume(bin.int32())
       bh.consume(bin.int64())
+      i += 1
     }
     bin.close()
   }
 
-  @Benchmark
-  def array_DataInputStream(bh: Blackhole): Unit = {
-    val din = new DataInputStream(new ByteArrayInputStream(testData))
-    for(i <- 0 until count) {
+  def run(bh: Blackhole, din: DataInputStream): Unit = {
+    var i = 0
+    while(i < count) {
       bh.consume(din.readByte())
       bh.consume(din.readInt())
       bh.consume(din.readLong())
+      i += 1
     }
     din.close()
   }
 
-  @Benchmark
-  def array_ByteBuffer(bh: Blackhole): Unit = {
-    val buf = ByteBuffer.wrap(testData)
+  def run(bh: Blackhole, buf: ByteBuffer): Unit = {
     buf.order(ByteOrder.BIG_ENDIAN)
-    for(i <- 0 until count) {
+    var i = 0
+    while(i < count) {
       bh.consume(buf.get())
       bh.consume(buf.getInt())
       bh.consume(buf.getLong())
+      i += 1
     }
   }
 
+//  @Benchmark
+//  def array_DataInputStream(bh: Blackhole): Unit = run(bh, new DataInputStream(new ByteArrayInputStream(testData)))
+//  @Benchmark
+//  def array_ByteBuffer(bh: Blackhole): Unit = run(bh, ByteBuffer.wrap(testData))
+//  @Benchmark
+//  def array_BufferedInput(bh: Blackhole): Unit = run(bh, BufferedInput(new ByteArrayInputStream(testData)))
+//  @Benchmark
+//  def array_BufferedInput_fromArray(bh: Blackhole): Unit = run(bh, BufferedInput.fromArray(testData))
+//
+//  @Benchmark
+//  def mediumFile_DataInputStream(bh: Blackhole): Unit = run(bh, new DataInputStream(new BufferedInputStream(new FileInputStream(diskTestDataMedium))))
+//  @Benchmark
+//  def mediumFile_BufferedInput(bh: Blackhole): Unit = run(bh, BufferedInput(new FileInputStream(diskTestDataMedium)))
   @Benchmark
-  def array_BufferedInput(bh: Blackhole): Unit = run(bh, BufferedInput(new ByteArrayInputStream(testData)))
-
-  @Benchmark
-  def array_BufferedInput_fromArray(bh: Blackhole): Unit = run(bh, BufferedInput.fromArray(testData))
+  def mediumFile_BufferedInput_mapped(bh: Blackhole): Unit = run(bh, BufferedInput.fromMappedFile(diskTestDataMedium.toPath))
 }
