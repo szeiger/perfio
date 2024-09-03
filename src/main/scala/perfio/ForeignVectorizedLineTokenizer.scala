@@ -10,28 +10,28 @@ import java.nio.file.Path
 import scala.annotation.tailrec
 
 /** MemorySegment-based version of VectorizedLineTokenizer. */
-object VectorizedForeignLineTokenizer {
-  /** Create a VectorizedForeignLineTokenizer. See [[LineTokenizer.fromMemorySegment]] for details. */
-  def fromMemorySegment(buf: MemorySegment, charset: Charset = StandardCharsets.UTF_8, closeable: AutoCloseable = null): VectorizedForeignLineTokenizer =
+object ForeignVectorizedLineTokenizer {
+  /** Create a ForeignVectorizedLineTokenizer. See [[LineTokenizer.fromMemorySegment]] for details. */
+  def fromMemorySegment(buf: MemorySegment, charset: Charset = StandardCharsets.UTF_8, closeable: AutoCloseable = null): ForeignVectorizedLineTokenizer =
     create(buf, closeable, charset)
 
-  /** Create a VectorizedForeignLineTokenizer. See [[LineTokenizer.fromMappedFile]] for details. */
-  def fromMappedFile(file: Path, charset: Charset = StandardCharsets.UTF_8): VectorizedForeignLineTokenizer =
+  /** Create a ForeignVectorizedLineTokenizer. See [[LineTokenizer.fromMappedFile]] for details. */
+  def fromMappedFile(file: Path, charset: Charset = StandardCharsets.UTF_8): ForeignVectorizedLineTokenizer =
     create(ForeignSupport.mapRO(file), null, charset)
 
-  private[this] def create(buf: MemorySegment, closeable: AutoCloseable, cs: Charset): VectorizedForeignLineTokenizer =
+  private[this] def create(buf: MemorySegment, closeable: AutoCloseable, cs: Charset): ForeignVectorizedLineTokenizer =
     if(cs eq StandardCharsets.ISO_8859_1)
-      new VectorizedForeignLineTokenizer(buf, closeable) {
+      new ForeignVectorizedLineTokenizer(buf, closeable) {
         // Use the slightly faster constructor for Latin-1
         protected[this] def makeString(buf: Array[Byte], start: Int, len: Int): String = new String(buf, 0, start, len)
       }
     else
-      new VectorizedForeignLineTokenizer(buf, closeable) {
+      new ForeignVectorizedLineTokenizer(buf, closeable) {
         protected[this] def makeString(buf: Array[Byte], start: Int, len: Int): String = new String(buf, start, len, cs)
       }
 }
 
-abstract class VectorizedForeignLineTokenizer private (buf: MemorySegment, closeable: AutoCloseable) extends LineTokenizer {
+abstract class ForeignVectorizedLineTokenizer private (buf: MemorySegment, closeable: AutoCloseable) extends LineTokenizer {
   import VectorSupport._
 
   private[this] var start = 0L

@@ -70,8 +70,8 @@ class LineTokenizerBenchmark extends BenchUtil {
   def array_ScalarLineTokenizer_fromArray(bh: Blackhole): Unit =
     bh.consume(count(ScalarLineTokenizer.fromArray(testData, charset = cs)))
   @Benchmark
-  def array_ScalarForeignLineTokenizer(bh: Blackhole): Unit =
-    bh.consume(count(ScalarForeignLineTokenizer.fromMemorySegment(MemorySegment.ofArray(testData), cs)))
+  def array_ForeignScalarLineTokenizer(bh: Blackhole): Unit =
+    bh.consume(count(ForeignScalarLineTokenizer.fromMemorySegment(MemorySegment.ofArray(testData), cs)))
   @Benchmark
   def array_VectorizedLineTokenizer(bh: Blackhole): Unit =
     bh.consume(count(VectorizedLineTokenizer(new ByteArrayInputStream(testData), cs)))
@@ -79,15 +79,15 @@ class LineTokenizerBenchmark extends BenchUtil {
   def array_VectorizedLineTokenizer_fromArray(bh: Blackhole): Unit =
     bh.consume(count(VectorizedLineTokenizer.fromArray(testData, charset = cs)))
   @Benchmark
-  def array_VectorizedForeignLineTokenizer(bh: Blackhole): Unit =
-    bh.consume(count(VectorizedForeignLineTokenizer.fromMemorySegment(MemorySegment.ofArray(testData), cs)))
+  def array_ForeignVectorizedLineTokenizer(bh: Blackhole): Unit =
+    bh.consume(count(ForeignVectorizedLineTokenizer.fromMemorySegment(MemorySegment.ofArray(testData), cs)))
 
   @Benchmark
-  def offHeap_ScalarForeignLineTokenizer(bh: Blackhole): Unit =
-    bh.consume(count(ScalarForeignLineTokenizer.fromMemorySegment(testDataOffHeap, cs)))
+  def offHeap_ForeignScalarLineTokenizer(bh: Blackhole): Unit =
+    bh.consume(count(ForeignScalarLineTokenizer.fromMemorySegment(testDataOffHeap, cs)))
     @Benchmark
-  def offHeap_VectorizedForeignLineTokenizer(bh: Blackhole): Unit =
-    bh.consume(count(VectorizedForeignLineTokenizer.fromMemorySegment(testDataOffHeap, cs)))
+  def offHeap_ForeignVectorizedLineTokenizer(bh: Blackhole): Unit =
+    bh.consume(count(ForeignVectorizedLineTokenizer.fromMemorySegment(testDataOffHeap, cs)))
 
   @Benchmark
   def mediumFile_BufferedReader(bh: Blackhole): Unit =
@@ -99,13 +99,13 @@ class LineTokenizerBenchmark extends BenchUtil {
   def mediumFile_ScalarLineTokenizer(bh: Blackhole): Unit =
     bh.consume(count(ScalarLineTokenizer(new FileInputStream(diskTestDataMedium), cs)))
   @Benchmark
-  def mediumFile_ScalarForeignLineTokenizer(bh: Blackhole): Unit =
-    bh.consume(count(ScalarForeignLineTokenizer.fromMappedFile(diskTestDataMedium.toPath, cs)))
+  def mediumFile_ForeignScalarLineTokenizer(bh: Blackhole): Unit =
+    bh.consume(count(ForeignScalarLineTokenizer.fromMappedFile(diskTestDataMedium.toPath, cs)))
   @Benchmark
-  def smallFileVectorizedLineTokenizer(bh: Blackhole): Unit =
+  def mediumFile_VectorizedLineTokenizer(bh: Blackhole): Unit =
     bh.consume(count(VectorizedLineTokenizer(new FileInputStream(diskTestDataMedium), cs)))
-  def mediumFile_VectorizedForeignLineTokenizer(bh: Blackhole): Unit =
-    bh.consume(count(VectorizedForeignLineTokenizer.fromMappedFile(diskTestDataMedium.toPath, cs)))
+  def mediumFile_ForeignVectorizedLineTokenizer(bh: Blackhole): Unit =
+    bh.consume(count(ForeignVectorizedLineTokenizer.fromMappedFile(diskTestDataMedium.toPath, cs)))
 
   @Benchmark
   def largeFile_BufferedReader(bh: Blackhole): Unit =
@@ -117,12 +117,12 @@ class LineTokenizerBenchmark extends BenchUtil {
   def largeFile_ScalarLineTokenizer(bh: Blackhole): Unit =
     bh.consume(count(ScalarLineTokenizer(new FileInputStream(diskTestDataLarge), cs)))
   @Benchmark
-  def largeFile_ScalarForeignLineTokenizer(bh: Blackhole): Unit =
-    bh.consume(count(ScalarForeignLineTokenizer.fromMappedFile(diskTestDataLarge.toPath, cs)))
+  def largeFile_ForeignScalarLineTokenizer(bh: Blackhole): Unit =
+    bh.consume(count(ForeignScalarLineTokenizer.fromMappedFile(diskTestDataLarge.toPath, cs)))
   @Benchmark
   def largeFile_VectorizedLineTokenizer(bh: Blackhole): Unit =
     bh.consume(count(VectorizedLineTokenizer(new FileInputStream(diskTestDataLarge), cs)))
   @Benchmark
-  def largeFile_VectorizedForeignLineTokenizer(bh: Blackhole): Unit =
-    bh.consume(count(VectorizedForeignLineTokenizer.fromMappedFile(diskTestDataLarge.toPath, cs)))
+  def largeFile_ForeignVectorizedLineTokenizer(bh: Blackhole): Unit =
+    bh.consume(count(ForeignVectorizedLineTokenizer.fromMappedFile(diskTestDataLarge.toPath, cs)))
 }

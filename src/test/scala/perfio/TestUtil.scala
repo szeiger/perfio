@@ -2,6 +2,7 @@ package perfio
 
 import java.io.{ByteArrayInputStream, ByteArrayOutputStream, DataInputStream, DataOutputStream, File, FileOutputStream}
 import java.lang.foreign.{Arena, MemorySegment, ValueLayout}
+import java.nio.{ByteBuffer, ByteOrder}
 
 trait TestUtil {
   def toGlobal(testData: Array[Byte]): MemorySegment = {
@@ -16,6 +17,12 @@ trait TestUtil {
     f(dout)
     new TestData(out.toByteArray, name, getClass)
   }
+
+  def reverseByteOrder(i: Int): Int =
+    ByteBuffer.wrap(new Array[Byte](4)).order(ByteOrder.BIG_ENDIAN).putInt(0, i).order(ByteOrder.LITTLE_ENDIAN).getInt(0)
+
+  def reverseByteOrder(l: Long): Long =
+    ByteBuffer.wrap(new Array[Byte](8)).order(ByteOrder.BIG_ENDIAN).putLong(0, l).order(ByteOrder.LITTLE_ENDIAN).getLong(0)
 }
 
 class TestData(val bytes: Array[Byte], val name: String, owner: Class[_]) {

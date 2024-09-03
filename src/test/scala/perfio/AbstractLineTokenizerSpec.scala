@@ -145,12 +145,12 @@ object VectorizedLineTokenizerFromArraySpec extends FromArraySpec {
     VectorizedLineTokenizer.fromArray(a, off, len)
 }
 
-object ScalarForeignLineTokenizerSpec extends ForeignSpec {
+object ForeignScalarLineTokenizerSpec extends ForeignSpec {
   def create(a: Array[Byte], off: Int, len: Int): LineTokenizer =
-    ScalarForeignLineTokenizer.fromMemorySegment(MemorySegment.ofArray(a))
+    ForeignScalarLineTokenizer.fromMemorySegment(MemorySegment.ofArray(a))
 }
 
-object VectorizedForeignLineTokenizerSpec extends ForeignSpec {
+object ForeignVectorizedLineTokenizerSpec extends ForeignSpec {
   def create(a: Array[Byte], off: Int, len: Int): LineTokenizer =
-    VectorizedForeignLineTokenizer.fromMemorySegment(MemorySegment.ofArray(a))
+    ForeignVectorizedLineTokenizer.fromMemorySegment(MemorySegment.ofArray(a))
 }

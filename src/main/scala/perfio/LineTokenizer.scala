@@ -68,8 +68,8 @@ object LineTokenizer {
    * @param closeable         An object to close when the LineTokenizer is closed, or null.
    */
   def fromMemorySegment(buf: MemorySegment, charset: Charset = StandardCharsets.UTF_8, closeable: AutoCloseable = null): LineTokenizer =
-    if(useVectorized) VectorizedForeignLineTokenizer.fromMemorySegment(buf, charset, closeable)
-    else ScalarForeignLineTokenizer.fromMemorySegment(buf, charset, closeable)
+    if(useVectorized) ForeignVectorizedLineTokenizer.fromMemorySegment(buf, charset, closeable)
+    else ForeignScalarLineTokenizer.fromMemorySegment(buf, charset, closeable)
 
   /** Read text from a memory-mapped file and split it into lines. The mapped MemorySegment uses the auto-arena
    * so it gets garbage-collected like a heap object. Calling close() on the LineTokenizer does not unmap the file.
@@ -80,8 +80,8 @@ object LineTokenizer {
    *                          The behavior for incompatible charsets is undefined.
    */
   def fromMappedFile(file: Path, charset: Charset = StandardCharsets.UTF_8): LineTokenizer =
-    if(useVectorized) VectorizedForeignLineTokenizer.fromMappedFile(file, charset)
-    else ScalarForeignLineTokenizer.fromMappedFile(file, charset)
+    if(useVectorized) ForeignVectorizedLineTokenizer.fromMappedFile(file, charset)
+    else ForeignScalarLineTokenizer.fromMappedFile(file, charset)
 
   private[this] var useVectorized: Boolean = {
     // Just a sanity check. We accept any reasonable size. Even 64-bit vectors (SWAR) are faster than scalar.

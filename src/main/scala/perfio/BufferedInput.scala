@@ -19,10 +19,10 @@ object BufferedInput {
     new HeapBufferedInput(buf, bb, 0, buf.length, Long.MaxValue, null, 0, null)
   }
 
-  def fromMemorySegment(ms: MemorySegment, closeable: AutoCloseable = null): BufferedInput = {
+  def fromMemorySegment(ms: MemorySegment, closeable: AutoCloseable = null, order: ByteOrder = ByteOrder.BIG_ENDIAN): BufferedInput = {
     val len = ms.byteSize()
-    if(len > MaxDirectBufferSize) create(ms.asSlice(0, MaxDirectBufferSize).asByteBuffer(), ms.byteSize(), ms, closeable)
-    else create(ms.asByteBuffer(), ms.byteSize(), null, closeable)
+    if(len > MaxDirectBufferSize) create(ms.asSlice(0, MaxDirectBufferSize).asByteBuffer().order(order), ms.byteSize(), ms, closeable)
+    else create(ms.asByteBuffer().order(order), ms.byteSize(), null, closeable)
   }
 
   private[this] def create(bb: ByteBuffer, totalReadLimit: Long, ms: MemorySegment, closeable: AutoCloseable): DirectBufferedInput =
@@ -32,7 +32,8 @@ object BufferedInput {
     if(bb.isDirect) create(bb, Long.MaxValue, null, null)
     else new HeapBufferedInput(bb.array(), bb, bb.position(), bb.limit(), Long.MaxValue, null, 0, null)
 
-  def fromMappedFile(file: Path): BufferedInput = fromMemorySegment(ForeignSupport.mapRO(file), null)
+  def fromMappedFile(file: Path, order: ByteOrder = ByteOrder.BIG_ENDIAN): BufferedInput =
+    fromMemorySegment(ForeignSupport.mapRO(file), null, order)
 
   private[this] val MinBufferSize = 16
   private[perfio] var MaxDirectBufferSize = Int.MaxValue-15 //modified by unit tests
@@ -97,6 +98,12 @@ sealed abstract class BufferedInput protected (
       if(state == STATE_CLOSED) throwClosed
       else if(state == STATE_ACTIVE_VIEW) throwActiveView
     }
+  }
+
+  /** Change the byte order of this BufferedInput. */
+  def order(order: ByteOrder): this.type = {
+    bb.order(order)
+    this
   }
 
   @inline private[this] def throwActiveView: Nothing = throw new IOException("Cannot use BufferedInput while a view is active")

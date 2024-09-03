@@ -5,28 +5,28 @@ import java.nio.charset.{Charset, StandardCharsets}
 import java.nio.file.Path
 
 /** MemorySegment-based version of ScalarLineTokenizer. */
-object ScalarForeignLineTokenizer {
-  /** Create a ScalarForeignLineTokenizer. See [[LineTokenizer.fromMemorySegment]] for details. */
-  def fromMemorySegment(buf: MemorySegment, charset: Charset = StandardCharsets.UTF_8, closeable: AutoCloseable = null): ScalarForeignLineTokenizer =
+object ForeignScalarLineTokenizer {
+  /** Create a ForeignScalarLineTokenizer. See [[LineTokenizer.fromMemorySegment]] for details. */
+  def fromMemorySegment(buf: MemorySegment, charset: Charset = StandardCharsets.UTF_8, closeable: AutoCloseable = null): ForeignScalarLineTokenizer =
     create(buf, closeable, charset)
 
-  /** Create a ScalarForeignLineTokenizer. See [[LineTokenizer.fromMappedFile]] for details. */
-  def fromMappedFile(file: Path, charset: Charset = StandardCharsets.UTF_8): ScalarForeignLineTokenizer =
+  /** Create a ForeignScalarLineTokenizer. See [[LineTokenizer.fromMappedFile]] for details. */
+  def fromMappedFile(file: Path, charset: Charset = StandardCharsets.UTF_8): ForeignScalarLineTokenizer =
     create(ForeignSupport.mapRO(file), null, charset)
 
-  private[this] def create(buf: MemorySegment, closeable: AutoCloseable, cs: Charset): ScalarForeignLineTokenizer =
+  private[this] def create(buf: MemorySegment, closeable: AutoCloseable, cs: Charset): ForeignScalarLineTokenizer =
     if(cs eq StandardCharsets.ISO_8859_1)
-      new ScalarForeignLineTokenizer(buf, closeable) {
+      new ForeignScalarLineTokenizer(buf, closeable) {
         // Use the slightly faster constructor for Latin-1
         protected[this] def makeString(buf: Array[Byte], start: Int, len: Int): String = new String(buf, 0, start, len)
       }
     else
-      new ScalarForeignLineTokenizer(buf, closeable) {
+      new ForeignScalarLineTokenizer(buf, closeable) {
         protected[this] def makeString(buf: Array[Byte], start: Int, len: Int): String = new String(buf, start, len, cs)
       }
 }
 
-abstract class ScalarForeignLineTokenizer(buf: MemorySegment, closeable: AutoCloseable) extends LineTokenizer {
+abstract class ForeignScalarLineTokenizer(buf: MemorySegment, closeable: AutoCloseable) extends LineTokenizer {
   private[this] var pos, start = 0L
   private[this] val limit = buf.byteSize()
   private[this] var linebuf = new Array[Byte](1024)
