@@ -1,5 +1,7 @@
 package perfio
 
+import org.junit.Assert
+
 import java.io.{ByteArrayInputStream, ByteArrayOutputStream, DataInputStream, DataOutputStream, File, FileOutputStream}
 import java.lang.foreign.{Arena, MemorySegment, ValueLayout}
 import java.nio.{ByteBuffer, ByteOrder}
@@ -47,4 +49,15 @@ class TestData(val bytes: Array[Byte], val name: String, owner: Class[_]) {
     BufferedInput.fromMappedFile(getFile().toPath)
   }
   def createBufferedInputFromArray(): BufferedInput = BufferedInput.fromArray(bytes)
+
+  def createBufferedOutputToOutputStream(): (BufferedOutput, () => Unit) = {
+    val bout = new ByteArrayOutputStream()
+    val bo = BufferedOutput(bout)
+    val checker = () => {
+      bo.flush()
+      val a = bout.toByteArray
+      Assert.assertArrayEquals(bytes, a)
+    }
+    (bo, checker)
+  }
 }

@@ -10,12 +10,12 @@ import scala.annotation.tailrec
 object BufferedInput {
   def apply(in: InputStream, byteOrder: ByteOrder = ByteOrder.BIG_ENDIAN, initialBufferSize: Int = 32768): BufferedInput = {
     val buf: Array[Byte] = new Array(initialBufferSize max MinBufferSize)
-    val bb = createByteBuffer(buf, byteOrder)
+    val bb = ForeignSupport.createByteBuffer(buf, byteOrder)
     new HeapBufferedInput(buf, bb, buf.length, buf.length, Long.MaxValue, in, buf.length/2, null)
   }
 
   def fromArray(buf: Array[Byte], byteOrder: ByteOrder = ByteOrder.BIG_ENDIAN): BufferedInput = {
-    val bb = createByteBuffer(buf, byteOrder)
+    val bb = ForeignSupport.createByteBuffer(buf, byteOrder)
     new HeapBufferedInput(buf, bb, 0, buf.length, Long.MaxValue, null, 0, null)
   }
 
@@ -37,12 +37,6 @@ object BufferedInput {
 
   private[this] val MinBufferSize = 16
   private[perfio] var MaxDirectBufferSize = Int.MaxValue-15 //modified by unit tests
-
-  @inline private[perfio] def createByteBuffer(buf: Array[Byte], byteOrder: ByteOrder): ByteBuffer = {
-    val bb = ByteBuffer.wrap(buf)
-    bb.order(byteOrder)
-    bb
-  }
 
   private val STATE_LIVE = 0
   private val STATE_CLOSED = 1
@@ -337,7 +331,7 @@ private class HeapBufferedInput(
           val buf2 = new Array[Byte](buflen)
           if(a > 0) System.arraycopy(buf, pos, buf2, 0, a)
           buf = buf2
-          bb = createByteBuffer(buf, bb.order())
+          bb = ForeignSupport.createByteBuffer(buf, bb.order())
         } else if (a > 0 && pos > 0) {
           System.arraycopy(buf, pos, buf, 0, a)
         }
