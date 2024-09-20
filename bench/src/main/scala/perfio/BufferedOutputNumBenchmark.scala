@@ -50,14 +50,14 @@ class BufferedOutputNumBenchmark extends BenchUtil {
 //    bh.consume(bout.getBuffer)
 //  }
 //
-//  @Benchmark
-//  def array_DataOutputStream_fixed(bh: Blackhole): Unit = {
-//    val bout = new MyByteArrayOutputStream(count * 13)
-//    val out = new DataOutputStream(bout)
-//    writeTo(out)
-//    bh.consume(bout.getSize)
-//    bh.consume(bout.getBuffer)
-//  }
+  @Benchmark
+  def array_DataOutputStream_fixed(bh: Blackhole): Unit = {
+    val bout = new MyByteArrayOutputStream(count * 13)
+    val out = new DataOutputStream(bout)
+    writeTo(out)
+    bh.consume(bout.getSize)
+    bh.consume(bout.getBuffer)
+  }
 
 //  @Benchmark
 //  def array_FushingBufferedOutput_growing(bh: Blackhole): Unit = {
