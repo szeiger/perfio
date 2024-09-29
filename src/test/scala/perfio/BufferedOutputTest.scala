@@ -40,18 +40,63 @@ class BufferedOutputTest extends TestUtil {
     checker()
   }
 
-  @Test def defer(): Unit = {
+  final class Counter(bo: BufferedOutput) {
+    var bocount = 0
+    def apply(i: Int): Unit = {
+      bocount += i
+      assertEquals(bocount, bo.totalBytesWritten)
+    }
+  }
+
+  @Test def reserve(): Unit = {
     val (bo, checker) = viewTestData.createBufferedOutputToOutputStream()
+    val cnt = new Counter(bo)
     for(i <- 0 until count) {
-      val bo2 = bo.defer(4)
+      //println("****** "+i)
+      cnt(0)
+      val bo2 = bo.reserve(4)
+      cnt(4)
+      assertEquals(0, bo2.totalBytesWritten)
       bo.int8(i.toByte)
+      cnt(1)
       bo.int32(i+2)
+      cnt(4)
       bo.int64(i+3)
+      cnt(8)
       bo2.int32(13)
+      cnt(0)
+      assertEquals(4, bo2.totalBytesWritten)
+      assertException[EOFException](bo2.int8(0))
       bo2.close()
+      cnt(0)
       assertException[IOException](bo2.int8(0))
     }
-    //assertEquals(count * 13, bo.totalBytesWritten)
+    checker()
+  }
+
+  @Test def defer(): Unit = {
+    val (bo, checker) = viewTestData.createBufferedOutputToOutputStream()
+    val cnt = new Counter(bo)
+    for(i <- 0 until count) {
+      //println("****** "+i)
+      cnt(0)
+      val bo2 = bo.defer(4)
+      cnt(0)
+      assertEquals(0, bo2.totalBytesWritten)
+      bo.int8(i.toByte)
+      cnt(1)
+      bo.int32(i+2)
+      cnt(4)
+      bo.int64(i+3)
+      cnt(8)
+      bo2.int32(13)
+      cnt(0)
+      assertEquals(4, bo2.totalBytesWritten)
+      assertException[EOFException](bo2.int8(0))
+      bo2.close()
+      cnt(0)
+      assertException[IOException](bo2.int8(0))
+    }
     checker()
   }
 

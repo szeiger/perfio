@@ -9,7 +9,7 @@ import scala.reflect.ClassTag
 object BufferedOutput {
   def apply(out: OutputStream, byteOrder: ByteOrder = ByteOrder.BIG_ENDIAN, initialBufferSize: Int = 32768): BufferedOutput = {
     val buf: Array[Byte] = new Array(initialBufferSize max MinBufferSize)
-    new BufferedOutput(buf, byteOrder == ByteOrder.BIG_ENDIAN, 0, 0, buf.length, out, initialBufferSize, false)
+    new BufferedOutput(buf, byteOrder == ByteOrder.BIG_ENDIAN, 0, 0, buf.length, out, initialBufferSize, false, Long.MaxValue)
   }
 
   def growing(byteOrder: ByteOrder = ByteOrder.BIG_ENDIAN, initialBufferSize: Int = 32768): FullyBufferedOutput = {
@@ -19,7 +19,7 @@ object BufferedOutput {
 
   //TODO make this work with block merging or remove the method?
   def fixed(buf: Array[Byte], start: Int = 0, len: Int = -1, byteOrder: ByteOrder = ByteOrder.BIG_ENDIAN, initialBufferSize: Int = 32768): BufferedOutput = {
-    new BufferedOutput(buf, byteOrder == ByteOrder.BIG_ENDIAN, start, start, if(len == -1) buf.length else len+start, null, initialBufferSize, true)
+    new BufferedOutput(buf, byteOrder == ByteOrder.BIG_ENDIAN, start, start, if(len == -1) buf.length else len+start, null, initialBufferSize, true, Long.MaxValue)
   }
 
   private[this] val MinBufferSize = 16
@@ -54,11 +54,12 @@ class BufferedOutput(
   protected var lim: Int,
   out: OutputStream,
   initialBufferSize: Int,
-  private var fixed: Boolean
+  private var fixed: Boolean, // buffer cannot be reallocated or grown beyond lim
+  private var totalLimit: Long
 ) extends AutoCloseable {
   import BufferedOutput.{SHARING_EXCLUSIVE, SHARING_LEFT, SHARING_RIGHT}
 
-  private[this] var totalFlushed = 0L
+  private var totalFlushed = 0L
   private var next, prev: BufferedOutput = this // prefix list as a double-linked ring
   private[this] var cachedExclusive, cachedShared: BufferedOutput = null // single-linked lists (via `next`) of blocks cached for reuse
   private var closed = false
@@ -66,7 +67,7 @@ class BufferedOutput(
   private var sharing: Byte = SHARING_EXCLUSIVE
 
   /** Re-initialize this block and return its old buffer. */
-  private def reinit(buf: Array[Byte], bigEndian: Boolean, start: Int, pos: Int, lim: Int, sharing: Byte): Array[Byte] = {
+  private def reinit(buf: Array[Byte], bigEndian: Boolean, start: Int, pos: Int, lim: Int, sharing: Byte, totalLimit: Long, totalFlushed: Long): Array[Byte] = {
     val b = this.buf
     this.buf = buf
     this.bigEndian = bigEndian
@@ -74,29 +75,30 @@ class BufferedOutput(
     this.pos = pos
     this.lim = lim
     this.sharing = sharing
-    totalFlushed = 0
+    this.totalLimit = totalLimit
+    this.totalFlushed = totalFlushed
     closed = false
     b
   }
 
-  /** Change the byte order of this BufferedInput. */
+  /** Change the byte order of this BufferedOutput. */
   def order(order: ByteOrder): this.type = {
     bigEndian = order == ByteOrder.BIG_ENDIAN
     this
   }
 
-  @inline private[this] def throwClosed: Nothing = throw new IOException("BufferedOutput has already been closed")
+  private[this] def throwClosed(): Nothing = throw new IOException("BufferedOutput has already been closed")
+
+  private[this] def throwUnderflow(len: Long, exp: Long): Nothing =
+    throw new IOException(s"Can't close BufferedOutput created by reserve($exp): Only $len bytes written")
 
   protected[this] def checkState(): Unit = {
-    if(closed) throwClosed
+    if(closed) throwClosed()
   }
 
   @inline private[this] def available: Int = lim - pos
 
-  def totalBytesWritten: Long = {
-    //TODO compute this correctly (also for prefix lists and deferred blocks)
-    totalFlushed + (pos - start)
-  }
+  def totalBytesWritten: Long = totalFlushed + (pos - start)
 
   private[this] def fwd(count: Int): Int = {
     if(available < count) {
@@ -162,10 +164,15 @@ class BufferedOutput(
 
   private[this] def flushAndGrow(count: Int): Unit = {
     checkState()
-    if(out != null && (prev eq root)) {
-      if(root.flushBlocks(true) && lim < start+count) growBufferClear(count)
-      else growBufferCopy(count)
-    } else growBufferCopy(count)
+    if(!fixed) {
+      if(out != null && (prev eq root)) {
+        root.flushBlocks(true)
+        if(lim < start+count) {
+          if(pos == start) growBufferClear(count)
+          else growBufferCopy(count)
+        }
+      } else growBufferCopy(count)
+    }
   }
 
   /** Write the buffer to the output. Must only be called on the root block. */
@@ -190,30 +197,69 @@ class BufferedOutput(
 
   /** Flush and unlink all closed blocks and optionally flush the root block. Returns true if all
    *  prefix blocks were flushed. Must only be called on the root block and only if out != null. */
-  private def flushBlocks(forceFlushRoot: Boolean): Boolean = {
+  private def flushBlocks(forceFlush: Boolean): Boolean = {
     while(next ne this) {
       val b = next
-      if(!b.closed) return false
-      val n = b.next
-      if(b.sharing == SHARING_LEFT && (b.pos - b.start) < initialBufferSize) {
-        assert(b.pos == b.lim)
-        n.start = b.start
+      val blen = b.pos - b.start
+      if(!b.closed) {
+        if((forceFlush && blen > 0) || blen > initialBufferSize/2) {
+          writeToOutput(b.buf, b.start, blen)
+          b.totalFlushed += blen
+          if(b.sharing == SHARING_LEFT) b.start = b.pos
+          else {
+            b.pos = 0
+            b.start = 0
+            b.lim -= blen
+          }
+        }
+        return false
+      }
+      if(b.sharing == SHARING_LEFT && blen < initialBufferSize) {
+        if(b.pos != b.lim) throwUnderflow(b.pos-b.start, b.lim-b.start)
+        val ns = b.nextShared
+        //if(ns.sharing == SHARING_RIGHT) ns.sharing = SHARING_EXCLUSIVE
+        ns.start = b.start
+        ns.totalFlushed -= blen
       } else {
-        val blen = b.pos - b.start
+        val n = b.next
         if(blen < initialBufferSize/2 && b.sharing != SHARING_LEFT && n.sharing != SHARING_LEFT && !n.fixed && b.mergeToRight) ()
-        else if(blen > 0) writeToOutput(b.buf, b.start, b.pos-b.start)
+        else {
+          if(blen > 0) writeToOutput(b.buf, b.start, blen)
+          //val ns = b.nextShared
+          //if(ns.sharing == SHARING_RIGHT) ns.sharing = SHARING_EXCLUSIVE
+        }
       }
       unlink(b)
     }
-    val length = pos-start
-    if((forceFlushRoot && length > 0) || length > initialBufferSize/2) {
-      writeToOutput(buf, start, length)
+    val len = pos-start
+    if((forceFlush && len > 0) || len > initialBufferSize/2) {
+      writeToOutput(buf, start, len)
+      totalFlushed += len
       pos = start
     }
     true
   }
 
-  /** Merge the contents of this buffer into the next one. Returns false if there was not enough space to merge. */
+  private def nextShared: BufferedOutput = {
+    val a = buf
+    var b = next
+    while(b.buf ne a) b = b.next
+    b
+  }
+
+  private def prevShared: BufferedOutput = {
+    val a = this.buf
+    val r = root
+    var b = prev
+    while(true) {
+      if(b.buf eq a) return b
+      if(b eq r) return null
+      b = b.next
+    }
+    null
+  }
+
+  /** Merge the contents of this block into the next one. Returns false if there was not enough space to merge. */
   private def mergeToRight(): Boolean = {
     val n = next
     val nlen = n.pos - n.start
@@ -221,50 +267,52 @@ class BufferedOutput(
     if(pos + nlen < initialBufferSize) {
       //println(s"Merging ${this.show} into ${n.show}")
       System.arraycopy(n.buf, n.start, buf, pos, nlen)
+      val len = pos - start
+      n.totalFlushed -= len
       val tmpbuf = buf
       buf = n.buf
       n.buf = tmpbuf
       n.start = start
       n.lim = tmpbuf.length
       n.pos = pos + nlen
+
       //println(s"Merged ${this.show} into ${n.show}")
       true
     }
     else false
   }
 
-  private def show: String = {
-    s"[buf=$buf, start=$start, pos=$pos, lim=$lim, closed=$closed, sharing=$sharing, fixed=$fixed]"
-  }
+  private def show: String =
+    s"[buf=$buf, start=$start, pos=$pos, lim=$lim, closed=$closed, sharing=$sharing, fixed=$fixed, totalFlushed=$totalFlushed, totalLimit=$totalLimit]"
 
   /** Switch a potentially shared block to exclusive after re-allocating its buffer */
   private[this] def unshare(): Unit = {
     assert(sharing != SHARING_LEFT)
     if(sharing == SHARING_RIGHT) {
       sharing = SHARING_EXCLUSIVE
-      prev.sharing =
-        if(prev.sharing == SHARING_LEFT) SHARING_RIGHT else SHARING_EXCLUSIVE
+      val ps = prevShared
+      if(ps != null) ps.sharing = SHARING_RIGHT
     }
   }
 
   private[this] def growBufferClear(count: Int): Unit = {
-    if(!fixed) {
-      val buflen = BufferUtil.growBuffer(buf.length, count, 1)
-      //println(s"$show.growBufferClear($count): $buflen")
-      buf = new Array[Byte](buflen)
-      lim = buflen
-      unshare()
-    }
+    val tlim = ((totalLimit - totalFlushed) min count).toInt
+    val buflen = BufferUtil.growBuffer(buf.length, tlim, 1)
+    //println(s"$show.growBufferClear($count): $lim, $buflen")
+    if(buflen > buf.length) buf = new Array[Byte](buflen)
+    lim = tlim min buf.length
+    pos = 0
+    start = 0
+    unshare()
   }
 
   private[this] def growBufferCopy(count: Int): Unit = {
-    if(!fixed) {
-      val buflen = BufferUtil.growBuffer(buf.length, pos + count, 1)
-      //println(s"$show.growBufferCopy($count): $buflen")
-      buf = Arrays.copyOf(buf, buflen)
-      lim = buflen
-      unshare()
-    }
+    val tlim = ((totalLimit - totalFlushed) min (pos + count)).toInt
+    val buflen = BufferUtil.growBuffer(buf.length, tlim, 1)
+    //println(s"$show.growBufferCopy($count): $buflen")
+    if(buflen > buf.length) buf = Arrays.copyOf(buf, buflen)
+    lim = tlim min buf.length
+    unshare()
   }
 
   /** Insert a block directly before this block in the prefix list. */
@@ -299,7 +347,7 @@ class BufferedOutput(
   /** Get a cached or new exclusive block. Must only be called on the root block. */
   private def getExclusiveBlock(): BufferedOutput = {
     if(cachedExclusive == null) {
-      val b = new BufferedOutput(new Array[Byte](initialBufferSize), bigEndian, 0, 0, 0, out, initialBufferSize, false)
+      val b = new BufferedOutput(new Array[Byte](initialBufferSize), bigEndian, 0, 0, 0, out, initialBufferSize, false, Long.MaxValue)
       b.root = this
       b
     } else {
@@ -312,7 +360,7 @@ class BufferedOutput(
   /** Get a cached or new shared block. Must only be called on the root block. */
   private def getSharedBlock(): BufferedOutput = {
     if(cachedShared == null) {
-      val b = new BufferedOutput(null, bigEndian, 0, 0, 0, out, initialBufferSize, false)
+      val b = new BufferedOutput(null, bigEndian, 0, 0, 0, out, initialBufferSize, false, Long.MaxValue)
       b.root = this
       b.fixed = true
       b
@@ -323,37 +371,54 @@ class BufferedOutput(
     }
   }
 
-  private[this] def deferShort(max: Int, truncate: Boolean): BufferedOutput = {
-    val p = fwd(max)
+  private[this] def deferShort(length: Int): BufferedOutput = {
+    val p = fwd(length)
+    val len = p - start
     val b = root.getSharedBlock()
-    b.reinit(buf, bigEndian, start, p, pos, SHARING_LEFT)
+    b.reinit(buf, bigEndian, start, p, pos, SHARING_LEFT, Long.MaxValue, -len)
     insertPrefix(b)
+    totalFlushed += (pos - start)
     start = pos
     if(sharing == SHARING_EXCLUSIVE) sharing = SHARING_RIGHT
     b
   }
 
-  private[this] def deferLong(truncate: Boolean): BufferedOutput = {
+  private[this] def deferLong(max: Long, deferred: Boolean): BufferedOutput = {
+    val len = pos - start
     val b = root.getExclusiveBlock()
+    var l = lim
+    if(l - pos > max) l = (max + pos).toInt
+    buf = b.reinit(buf, bigEndian, start, pos, l, SHARING_EXCLUSIVE, max-len, -len)
+    //println(s"after reinit for max=$max, lim=$lim, l=$l: ${b.show}")
     insertPrefix(b)
-    buf = b.reinit(buf, bigEndian, start, pos, lim, SHARING_EXCLUSIVE)
+    totalFlushed += len
+    if(!deferred) totalFlushed += max
     pos = 0
     lim = buf.size
     b
   }
 
-  def defer(max: Long = Long.MaxValue, truncate: Boolean = true): BufferedOutput = {
-    //TODO support `truncate`
-    //TODO enforce limit in deferLong
+  /** Leave a fixed-size gap at the current position that can be filled later after continuing to write
+   * to this BufferedOutput. This BufferdOutput's `totalBytesWritten` is immediately increased by the requested
+   * size. Attempting to write more than the requested amount of data to the returned BufferedOutput or closing
+   * it before writing all of the data throws an IOException. */
+  def reserve(length: Long): BufferedOutput = {
     checkState()
-    if(fixed) deferShort((max min available).toInt, truncate)
-    else if(max < initialBufferSize) deferShort(max.toInt, truncate)
-    else deferLong(truncate)
+    if(fixed) deferShort((length min available).toInt)
+    else if(length < initialBufferSize) deferShort(length.toInt)
+    else deferLong(length, false)
+  }
+
+  /** Create a hole at the current position that can be filled later after continuing to write
+   * to this BufferedOutput. Its size is *not* counted as part of this object's size. */
+  def defer(max: Long = Long.MaxValue): BufferedOutput = {
+    checkState()
+    deferLong(max, true)
   }
 }
 
 class FullyBufferedOutput(_buf: Array[Byte], _bigEndian: Boolean, _start: Int, _pos: Int, _lim: Int, _initialBufferSize: Int)
-  extends BufferedOutput(_buf, _bigEndian, _start, _pos, _lim, null, _initialBufferSize, false) {
+  extends BufferedOutput(_buf, _bigEndian, _start, _pos, _lim, null, _initialBufferSize, false, Long.MaxValue) {
 
   //TODO support prefix blocks
 
