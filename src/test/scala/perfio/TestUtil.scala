@@ -59,12 +59,21 @@ class TestData(val bytes: Array[Byte], val name: String, owner: Class[_]) {
   }
   def createBufferedInputFromArray(): BufferedInput = BufferedInput.fromArray(bytes)
 
-  def createBufferedOutputToOutputStream(): (BufferedOutput, () => Unit) = {
+  def createBufferedOutputToOutputStream(initialBufferSize: Int = 64): (BufferedOutput, () => Unit) = {
     val bout = new ByteArrayOutputStream()
-    val bo = BufferedOutput(bout)
+    val bo = BufferedOutput(bout, initialBufferSize = initialBufferSize)
     val checker = () => {
       bo.flush()
       val a = bout.toByteArray
+      Assert.assertArrayEquals(bytes, a)
+    }
+    (bo, checker)
+  }
+  def createGrowingBufferedOutput(initialBufferSize: Int = 64): (BufferedOutput, () => Unit) = {
+    val bo = BufferedOutput.growing(initialBufferSize = initialBufferSize)
+    val checker = () => {
+      bo.flush()
+      val a = bo.toByteArray
       Assert.assertArrayEquals(bytes, a)
     }
     (bo, checker)

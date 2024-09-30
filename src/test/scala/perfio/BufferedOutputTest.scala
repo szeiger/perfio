@@ -3,12 +3,13 @@ package perfio
 import org.junit.Assert._
 import org.junit.Test
 import org.junit.runner.RunWith
-import org.junit.runners.JUnit4
+import org.junit.runners.Parameterized
+import scala.jdk.CollectionConverters._
 
 import java.io.{EOFException, IOException}
 
-@RunWith(classOf[JUnit4])
-class BufferedOutputTest extends TestUtil {
+@RunWith(classOf[Parameterized])
+class BufferedOutputTest(_name: String, create: TestData => (BufferedOutput, () => Unit)) extends TestUtil {
   val count = 1000
 
   lazy val testData = createTestData("small") { dout =>
@@ -29,7 +30,7 @@ class BufferedOutputTest extends TestUtil {
   }
 
   @Test def simple(): Unit = {
-    val (bo, checker) = testData.createBufferedOutputToOutputStream()
+    val (bo, checker) = create(testData)
     assertEquals(0L, bo.totalBytesWritten)
     for(i <- 0 until count) {
       bo.int8(i.toByte)
@@ -49,7 +50,7 @@ class BufferedOutputTest extends TestUtil {
   }
 
   @Test def reserve(): Unit = {
-    val (bo, checker) = viewTestData.createBufferedOutputToOutputStream()
+    val (bo, checker) = create(viewTestData)
     val cnt = new Counter(bo)
     for(i <- 0 until count) {
       //println("****** "+i)
@@ -75,7 +76,7 @@ class BufferedOutputTest extends TestUtil {
   }
 
   @Test def defer(): Unit = {
-    val (bo, checker) = viewTestData.createBufferedOutputToOutputStream()
+    val (bo, checker) = create(viewTestData)
     val cnt = new Counter(bo)
     for(i <- 0 until count) {
       //println("****** "+i)
@@ -118,4 +119,13 @@ class BufferedOutputTest extends TestUtil {
   @Test def fixedOffset(): Unit = testFixed(25, 0)
   @Test def fixedLimit(): Unit = testFixed(0, 25)
   @Test def fixedBoth(): Unit = testFixed(139, 17)
+}
+
+object BufferedOutputTest {
+  @Parameterized.Parameters(name = "{0}")
+  def params = Vector(
+    Array[Any]("baos_64", (_: TestData).createBufferedOutputToOutputStream(64)),
+    Array[Any]("baos_32768", (_: TestData).createBufferedOutputToOutputStream(32768)),
+    Array[Any]("growing_64", (_: TestData).createGrowingBufferedOutput(64)),
+  ).asJava
 }
