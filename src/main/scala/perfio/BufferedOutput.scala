@@ -267,7 +267,8 @@ abstract class BufferedOutput(
     }
   }
 
-  private[this] def deferShort(length: Int): BufferedOutput = {
+  /** Reserve a short block (fully allocated) by splitting this block into two shared blocks. */
+  private[this] def reserveShort(length: Int): BufferedOutput = {
     val p = fwd(length)
     val len = p - start
     val b = cacheRoot.getSharedBlock()
@@ -279,23 +280,19 @@ abstract class BufferedOutput(
     b
   }
 
-  private[this] def deferLong(max: Long, deferred: Boolean): BufferedOutput = {
+  /** Reserve a long block (flushed on demand) by allocating a new block. Must not be called on a shared block. */
+  private[this] def reserveLong(max: Long): BufferedOutput = {
     val len = pos - start
     val b = cacheRoot.getExclusiveBlock()
     var l = lim
     if(l - pos > max) l = (max + pos).toInt
-    if(sharing == SHARING_LEFT) {
-      ??? //TODO split shared buffers
-    } else {
-      buf = b.reinit(buf, bigEndian, start, pos, l, sharing, max-len, -len, deferred, root, null)
-      //println(s"after reinit for max=$max, lim=$lim, l=$l: ${b.show}")
-      b.insertBefore(this)
-      totalFlushed += len
-      sharing = SHARING_EXCLUSIVE
-      if(!deferred) totalFlushed += max
-      pos = 0
-      lim = buf.size
-    }
+    buf = b.reinit(buf, bigEndian, start, pos, l, sharing, max-len, -len, false, root, null)
+    //println(s"after reinit for max=$max, lim=$lim, l=$l: ${b.show}")
+    b.insertBefore(this)
+    totalFlushed = totalFlushed + len + max
+    sharing = SHARING_EXCLUSIVE
+    pos = 0
+    lim = buf.size
     b
   }
 
@@ -305,30 +302,21 @@ abstract class BufferedOutput(
    * it before writing all of the data throws an IOException. */
   final def reserve(length: Long): BufferedOutput = {
     checkState()
-    if(fixed) deferShort((length min available).toInt)
-    else if(length < cacheRoot.initialBufferSize) deferShort(length.toInt)
-    else deferLong(length, false)
-  }
-
-  /** Create a hole at the current position that can be filled later after continuing to write
-   * to this BufferedOutput. Its size is *not* counted as part of this object's size. */
-  final def defer(max: Long = Long.MaxValue): BufferedOutput = {
-    checkState()
-    deferLong(max, true)
+    if(fixed) reserveShort((length min available).toInt)
+    else if(length < cacheRoot.initialBufferSize) reserveShort(length.toInt)
+    else reserveLong(length)
   }
 
   /** Create a new BufferedOutput `b` that gets appended to `this` when closed. If `this` has a limited
    * size and appending `b` would exceed the limit, an EOFException is thrown when attempting to close `b`.
    * Attempting to write more than the requested maximum length to `b` results in an IOException. */
-  def sub(max: Long = Long.MaxValue): BufferedOutput = {
+  def defer(max: Long = Long.MaxValue): BufferedOutput = {
     val b = cacheRoot.getExclusiveBlock()
     b.reinit(b.buf, bigEndian, 0, 0, b.buf.length, SHARING_EXCLUSIVE, max, 0L, true, b, this)
     b.next = b
     b.prev = b
     b
   }
-
-  //private[this] def
 
   /** Append a nested root block */
   private[perfio] def appendNested(b: BufferedOutput): Unit = {
@@ -434,7 +422,7 @@ abstract class CacheRootBufferedOutput(_buf: Array[Byte], _bigEndian: Boolean, _
     }
   }
 
-  /** Get a cached or new exclusive block. Must only be called on the cacheRoot. */
+  /** Get a cached or new exclusive block. */
   private[perfio] def getExclusiveBlock(): NestedBufferedOutput = {
     if(cachedExclusive == null)
       new NestedBufferedOutput(new Array[Byte](cacheRoot.initialBufferSize), false, cacheRoot)
@@ -445,7 +433,7 @@ abstract class CacheRootBufferedOutput(_buf: Array[Byte], _bigEndian: Boolean, _
     }
   }
 
-  /** Get a cached or new shared block. Must only be called on the cacheRoot. */
+  /** Get a cached or new shared block. */
   private[perfio] def getSharedBlock(): NestedBufferedOutput = {
     if(cachedShared == null)
       new NestedBufferedOutput(null, true, cacheRoot)

@@ -75,39 +75,13 @@ class BufferedOutputTest(_name: String, create: TestData => (BufferedOutput, () 
     checker()
   }
 
-  @Test def defer(): Unit = {
-    val (bo, checker) = create(viewTestData)
-    val cnt = new Counter(bo)
-    for(i <- 0 until count) {
-      //println("****** "+i)
-      cnt(0)
-      val bo2 = bo.defer(4)
-      cnt(0)
-      assertEquals(0, bo2.totalBytesWritten)
-      bo.int8(i.toByte)
-      cnt(1)
-      bo.int32(i+2)
-      cnt(4)
-      bo.int64(i+3)
-      cnt(8)
-      bo2.int32(13)
-      cnt(0)
-      assertEquals(4, bo2.totalBytesWritten)
-      assertException[EOFException](bo2.int8(0))
-      bo2.close()
-      cnt(0)
-      assertException[IOException](bo2.int8(0))
-    }
-    checker()
-  }
-
   @Test def sub(): Unit = {
     val (bo1, checker) = create(viewTestData)
     val cnt1 = new Counter(bo1)
     for(i <- 0 until count) {
       //println("****** "+i)
       cnt1(0)
-      val bo2 = bo1.sub()
+      val bo2 = bo1.defer()
       val cnt2 = new Counter(bo2)
       cnt1(0)
       cnt2(0)

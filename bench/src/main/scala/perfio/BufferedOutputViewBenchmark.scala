@@ -94,25 +94,6 @@ class BufferedOutputViewBenchmark extends BenchUtil {
     var i = 0
     while(i < count/div) {
       val o2 = out.defer()
-      val pos = out.totalBytesWritten
-      var j = 0
-      while(j < div) {
-        out.int8((i+j).toByte)
-        out.int32(i+j+100)
-        out.int64(i+j+101)
-        j += 1
-      }
-      o2.int32((out.totalBytesWritten-pos).toInt)
-      o2.close()
-      i += 1
-    }
-    out.flush()
-  }
-
-  private[this] def writeSubTo(out: BufferedOutput): Unit = {
-    var i = 0
-    while(i < count/div) {
-      val o2 = out.sub()
       var j = 0
       while(j < div) {
         o2.int8((i+j).toByte)
@@ -156,29 +137,20 @@ class BufferedOutputViewBenchmark extends BenchUtil {
 //    bh.consume(bout.getBuffer)
 //  }
 
-//  @Benchmark
-//  def bufferedOutput_reserve_toFixedBAOS(bh: Blackhole): Unit = {
-//    val bout = new MyByteArrayOutputStream(byteSize)
-//    val out = BufferedOutput(bout)
-//    writeReserveTo(out)
-//    bh.consume(bout.getSize)
-//    bh.consume(bout.getBuffer)
-//  }
-//
-//  @Benchmark
-//  def bufferedOutput_defer_toFixedBAOS(bh: Blackhole): Unit = {
-//    val bout = new MyByteArrayOutputStream(byteSize)
-//    val out = BufferedOutput(bout)
-//    writeDeferTo(out)
-//    bh.consume(bout.getSize)
-//    bh.consume(bout.getBuffer)
-//  }
-
   @Benchmark
-  def bufferedOutput_sub_toFixedBAOS(bh: Blackhole): Unit = {
+  def bufferedOutput_reserve_toFixedBAOS(bh: Blackhole): Unit = {
     val bout = new MyByteArrayOutputStream(byteSize)
     val out = BufferedOutput(bout)
-    writeSubTo(out)
+    writeReserveTo(out)
+    bh.consume(bout.getSize)
+    bh.consume(bout.getBuffer)
+  }
+
+  @Benchmark
+  def bufferedOutput_defer_toFixedBAOS(bh: Blackhole): Unit = {
+    val bout = new MyByteArrayOutputStream(byteSize)
+    val out = BufferedOutput(bout)
+    writeDeferTo(out)
     bh.consume(bout.getSize)
     bh.consume(bout.getBuffer)
   }
