@@ -54,32 +54,17 @@ abstract class BufferedOutput(
   private[perfio] var start: Int, // first used byte in buf
   private[perfio] var pos: Int,
   private[perfio] var lim: Int,
-  private[perfio] var fixed: Boolean, // buffer cannot be reallocated or grown beyond lim
-  private[this] var totalLimit: Long,
+  private[perfio] val fixed: Boolean, // buffer cannot be reallocated or grown beyond lim
+  private[perfio] var totalLimit: Long,
 ) extends AutoCloseable {
 
   private[perfio] var totalFlushed = 0L
   private[perfio] var next, prev: BufferedOutput = this // prefix list as a double-linked ring
   private[perfio] var closed = false
   private[perfio] var truncate = true
-  private[perfio] var root: RootBufferedOutput = null
+  private[perfio] var root: BufferedOutput = this
+  private[perfio] var cacheRoot: CacheRootBufferedOutput = null
   private[perfio] var sharing: Byte = SHARING_EXCLUSIVE
-
-  /** Re-initialize this block and return its old buffer. */
-  private def reinit(buf: Array[Byte], bigEndian: Boolean, start: Int, pos: Int, lim: Int, sharing: Byte, totalLimit: Long, totalFlushed: Long, truncate: Boolean): Array[Byte] = {
-    val b = this.buf
-    this.buf = buf
-    this.bigEndian = bigEndian
-    this.start = start
-    this.pos = pos
-    this.lim = lim
-    this.sharing = sharing
-    this.totalLimit = totalLimit
-    this.totalFlushed = totalFlushed
-    this.truncate = truncate
-    closed = false
-    b
-  }
 
   /** Change the byte order of this BufferedOutput. */
   final def order(order: ByteOrder): this.type = {
@@ -100,7 +85,7 @@ abstract class BufferedOutput(
 
   final def totalBytesWritten: Long = totalFlushed + (pos - start)
 
-  private[this] def fwd(count: Int): Int = {
+  private[perfio] def fwd(count: Int): Int = {
     if(available < count) {
       flushAndGrow(count)
       if(available < count) throw new EOFException()
@@ -170,7 +155,7 @@ abstract class BufferedOutput(
     }
   }
 
-  private def checkUnderflow(): Unit = {
+  private[perfio] def checkUnderflow(): Unit = {
     if(fixed) {
       if(pos != lim) throwUnderflow(pos-start, lim-start)
     } else {
@@ -205,7 +190,7 @@ abstract class BufferedOutput(
   }
 
   private[this] def growBufferClear(count: Int): Unit = {
-    val tlim = ((totalLimit - totalFlushed) min count).toInt
+    val tlim = ((totalLimit - totalBytesWritten) min count).toInt
     val buflen = BufferUtil.growBuffer(buf.length, tlim, 1)
     //println(s"$show.growBufferClear($count): $lim, $buflen")
     if(buflen > buf.length) buf = new Array[Byte](buflen)
@@ -216,7 +201,7 @@ abstract class BufferedOutput(
   }
 
   private[this] def growBufferCopy(count: Int): Unit = {
-    val tlim = ((totalLimit - totalFlushed) min (pos + count)).toInt
+    val tlim = ((totalLimit - totalBytesWritten) min (pos + count)).toInt
     val buflen = BufferUtil.growBuffer(buf.length, tlim, 1)
     //println(s"$show.growBufferCopy($count): $buflen")
     if(buflen > buf.length) buf = Arrays.copyOf(buf, buflen)
@@ -224,12 +209,35 @@ abstract class BufferedOutput(
     unshare()
   }
 
-  private def insertBefore(b: BufferedOutput): Unit = {
+  /** Insert this block before the given block. */
+  private[perfio] def insertBefore(b: BufferedOutput): Unit = {
     prev = b.prev
     next = b
     b.prev.next = this
     b.prev = this
   }
+
+  /** Insert this block and its prefix list before the given block. Must only be called on a root block. */
+  private[perfio] def insertAllBefore(b: BufferedOutput): Unit = {
+    val n = next
+    n.prev = b.prev
+    b.prev.next = n
+    next = b
+    b.prev = this
+  }
+
+  /** Unlink this block and return it to the cache. */
+  private[perfio] def unlink(): Unit = {
+    prev.next = next
+    next.prev = prev
+    cacheRoot.returnToCache(this)
+  }
+
+  /** Flush and unlink all closed blocks and optionally flush the root block. Must only be called on the root block. */
+  private[perfio] def flushBlocks(forceFlush: Boolean): Unit
+
+  /** Force flush to the upstream after flushBlocks. Must only be called on the root block. */
+  private[perfio] def flushUpstream(): Unit
 
   final def flush(): Unit = {
     checkState()
@@ -239,14 +247,12 @@ abstract class BufferedOutput(
     }
   }
 
-  final def close(): Unit = {
+  def close(): Unit = {
     checkState()
     if(!truncate) checkUnderflow()
     closed = true
     lim = pos
-    if(root ne this) {
-      if(prev eq root) root.flushBlocks(false)
-    } else {
+    if(root eq this) {
       var b = next
       while(b ne this) {
         if(!b.closed) {
@@ -255,16 +261,17 @@ abstract class BufferedOutput(
         }
         b = b.next
       }
-      root.flushBlocks(true)
-      root.closeUpstream()
+      flushBlocks(true)
+    } else {
+      if(prev eq root) root.flushBlocks(false)
     }
   }
 
   private[this] def deferShort(length: Int): BufferedOutput = {
     val p = fwd(length)
     val len = p - start
-    val b = root.getSharedBlock()
-    b.reinit(buf, bigEndian, start, p, pos, SHARING_LEFT, Long.MaxValue, -len, false)
+    val b = cacheRoot.getSharedBlock()
+    b.reinit(buf, bigEndian, start, p, pos, SHARING_LEFT, length, -len, false, root, null)
     b.insertBefore(this)
     totalFlushed += (pos - start)
     start = pos
@@ -274,13 +281,13 @@ abstract class BufferedOutput(
 
   private[this] def deferLong(max: Long, deferred: Boolean): BufferedOutput = {
     val len = pos - start
-    val b = root.getExclusiveBlock()
+    val b = cacheRoot.getExclusiveBlock()
     var l = lim
     if(l - pos > max) l = (max + pos).toInt
     if(sharing == SHARING_LEFT) {
       ??? //TODO split shared buffers
     } else {
-      buf = b.reinit(buf, bigEndian, start, pos, l, sharing, max-len, -len, deferred)
+      buf = b.reinit(buf, bigEndian, start, pos, l, sharing, max-len, -len, deferred, root, null)
       //println(s"after reinit for max=$max, lim=$lim, l=$l: ${b.show}")
       b.insertBefore(this)
       totalFlushed += len
@@ -293,13 +300,13 @@ abstract class BufferedOutput(
   }
 
   /** Leave a fixed-size gap at the current position that can be filled later after continuing to write
-   * to this BufferedOutput. This BufferdOutput's `totalBytesWritten` is immediately increased by the requested
+   * to this BufferedOutput. This BufferedOutput's `totalBytesWritten` is immediately increased by the requested
    * size. Attempting to write more than the requested amount of data to the returned BufferedOutput or closing
    * it before writing all of the data throws an IOException. */
   final def reserve(length: Long): BufferedOutput = {
     checkState()
     if(fixed) deferShort((length min available).toInt)
-    else if(length < root.initialBufferSize) deferShort(length.toInt)
+    else if(length < cacheRoot.initialBufferSize) deferShort(length.toInt)
     else deferLong(length, false)
   }
 
@@ -309,36 +316,114 @@ abstract class BufferedOutput(
     checkState()
     deferLong(max, true)
   }
+
+  /** Create a new BufferedOutput `b` that gets appended to `this` when closed. If `this` has a limited
+   * size and appending `b` would exceed the limit, an EOFException is thrown when attempting to close `b`.
+   * Attempting to write more than the requested maximum length to `b` results in an IOException. */
+  def sub(max: Long = Long.MaxValue): BufferedOutput = {
+    val b = cacheRoot.getExclusiveBlock()
+    b.reinit(b.buf, bigEndian, 0, 0, b.buf.length, SHARING_EXCLUSIVE, max, 0L, true, b, this)
+    b.next = b
+    b.prev = b
+    b
+  }
+
+  //private[this] def
+
+  /** Append a nested root block */
+  private[perfio] def appendNested(b: BufferedOutput): Unit = {
+    val btot = b.totalBytesWritten
+    val rem = totalLimit - totalBytesWritten
+    if(btot > rem) throw new EOFException()
+    if(fixed) appendNestedToFixed(b)
+    else {
+      val tmpbuf = buf
+      val tmpstart = start
+      val tmppos = pos
+      val tmpsharing = sharing
+      val len = tmppos - tmpstart
+      val blen = b.pos - b.start
+      totalFlushed += b.totalFlushed + len
+      b.totalFlushed += blen - len
+      buf = b.buf
+      start = b.start
+      pos = b.pos
+      lim = buf.length
+      sharing = b.sharing
+      b.buf = tmpbuf
+      b.start = tmpstart
+      b.pos = tmppos
+      b.lim = tmppos
+      b.closed = true
+      b.sharing = tmpsharing
+      b.insertAllBefore(this)
+      if(b.prev eq this) flushBlocks(false)
+    }
+  }
+
+  private[this] def appendNestedToFixed(r: BufferedOutput): Unit = {
+    var b = r.next
+    while(true) {
+      val blen = b.pos - b.start
+      if(blen > 0) {
+        val p = fwd(blen)
+        System.arraycopy(b.buf, b.start, buf, p, blen)
+      }
+      cacheRoot.returnToCache(b)
+      if(b eq r) return
+      b = b.next
+    }
+  }
 }
 
 
-final class NestedBufferedOutput(_buf: Array[Byte], _fixed: Boolean, _root: RootBufferedOutput)
+final class NestedBufferedOutput(_buf: Array[Byte], _fixed: Boolean, _cacheRoot: CacheRootBufferedOutput)
   extends BufferedOutput(_buf, false, 0, 0, 0, _fixed, Long.MaxValue) {
 
-  this.root = _root
+  private[this] var parent: BufferedOutput = null
+
+  this.cacheRoot = _cacheRoot
+
+  /** Re-initialize this block and return its old buffer. */
+  private[perfio] def reinit(buf: Array[Byte], bigEndian: Boolean, start: Int, pos: Int, lim: Int, sharing: Byte,
+    totalLimit: Long, totalFlushed: Long, truncate: Boolean, root: BufferedOutput, parent: BufferedOutput): Array[Byte] = {
+    val b = this.buf
+    this.buf = buf
+    this.bigEndian = bigEndian
+    this.start = start
+    this.pos = pos
+    this.lim = lim
+    this.sharing = sharing
+    this.totalLimit = totalLimit
+    this.totalFlushed = totalFlushed
+    this.truncate = truncate
+    this.root = root
+    this.parent = parent
+    closed = false
+    b
+  }
+
+  private[perfio] def flushBlocks(forceFlush: Boolean): Unit = ()
+
+  private[perfio] def flushUpstream(): Unit = ()
+
+  override def close(): Unit = {
+    super.close()
+    if(parent != null) parent.appendNested(this)
+  }
 }
 
 
-abstract class RootBufferedOutput(_buf: Array[Byte], _bigEndian: Boolean, _start: Int, _pos: Int, _lim: Int,
+abstract class CacheRootBufferedOutput(_buf: Array[Byte], _bigEndian: Boolean, _start: Int, _pos: Int, _lim: Int,
   private[perfio] val initialBufferSize: Int,
   _fixed: Boolean, _totalLimit: Long)
   extends BufferedOutput(_buf, _bigEndian, _start, _pos, _lim, _fixed, _totalLimit) {
 
-  this.root = this
+  this.cacheRoot = this
 
   private[this] var cachedExclusive, cachedShared: BufferedOutput = null // single-linked lists (via `next`) of blocks cached for reuse
 
-  /** Flush and unlink all closed blocks and optionally flush the root block. */
-  private[perfio] def flushBlocks(forceFlush: Boolean): Unit
-
-  private[perfio] def flushUpstream(): Unit
-
-  private[perfio] def closeUpstream(): Unit
-
-  /** Unlink a block and return it to the cache. */
-  private[perfio] def unlink(b: BufferedOutput): Unit = {
-    next = b.next
-    next.prev = this
+  private[perfio] def returnToCache(b: BufferedOutput): Unit = {
     if(b.sharing == SHARING_LEFT) {
       b.buf = null
       b.next = cachedShared
@@ -349,32 +434,32 @@ abstract class RootBufferedOutput(_buf: Array[Byte], _bigEndian: Boolean, _start
     }
   }
 
-  /** Get a cached or new exclusive block. Must only be called on the root block. */
-  private[perfio] def getExclusiveBlock(): BufferedOutput = {
+  /** Get a cached or new exclusive block. Must only be called on the cacheRoot. */
+  private[perfio] def getExclusiveBlock(): NestedBufferedOutput = {
     if(cachedExclusive == null)
-      new NestedBufferedOutput(new Array[Byte](root.initialBufferSize), false, root)
+      new NestedBufferedOutput(new Array[Byte](cacheRoot.initialBufferSize), false, cacheRoot)
     else {
       val b = cachedExclusive
       cachedExclusive = b.next
-      b
+      b.asInstanceOf[NestedBufferedOutput]
     }
   }
 
-  /** Get a cached or new shared block. Must only be called on the root block. */
-  private[perfio] def getSharedBlock(): BufferedOutput = {
+  /** Get a cached or new shared block. Must only be called on the cacheRoot. */
+  private[perfio] def getSharedBlock(): NestedBufferedOutput = {
     if(cachedShared == null)
-      new NestedBufferedOutput(null, true, root)
+      new NestedBufferedOutput(null, true, cacheRoot)
     else {
       val b = cachedShared
       cachedShared = b.next
-      b
+      b.asInstanceOf[NestedBufferedOutput]
     }
   }
 }
 
 
 class FullyBufferedOutput(_buf: Array[Byte], _bigEndian: Boolean, _start: Int, _pos: Int, _lim: Int, _initialBufferSize: Int, _fixed: Boolean)
-  extends RootBufferedOutput(_buf, _bigEndian, _start, _pos, _lim, _initialBufferSize, _fixed, Long.MaxValue) {
+  extends CacheRootBufferedOutput(_buf, _bigEndian, _start, _pos, _lim, _initialBufferSize, _fixed, Long.MaxValue) {
 
   private[perfio] def flushBlocks(forceFlush: Boolean): Unit = {
     while(next ne this) {
@@ -388,7 +473,7 @@ class FullyBufferedOutput(_buf: Array[Byte], _bigEndian: Boolean, _start: Int, _
           n.totalFlushed -= blen
         }
       } else mergeBuffers(b)
-      unlink(b)
+      b.unlink()
     }
   }
 
@@ -402,7 +487,7 @@ class FullyBufferedOutput(_buf: Array[Byte], _bigEndian: Boolean, _start: Int, _
 //        ns.start = b.start
 //        ns.totalFlushed -= blen
 //      }
-//      unlink(b)
+//      b.unlink()
 //    } else true
 //  }
 
@@ -446,7 +531,6 @@ class FullyBufferedOutput(_buf: Array[Byte], _bigEndian: Boolean, _start: Int, _
   //TODO support prefix blocks
 
   private[perfio] def flushUpstream(): Unit = ()
-  private[perfio] def closeUpstream(): Unit = ()
 
   def toByteArray: Array[Byte] = {
     val b = getBuffer
@@ -464,7 +548,7 @@ class FullyBufferedOutput(_buf: Array[Byte], _bigEndian: Boolean, _start: Int, _
 
 class FlushingBufferedOutput(_buf: Array[Byte], _bigEndian: Boolean, _start: Int, _pos: Int, _lim: Int,
   _initialBufferSize: Int, _fixed: Boolean, _totalLimit: Long, out: OutputStream)
-  extends RootBufferedOutput(_buf, _bigEndian, _start, _pos, _lim, _initialBufferSize, _fixed, _totalLimit) {
+  extends CacheRootBufferedOutput(_buf, _bigEndian, _start, _pos, _lim, _initialBufferSize, _fixed, _totalLimit) {
 
   private[perfio] def flushUpstream(): Unit = out.flush()
 
@@ -497,7 +581,7 @@ class FlushingBufferedOutput(_buf: Array[Byte], _bigEndian: Boolean, _start: Int
         if(blen < initialBufferSize/2 && maybeMergeToRight(b)) ()
         else if(blen > 0) writeToOutput(b.buf, b.start, blen)
       }
-      unlink(b)
+      b.unlink()
     }
     val len = pos-start
     if((forceFlush && len > 0) || len > initialBufferSize/2) {

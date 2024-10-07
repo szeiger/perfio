@@ -101,6 +101,32 @@ class BufferedOutputTest(_name: String, create: TestData => (BufferedOutput, () 
     checker()
   }
 
+  @Test def sub(): Unit = {
+    val (bo1, checker) = create(viewTestData)
+    val cnt1 = new Counter(bo1)
+    for(i <- 0 until count) {
+      //println("****** "+i)
+      cnt1(0)
+      val bo2 = bo1.sub()
+      val cnt2 = new Counter(bo2)
+      cnt1(0)
+      cnt2(0)
+      bo2.int8(i.toByte)
+      cnt2(1)
+      bo2.int32(i+2)
+      cnt2(4)
+      bo2.int64(i+3)
+      cnt2(8)
+      bo1.int32(13)
+      cnt1(4)
+      cnt2(0)
+      bo2.close()
+      assertException[IOException](bo2.int8(0))
+      cnt1(bo2.totalBytesWritten.toInt)
+    }
+    checker()
+  }
+
   private def testFixed(padLeft: Int, padRight: Int): Unit = {
     val buf = new Array[Byte](count*13 + padLeft + padRight)
     val (bo, checker) = testData.createFixedBufferedOutput(buf, padLeft, count*13)
