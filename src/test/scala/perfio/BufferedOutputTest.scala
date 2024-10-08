@@ -127,5 +127,6 @@ object BufferedOutputTest {
     Array[Any]("baos_64", (_: TestData).createBufferedOutputToOutputStream(64)),
     Array[Any]("baos_32768", (_: TestData).createBufferedOutputToOutputStream(32768)),
     Array[Any]("growing_64", (_: TestData).createGrowingBufferedOutput(64)),
+    Array[Any]("fixed_32768", (_: TestData).createFixedBufferedOutput(new Array[Byte](32768))),
   ).asJava
 }

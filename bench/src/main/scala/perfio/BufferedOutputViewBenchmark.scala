@@ -108,37 +108,37 @@ class BufferedOutputViewBenchmark extends BenchUtil {
     out.flush()
   }
 
-//  @Benchmark
-//  def dataOutputStream_direct_toFixedBAOS(bh: Blackhole): Unit = {
-//    val bout = new MyByteArrayOutputStream(byteSize)
-//    val out = new DataOutputStream(bout)
-//    writeDirectTo(out)
-//    assert(bout.getSize == byteSize)
-//    bh.consume(bout.getSize)
-//    bh.consume(bout.getBuffer)
-//  }
-//
-//  @Benchmark
-//  def dataOutputStream_nested_toFixedBAOS(bh: Blackhole): Unit = {
-//    val bout = new MyByteArrayOutputStream(byteSize)
-//    val out = new DataOutputStream(bout)
-//    writeNestedTo(out)
-//    assert(bout.getSize == byteSize)
-//    bh.consume(bout.getSize)
-//    bh.consume(bout.getBuffer)
-//  }
-//
-//  @Benchmark
-//  def bufferedOutput_direct_toFixedBAOS(bh: Blackhole): Unit = {
-//    val bout = new MyByteArrayOutputStream(byteSize)
-//    val out = BufferedOutput(bout)
-//    writeDirectTo(out)
-//    bh.consume(bout.getSize)
-//    bh.consume(bout.getBuffer)
-//  }
+  @Benchmark
+  def array_DataOutputStream_direct_preallocated(bh: Blackhole): Unit = {
+    val bout = new MyByteArrayOutputStream(byteSize)
+    val out = new DataOutputStream(bout)
+    writeDirectTo(out)
+    assert(bout.getSize == byteSize)
+    bh.consume(bout.getSize)
+    bh.consume(bout.getBuffer)
+  }
 
   @Benchmark
-  def bufferedOutput_reserve_toFixedBAOS(bh: Blackhole): Unit = {
+  def array_DataOutputStream_nested_preallocated(bh: Blackhole): Unit = {
+    val bout = new MyByteArrayOutputStream(byteSize)
+    val out = new DataOutputStream(bout)
+    writeNestedTo(out)
+    assert(bout.getSize == byteSize)
+    bh.consume(bout.getSize)
+    bh.consume(bout.getBuffer)
+  }
+
+  @Benchmark
+  def array_FlushingBufferedOutput_direct_preallocated(bh: Blackhole): Unit = {
+    val bout = new MyByteArrayOutputStream(byteSize)
+    val out = BufferedOutput(bout)
+    writeDirectTo(out)
+    bh.consume(bout.getSize)
+    bh.consume(bout.getBuffer)
+  }
+
+  @Benchmark
+  def array_FlushingBufferedOutput_reserve_preallocated(bh: Blackhole): Unit = {
     val bout = new MyByteArrayOutputStream(byteSize)
     val out = BufferedOutput(bout)
     writeReserveTo(out)
@@ -147,11 +147,27 @@ class BufferedOutputViewBenchmark extends BenchUtil {
   }
 
   @Benchmark
-  def bufferedOutput_defer_toFixedBAOS(bh: Blackhole): Unit = {
+  def array_FlushingBufferedOutput_defer_preallocated(bh: Blackhole): Unit = {
     val bout = new MyByteArrayOutputStream(byteSize)
     val out = BufferedOutput(bout)
     writeDeferTo(out)
     bh.consume(bout.getSize)
     bh.consume(bout.getBuffer)
+  }
+
+  @Benchmark
+  def array_FullyBufferedOutput_reserve_fixed(bh: Blackhole): Unit = {
+    val out = BufferedOutput.fixed(new Array[Byte](byteSize))
+    writeReserveTo(out)
+    bh.consume(out.getBuffer)
+    bh.consume(out.getSize)
+  }
+
+  @Benchmark
+  def array_FullyBufferedOutput_defer_fixed(bh: Blackhole): Unit = {
+    val out = BufferedOutput.fixed(new Array[Byte](byteSize))
+    writeDeferTo(out)
+    bh.consume(out.getBuffer)
+    bh.consume(out.getSize)
   }
 }

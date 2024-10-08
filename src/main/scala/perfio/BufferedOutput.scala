@@ -19,10 +19,8 @@ object BufferedOutput {
     new FullyBufferedOutput(buf, byteOrder == ByteOrder.BIG_ENDIAN, 0, 0, buf.length, initialBufferSize, false)
   }
 
-  //TODO make this work with block merging or remove the method?
-  def fixed(buf: Array[Byte], start: Int = 0, len: Int = -1, byteOrder: ByteOrder = ByteOrder.BIG_ENDIAN, initialBufferSize: Int = 32768): BufferedOutput = {
+  def fixed(buf: Array[Byte], start: Int = 0, len: Int = -1, byteOrder: ByteOrder = ByteOrder.BIG_ENDIAN, initialBufferSize: Int = 32768): FullyBufferedOutput =
     new FullyBufferedOutput(buf, byteOrder == ByteOrder.BIG_ENDIAN, start, start, if(len == -1) buf.length else len+start, initialBufferSize, true)
-  }
 
   private[this] val MinBufferSize = 16
 
@@ -192,9 +190,9 @@ abstract class BufferedOutput(
   private[this] def growBufferClear(count: Int): Unit = {
     val tlim = ((totalLimit - totalBytesWritten) min count).toInt
     val buflen = BufferUtil.growBuffer(buf.length, tlim, 1)
-    //println(s"$show.growBufferClear($count): $lim, $buflen")
+    //println(s"$show.growBufferClear($count): ${buf.length} -> $buflen")
     if(buflen > buf.length) buf = new Array[Byte](buflen)
-    lim = tlim min buf.length
+    lim = buf.length
     pos = 0
     start = 0
     unshare()
@@ -203,9 +201,9 @@ abstract class BufferedOutput(
   private[this] def growBufferCopy(count: Int): Unit = {
     val tlim = ((totalLimit - totalBytesWritten) min (pos + count)).toInt
     val buflen = BufferUtil.growBuffer(buf.length, tlim, 1)
-    //println(s"$show.growBufferCopy($count): $buflen")
+    //println(s"$show.growBufferCopy($count): ${buf.length} -> $buflen")
     if(buflen > buf.length) buf = Arrays.copyOf(buf, buflen)
-    lim = tlim min buf.length
+    lim = buf.length
     unshare()
   }
 
@@ -227,10 +225,16 @@ abstract class BufferedOutput(
   }
 
   /** Unlink this block and return it to the cache. */
-  private[perfio] def unlink(): Unit = {
+  private[perfio] def unlinkAndReturn(): Unit = {
     prev.next = next
     next.prev = prev
     cacheRoot.returnToCache(this)
+  }
+
+  /** Unlink this block. */
+  private[perfio] def unlinkOnly(): Unit = {
+    prev.next = next
+    next.prev = prev
   }
 
   /** Flush and unlink all closed blocks and optionally flush the root block. Must only be called on the root block. */
@@ -449,88 +453,67 @@ abstract class CacheRootBufferedOutput(_buf: Array[Byte], _bigEndian: Boolean, _
 class FullyBufferedOutput(_buf: Array[Byte], _bigEndian: Boolean, _start: Int, _pos: Int, _lim: Int, _initialBufferSize: Int, _fixed: Boolean)
   extends CacheRootBufferedOutput(_buf, _bigEndian, _start, _pos, _lim, _initialBufferSize, _fixed, Long.MaxValue) {
 
+  private var outbuf: Array[Byte] = null
+  private var outstart, outpos: Int = 0
+
   private[perfio] def flushBlocks(forceFlush: Boolean): Unit = {
     while(next ne this) {
       val b = next
       if(!b.closed) return
-      if(b.sharing == SHARING_LEFT) {
-        val blen = b.pos - b.start
-        if(blen > 0) {
+      val blen = b.pos - b.start
+      if(blen > 0) {
+        if(b.sharing == SHARING_LEFT) {
           val n = b.next
           n.start = b.start
           n.totalFlushed -= blen
-        }
-      } else mergeBuffers(b)
-      b.unlink()
+          b.unlinkAndReturn()
+        } else flushSingle(b, true)
+      } else b.unlinkAndReturn()
+    }
+    if(forceFlush) {
+
     }
   }
 
-//  private[this] def mergeShared(b: BufferedOutput): Boolean = {
-//    if(b.sharing == SHARING_LEFT) {
-//      val blen = b.pos - b.start
-//      if(blen > 0) {
-//        val n = b.next
-//        if(n.buf eq b.buf)
-//        val ns = b.nextShared
-//        ns.start = b.start
-//        ns.totalFlushed -= blen
-//      }
-//      b.unlink()
-//    } else true
-//  }
-
-  private[this] def mergeBuffers(b: BufferedOutput): Unit = {
-    //println(s"mergeBuffers ${b.show}, ${b.next.show}")
-    assert(b.next.sharing != SHARING_LEFT) //TODO support this
-    assert(!b.fixed)
-    assert(!b.next.fixed)
-    val n = b.next
+  private[this] def flushSingle(b: BufferedOutput, unlink: Boolean): Unit = {
     val blen = b.pos - b.start
-    val ntotal = n.lim - n.start
-    if(b.buf.length - b.pos < ntotal) {
-      if(b.pos == b.start) {
-        val buflen = BufferUtil.growBuffer(b.buf.length, ntotal, 1)
-        b.buf = new Array[Byte](buflen)
-        b.lim -= b.start
-        b.pos = 0
-        b.start = 0
-      } else {
-        val buflen = BufferUtil.growBuffer(b.buf.length, b.pos + ntotal, 1)
-        b.buf = Arrays.copyOf(b.buf, buflen)
+    if(outbuf == null) {
+      outbuf = b.buf
+      outstart = b.start
+      outpos = b.pos
+      if(unlink) b.unlinkOnly()
+    } else {
+      val tot = totalBytesWritten
+      if((outbuf.length - outpos) < tot) {
+        if(tot + outpos > Int.MaxValue) throw new IOException("Buffer exceeds maximum array length")
+        growOutBuffer((tot + outpos).toInt)
       }
+      System.arraycopy(b.buf, b.start, outbuf, outpos, blen)
+      outpos += blen
+      if(unlink) b.unlinkAndReturn()
     }
-
-    //println(s"n before: ${n.show}")
-    System.arraycopy(n.buf, n.start, b.buf, b.pos, ntotal)
-    val noff = b.pos - n.start
-    val tmpbuf = n.buf
-    n.buf = b.buf
-    n.pos += noff
-    n.lim += noff
-    n.start = b.start
-    n.totalFlushed -= blen
-    b.buf = tmpbuf
-    //println(s"n after: ${n.show}")
-
-    //b.mergeToRight()
-    b.unshare()
   }
 
-  //TODO support prefix blocks
+  private[this] def growOutBuffer(target: Int): Unit = {
+    val buflen = BufferUtil.growBuffer(outbuf.length, target, 1)
+    //println(s"Growing outbuf from ${outbuf.length} to $buflen based on $target")
+    if(buflen > outbuf.length) outbuf = Arrays.copyOf(outbuf, buflen)
+  }
 
   private[perfio] def flushUpstream(): Unit = ()
 
-  def toByteArray: Array[Byte] = {
-    val b = getBuffer
-    Arrays.copyOf(b, pos)
+  def copyToByteArray: Array[Byte] = {
+    flushSingle(this, false)
+    if(outbuf != null && outpos > 0) Arrays.copyOf(outbuf, outpos)
+    else new Array[Byte](0)
   }
 
-  def writeBytes(out: Array[Byte]): Unit = {
-    val b = getBuffer
-    System.arraycopy(b, 0, out, 0, pos)
+  def getBuffer: Array[Byte] = {
+    flushSingle(this, false)
+    outbuf
   }
-  def getBuffer = buf
-  def getSize = pos
+
+  def getSize = outpos
 }
 
 
@@ -569,7 +552,7 @@ class FlushingBufferedOutput(_buf: Array[Byte], _bigEndian: Boolean, _start: Int
         if(blen < initialBufferSize/2 && maybeMergeToRight(b)) ()
         else if(blen > 0) writeToOutput(b.buf, b.start, blen)
       }
-      b.unlink()
+      b.unlinkAndReturn()
     }
     val len = pos-start
     if((forceFlush && len > 0) || len > initialBufferSize/2) {

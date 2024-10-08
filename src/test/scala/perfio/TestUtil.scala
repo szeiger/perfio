@@ -73,7 +73,7 @@ class TestData(val bytes: Array[Byte], val name: String, owner: Class[_]) {
     val bo = BufferedOutput.growing(initialBufferSize = initialBufferSize)
     val checker = () => {
       bo.flush()
-      val a = bo.toByteArray
+      val a = bo.copyToByteArray
       Assert.assertArrayEquals(bytes, a)
     }
     (bo, checker)
@@ -82,9 +82,10 @@ class TestData(val bytes: Array[Byte], val name: String, owner: Class[_]) {
     val bo = BufferedOutput.fixed(buf, start, len)
     val checker = () => {
       bo.flush()
-      Assert.assertArrayEquals("Array slice should match", bytes, buf.slice(start, start+len))
+      val checkLen = bo.totalBytesWritten.toInt
+      Assert.assertArrayEquals("Array slice should match", bytes, buf.slice(start, start+checkLen))
       Assert.assertArrayEquals("Array prefix should be empty", new Array[Byte](start), buf.slice(0, start))
-      Assert.assertArrayEquals("Array suffix should be empty", new Array[Byte](buf.length-start-len), buf.slice(start + len, buf.length))
+      Assert.assertArrayEquals("Array suffix should be empty", new Array[Byte](buf.length-start-checkLen), buf.slice(start + checkLen, buf.length))
     }
     (bo, checker)
   }
