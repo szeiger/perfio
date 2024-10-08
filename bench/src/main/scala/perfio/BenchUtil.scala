@@ -1,6 +1,6 @@
 package perfio
 
-import java.io.{File, FileOutputStream}
+import java.io.{ByteArrayOutputStream, File, FileOutputStream}
 import java.lang.foreign.{Arena, MemorySegment, ValueLayout}
 
 class BenchUtil {
@@ -23,4 +23,9 @@ class BenchUtil {
     MemorySegment.copy(testData, 0, m, ValueLayout.JAVA_BYTE, 0, testData.length)
     m
   }
+}
+
+class MyByteArrayOutputStream(capacity: Int = 32768) extends ByteArrayOutputStream(capacity) {
+  def getBuffer = buf
+  def getSize = count
 }

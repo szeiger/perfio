@@ -12,7 +12,7 @@ import java.io.{EOFException, IOException}
 class BufferedOutputTest(_name: String, create: TestData => (BufferedOutput, () => Unit)) extends TestUtil {
   val count = 1000
 
-  lazy val testData = createTestData("small") { dout =>
+  lazy val numTestData = createTestData("num") { dout =>
     for(i <- 0 until count) {
       dout.writeByte(i)
       dout.writeInt(i+2)
@@ -20,7 +20,7 @@ class BufferedOutputTest(_name: String, create: TestData => (BufferedOutput, () 
     }
   }
 
-  lazy val viewTestData = createTestData("small") { dout =>
+  lazy val viewTestData = createTestData("view") { dout =>
     for(i <- 0 until count) {
       dout.writeInt(13)
       dout.writeByte(i)
@@ -29,8 +29,15 @@ class BufferedOutputTest(_name: String, create: TestData => (BufferedOutput, () 
     }
   }
 
-  @Test def simple(): Unit = {
-    val (bo, checker) = create(testData)
+  lazy val stringTestData = createTestData("string") { dout =>
+    for(i <- 0 until count) {
+      val s = "abcdefghijklmnopqrstuvwxyz"
+      dout.writeUTF(s)
+    }
+  }
+
+  @Test def num(): Unit = {
+    val (bo, checker) = create(numTestData)
     assertEquals(0L, bo.totalBytesWritten)
     for(i <- 0 until count) {
       bo.int8(i.toByte)
@@ -38,6 +45,20 @@ class BufferedOutputTest(_name: String, create: TestData => (BufferedOutput, () 
       bo.int64(i+3)
     }
     assertEquals(count * 13, bo.totalBytesWritten)
+    checker()
+  }
+
+  @Test def string(): Unit = {
+    val (bo, checker) = create(stringTestData)
+    val cnt = new Counter(bo)
+    for(i <- 0 until count) {
+      cnt(0)
+      val s = "abcdefghijklmnopqrstuvwxyz"
+      bo.int16(s.length.toShort)
+      cnt(2)
+      bo.string(s)
+      cnt(s.length)
+    }
     checker()
   }
 
@@ -103,7 +124,7 @@ class BufferedOutputTest(_name: String, create: TestData => (BufferedOutput, () 
 
   private def testFixed(padLeft: Int, padRight: Int): Unit = {
     val buf = new Array[Byte](count*13 + padLeft + padRight)
-    val (bo, checker) = testData.createFixedBufferedOutput(buf, padLeft, count*13)
+    val (bo, checker) = numTestData.createFixedBufferedOutput(buf, padLeft, count*13)
     assertEquals(0L, bo.totalBytesWritten)
     for(i <- 0 until count) {
       bo.int8(i.toByte)

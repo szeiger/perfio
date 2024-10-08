@@ -1,12 +1,13 @@
 package perfio
 
 import java.io.{EOFException, IOException, OutputStream}
-import java.lang.invoke.{MethodHandles, VarHandle}
-import java.nio.{ByteBuffer, ByteOrder}
+import java.lang.invoke.MethodHandles
+import java.nio.ByteOrder
 import java.util.Arrays
 import scala.reflect.ClassTag
-
 import BufferedOutput.{SHARING_EXCLUSIVE, SHARING_LEFT, SHARING_RIGHT}
+
+import java.nio.charset.{Charset, StandardCharsets}
 
 object BufferedOutput {
   def apply(out: OutputStream, byteOrder: ByteOrder = ByteOrder.BIG_ENDIAN, initialBufferSize: Int = 32768): BufferedOutput = {
@@ -137,6 +138,48 @@ abstract class BufferedOutput(
     val p = fwd(8)
     (if(bigEndian) BufferedOutput.DOUBLE_BIG else BufferedOutput.DOUBLE_LITTLE).set(buf, p, d)
     this
+  }
+
+  def bytes(b: Array[Byte], off: Int, len: Int): this.type = {
+    val p = fwd(len)
+    System.arraycopy(b, off, buf, p, len)
+    this
+  }
+
+  def bytes(b: Array[Byte]): this.type = bytes(b, 0, b.length)
+
+  def string(s: String, charset: Charset = StandardCharsets.UTF_8): Int = {
+    if(charset eq StandardCharsets.ISO_8859_1) {
+      val len = s.length
+      if(len > 0) {
+        val p = fwd(len)
+        s.getBytes(0, len, buf, p)
+      }
+      len
+    } else {
+      val b = s.getBytes(charset)
+      bytes(b)
+      b.length
+    }
+  }
+
+  def zstring(s: String, charset: Charset = StandardCharsets.UTF_8): Int = {
+    if(charset eq StandardCharsets.ISO_8859_1) {
+      val len = s.length
+      if(len > 0) {
+        val p = fwd(len + 1)
+        s.getBytes(0, len, buf, p)
+        buf(p + len) = 0
+      } else int8(0)
+      len + 1
+    } else {
+      val b = s.getBytes(charset)
+      val len = b.length
+      val p = fwd(len + 1)
+      System.arraycopy(b, 0, buf, p, b.length)
+      buf(p + len) = 0
+      len + 1
+    }
   }
 
   private[this] def flushAndGrow(count: Int): Unit = {

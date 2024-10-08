@@ -131,8 +131,3 @@ class BufferedOutputNumBenchmark extends BenchUtil {
     out.close()
   }
 }
-
-class MyByteArrayOutputStream(capacity: Int = 32768) extends ByteArrayOutputStream(capacity) {
-  def getBuffer = buf
-  def getSize = count
-}
