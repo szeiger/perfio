@@ -1,6 +1,6 @@
 package perfio
 
-import java.io.{EOFException, IOException, OutputStream}
+import java.io.{EOFException, Flushable, IOException, OutputStream}
 import java.lang.invoke.MethodHandles
 import java.nio.ByteOrder
 import java.util.Arrays
@@ -66,7 +66,7 @@ abstract class BufferedOutput(
   private[perfio] var lim: Int,
   private[perfio] val fixed: Boolean, // buffer cannot be reallocated or grown beyond lim
   private[perfio] var totalLimit: Long,
-) extends AutoCloseable {
+) extends AutoCloseable with Flushable {
 
   private[perfio] var totalFlushed = 0L
   private[perfio] var next, prev: BufferedOutput = this // prefix list as a double-linked ring
@@ -104,6 +104,21 @@ abstract class BufferedOutput(
     pos += count
     p
   }
+
+  private[perfio] def tryFwd(count: Int): Int = {
+    if(available < count) flushAndGrow(count)
+    val p = pos
+    pos += (count min available)
+    p
+  }
+
+  def write(a: Array[Byte], off: Int, len: Int): this.type = {
+    val p = fwd(len)
+    System.arraycopy(a, off, buf, p, len)
+    this
+  }
+
+  def write(a: Array[Byte]): this.type = write(a, 0, a.length)
 
   final def int8(b: Byte): this.type = {
     val p = fwd(1)
@@ -160,37 +175,18 @@ abstract class BufferedOutput(
   def bytes(b: Array[Byte]): this.type = bytes(b, 0, b.length)
 
   def string(s: String, charset: Charset = StandardCharsets.UTF_8): Int = {
-    if(charset eq StandardCharsets.ISO_8859_1) {
-      val len = s.length
-      if(len > 0) {
-        val p = fwd(len)
-        s.getBytes(0, len, buf, p)
-      }
-      len
-    } else {
-      val b = s.getBytes(charset)
-      bytes(b)
-      b.length
-    }
+    val b = s.getBytes(charset)
+    bytes(b)
+    b.length
   }
 
   def zstring(s: String, charset: Charset = StandardCharsets.UTF_8): Int = {
-    if(charset eq StandardCharsets.ISO_8859_1) {
-      val len = s.length
-      if(len > 0) {
-        val p = fwd(len + 1)
-        s.getBytes(0, len, buf, p)
-        buf(p + len) = 0
-      } else int8(0)
-      len + 1
-    } else {
-      val b = s.getBytes(charset)
-      val len = b.length
-      val p = fwd(len + 1)
-      System.arraycopy(b, 0, buf, p, b.length)
-      buf(p + len) = 0
-      len + 1
-    }
+    val b = s.getBytes(charset)
+    val len = b.length
+    val p = fwd(len + 1)
+    System.arraycopy(b, 0, buf, p, b.length)
+    buf(p + len) = 0
+    len + 1
   }
 
   private[this] def flushAndGrow(count: Int): Unit = {
@@ -527,9 +523,6 @@ class FullyBufferedOutput(_buf: Array[Byte], _bigEndian: Boolean, _start: Int, _
           b.unlinkAndReturn()
         } else flushSingle(b, true)
       } else b.unlinkAndReturn()
-    }
-    if(forceFlush) {
-
     }
   }
 
