@@ -5,6 +5,7 @@ import org.openjdk.jmh.infra._
 
 import java.io._
 import java.nio.ByteBuffer
+import java.nio.file.Paths
 import java.util.concurrent.TimeUnit
 
 @BenchmarkMode(Array(Mode.AverageTime))
@@ -27,7 +28,7 @@ class BufferedOutputNumBenchmark extends BenchUtil {
       out.writeLong(i+101)
       i += 1
     }
-    out.flush()
+    out.close()
   }
 
   private[this] def writeTo(out: BufferedOutput): Unit = {
@@ -38,7 +39,7 @@ class BufferedOutputNumBenchmark extends BenchUtil {
       out.int64(i+101)
       i += 1
     }
-    out.flush()
+    out.close()
   }
 
   @Benchmark
@@ -82,7 +83,7 @@ class BufferedOutputNumBenchmark extends BenchUtil {
     val out = BufferedOutput.growing()
     writeTo(out)
     bh.consume(out.getBuffer)
-    bh.consume(out.getSize)
+    bh.consume(out.getLength)
   }
 
   @Benchmark
@@ -90,7 +91,7 @@ class BufferedOutputNumBenchmark extends BenchUtil {
     val out = BufferedOutput.growing(initialBufferSize = count*13)
     writeTo(out)
     bh.consume(out.getBuffer)
-    bh.consume(out.getSize)
+    bh.consume(out.getLength)
   }
 
   @Benchmark
@@ -98,7 +99,7 @@ class BufferedOutputNumBenchmark extends BenchUtil {
     val out = BufferedOutput.fixed(new Array[Byte](count*13))
     writeTo(out)
     bh.consume(out.getBuffer)
-    bh.consume(out.getSize)
+    bh.consume(out.getLength)
   }
 
   @Benchmark
@@ -125,8 +126,7 @@ class BufferedOutputNumBenchmark extends BenchUtil {
 
   @Benchmark
   def file_FlushingBufferedOutput(bh: Blackhole): Unit = {
-    val fout = new FileOutputStream("/dev/null")
-    val out = BufferedOutput(fout)
+    val out = BufferedOutput.ofFile(Paths.get("/dev/null"))
     writeTo(out)
     out.close()
   }

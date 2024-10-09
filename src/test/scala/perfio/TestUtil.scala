@@ -63,7 +63,7 @@ class TestData(val bytes: Array[Byte], val name: String, owner: Class[_]) {
     val bout = new ByteArrayOutputStream()
     val bo = BufferedOutput(bout, initialBufferSize = initialBufferSize)
     val checker = () => {
-      bo.flush()
+      bo.close()
       val a = bout.toByteArray
       Assert.assertArrayEquals(bytes, a)
     }
@@ -72,7 +72,7 @@ class TestData(val bytes: Array[Byte], val name: String, owner: Class[_]) {
   def createGrowingBufferedOutput(initialBufferSize: Int = 64): (BufferedOutput, () => Unit) = {
     val bo = BufferedOutput.growing(initialBufferSize = initialBufferSize)
     val checker = () => {
-      bo.flush()
+      bo.close()
       val a = bo.copyToByteArray
       Assert.assertArrayEquals(bytes, a)
     }
@@ -81,7 +81,7 @@ class TestData(val bytes: Array[Byte], val name: String, owner: Class[_]) {
   def createFixedBufferedOutput(buf: Array[Byte], start: Int = 0, len: Int = -1): (BufferedOutput, () => Unit) = {
     val bo = BufferedOutput.fixed(buf, start, len)
     val checker = () => {
-      bo.flush()
+      bo.close()
       val checkLen = bo.totalBytesWritten.toInt
       Assert.assertArrayEquals("Array slice should match", bytes, buf.slice(start, start+checkLen))
       Assert.assertArrayEquals("Array prefix should be empty", new Array[Byte](start), buf.slice(0, start))

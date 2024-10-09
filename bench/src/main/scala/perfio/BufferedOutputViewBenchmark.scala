@@ -4,6 +4,7 @@ import org.openjdk.jmh.annotations._
 import org.openjdk.jmh.infra._
 
 import java.io._
+import java.nio.file.Paths
 import java.util.concurrent.TimeUnit
 
 @BenchmarkMode(Array(Mode.AverageTime))
@@ -32,7 +33,7 @@ class BufferedOutputViewBenchmark extends BenchUtil {
       }
       i += 1
     }
-    out.flush()
+    out.close()
   }
 
   private[this] def writeNestedTo(out: DataOutputStream): Unit = {
@@ -52,7 +53,7 @@ class BufferedOutputViewBenchmark extends BenchUtil {
       b2.reset()
       i += 1
     }
-    out.flush()
+    out.close()
   }
 
   private[this] def writeDirectTo(out: BufferedOutput): Unit = {
@@ -68,7 +69,7 @@ class BufferedOutputViewBenchmark extends BenchUtil {
       }
       i += 1
     }
-    out.flush()
+    out.close()
   }
 
   private[this] def writeReserveTo(out: BufferedOutput): Unit = {
@@ -87,7 +88,7 @@ class BufferedOutputViewBenchmark extends BenchUtil {
       o2.close()
       i += 1
     }
-    out.flush()
+    out.close()
   }
 
   private[this] def writeDeferTo(out: BufferedOutput): Unit = {
@@ -105,7 +106,7 @@ class BufferedOutputViewBenchmark extends BenchUtil {
       o2.close()
       i += 1
     }
-    out.flush()
+    out.close()
   }
 
   @Benchmark
@@ -160,7 +161,7 @@ class BufferedOutputViewBenchmark extends BenchUtil {
     val out = BufferedOutput.fixed(new Array[Byte](byteSize))
     writeReserveTo(out)
     bh.consume(out.getBuffer)
-    bh.consume(out.getSize)
+    bh.consume(out.getLength)
   }
 
   @Benchmark
@@ -168,6 +169,45 @@ class BufferedOutputViewBenchmark extends BenchUtil {
     val out = BufferedOutput.fixed(new Array[Byte](byteSize))
     writeDeferTo(out)
     bh.consume(out.getBuffer)
-    bh.consume(out.getSize)
+    bh.consume(out.getLength)
+  }
+
+  @Benchmark
+  def file_DataOutputStream_direct(bh: Blackhole): Unit = {
+    val fout = new FileOutputStream("/dev/null")
+    val bout = new BufferedOutputStream(fout)
+    val out = new DataOutputStream(bout)
+    writeDirectTo(out)
+    out.close()
+  }
+
+  @Benchmark
+  def file_DataOutputStream_nested(bh: Blackhole): Unit = {
+    val fout = new FileOutputStream("/dev/null")
+    val bout = new BufferedOutputStream(fout)
+    val out = new DataOutputStream(bout)
+    writeNestedTo(out)
+    out.close()
+  }
+
+  @Benchmark
+  def file_FlushingBufferedOutput_direct(bh: Blackhole): Unit = {
+    val out = BufferedOutput.ofFile(Paths.get("/dev/null"))
+    writeDirectTo(out)
+    out.close()
+  }
+
+  @Benchmark
+  def file_FlushingBufferedOutput_reserve(bh: Blackhole): Unit = {
+    val out = BufferedOutput.ofFile(Paths.get("/dev/null"))
+    writeReserveTo(out)
+    out.close()
+  }
+
+  @Benchmark
+  def file_FlushingBufferedOutput_defer(bh: Blackhole): Unit = {
+    val out = BufferedOutput.ofFile(Paths.get("/dev/null"))
+    writeDeferTo(out)
+    out.close()
   }
 }

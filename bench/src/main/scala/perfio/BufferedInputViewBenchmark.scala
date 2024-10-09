@@ -101,33 +101,33 @@ class BufferedInputViewBenchmark extends BenchUtil {
     din.close()
   }
 
-//  @Benchmark
-//  def array_LimitedInputStream(bh: Blackhole): Unit = runDataInputStream(bh, new ByteArrayInputStream(testData))
-//  @Benchmark
-//  def array_fromInputStream_direct(bh: Blackhole): Unit = runDirect(bh, BufferedInput(new ByteArrayInputStream(testData)))
-//  @Benchmark
-//  def array_fromInputStream_counting(bh: Blackhole): Unit = runCounting(bh, BufferedInput(new ByteArrayInputStream(testData)))
-//  @Benchmark
-//  def array_fromInputStream_view(bh: Blackhole): Unit = runView(bh, BufferedInput(new ByteArrayInputStream(testData)))
-//  @Benchmark
-//  def array_fromArray_direct(bh: Blackhole): Unit = runDirect(bh, BufferedInput.fromArray(testData))
-//  @Benchmark
-//  def array_fromArray_counting(bh: Blackhole): Unit = runCounting(bh, BufferedInput.fromArray(testData))
-//  @Benchmark
-//  def array_fromArray_view(bh: Blackhole): Unit = runView(bh, BufferedInput.fromArray(testData))
+  @Benchmark
+  def array_LimitedInputStream(bh: Blackhole): Unit = runDataInputStream(bh, new ByteArrayInputStream(testData))
+  @Benchmark
+  def array_fromInputStream_direct(bh: Blackhole): Unit = runDirect(bh, BufferedInput(new ByteArrayInputStream(testData)))
+  @Benchmark
+  def array_fromInputStream_counting(bh: Blackhole): Unit = runCounting(bh, BufferedInput(new ByteArrayInputStream(testData)))
+  @Benchmark
+  def array_fromInputStream_view(bh: Blackhole): Unit = runView(bh, BufferedInput(new ByteArrayInputStream(testData)))
+  @Benchmark
+  def array_fromArray_direct(bh: Blackhole): Unit = runDirect(bh, BufferedInput.fromArray(testData))
+  @Benchmark
+  def array_fromArray_counting(bh: Blackhole): Unit = runCounting(bh, BufferedInput.fromArray(testData))
+  @Benchmark
+  def array_fromArray_view(bh: Blackhole): Unit = runView(bh, BufferedInput.fromArray(testData))
 
-//  @Benchmark
-//  def mediumFile_LimitedInputStream(bh: Blackhole): Unit = runDataInputStream(bh, new BufferedInputStream(new FileInputStream(diskTestDataMedium)))
-//  @Benchmark
-//  def mediumFile_fromInputStream_direct(bh: Blackhole): Unit = runDirect(bh, BufferedInput(new BufferedInputStream(new FileInputStream(diskTestDataMedium))))
-//  @Benchmark
-//  def mediumFile_fromInputStream_counting(bh: Blackhole): Unit = runCounting(bh, BufferedInput(new BufferedInputStream(new FileInputStream(diskTestDataMedium))))
-//  @Benchmark
-//  def mediumFile_fromInputStream_view(bh: Blackhole): Unit = runView(bh, BufferedInput(new BufferedInputStream(new FileInputStream(diskTestDataMedium))))
+  @Benchmark
+  def mediumFile_LimitedInputStream(bh: Blackhole): Unit = runDataInputStream(bh, new BufferedInputStream(new FileInputStream(diskTestDataMedium)))
+  @Benchmark
+  def mediumFile_fromInputStream_direct(bh: Blackhole): Unit = runDirect(bh, BufferedInput(new BufferedInputStream(new FileInputStream(diskTestDataMedium))))
+  @Benchmark
+  def mediumFile_fromInputStream_counting(bh: Blackhole): Unit = runCounting(bh, BufferedInput(new BufferedInputStream(new FileInputStream(diskTestDataMedium))))
+  @Benchmark
+  def mediumFile_fromInputStream_view(bh: Blackhole): Unit = runView(bh, BufferedInput(new BufferedInputStream(new FileInputStream(diskTestDataMedium))))
   @Benchmark
   def mediumFile_mapped_direct(bh: Blackhole): Unit = runDirect(bh, BufferedInput.fromMappedFile(diskTestDataMedium.toPath))
-//  @Benchmark
-//  def mediumFile_mapped_counting(bh: Blackhole): Unit = runCounting(bh, BufferedInput.fromMappedFile(diskTestDataMedium.toPath))
+  @Benchmark
+  def mediumFile_mapped_counting(bh: Blackhole): Unit = runCounting(bh, BufferedInput.fromMappedFile(diskTestDataMedium.toPath))
   @Benchmark
   def mediumFile_mapped_view(bh: Blackhole): Unit = runView(bh, BufferedInput.fromMappedFile(diskTestDataMedium.toPath))
 }

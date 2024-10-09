@@ -6,6 +6,7 @@ import org.openjdk.jmh.infra._
 import java.io._
 import java.nio.ByteBuffer
 import java.nio.charset.Charset
+import java.nio.file.Paths
 import java.util.concurrent.TimeUnit
 
 @BenchmarkMode(Array(Mode.AverageTime))
@@ -36,7 +37,7 @@ class BufferedOutputStringBenchmark extends BenchUtil {
       out.write(stringData)
       i += 1
     }
-    out.flush()
+    out.close()
   }
 
   private[this] def writeTo(out: PrintStream): Unit = {
@@ -45,7 +46,7 @@ class BufferedOutputStringBenchmark extends BenchUtil {
       out.print(stringData)
       i += 1
     }
-    out.flush()
+    out.close()
   }
 
   private[this] def writeTo(out: BufferedOutput): Unit = {
@@ -54,109 +55,104 @@ class BufferedOutputStringBenchmark extends BenchUtil {
       out.string(stringData, cs)
       i += 1
     }
-    out.flush()
+    out.close()
   }
 
-//  @Benchmark
-//  def array_PrintStream_growing(bh: Blackhole): Unit = {
-//    val bout = new MyByteArrayOutputStream
-//    val out = new PrintStream(bout, false, cs)
-//    writeTo(out)
-//    bh.consume(bout.getSize)
-//    bh.consume(bout.getBuffer)
-//  }
-//
-//  @Benchmark
-//  def array_PrintStream_preallocated(bh: Blackhole): Unit = {
-//    val bout = new MyByteArrayOutputStream(totalLength)
-//    val out = new PrintStream(bout, false, cs)
-//    writeTo(out)
-//    bh.consume(bout.getSize)
-//    bh.consume(bout.getBuffer)
-//  }
-//
-//  @Benchmark
-//  def array_OutputStreamWriter_growing(bh: Blackhole): Unit = {
-//    val bout = new MyByteArrayOutputStream
-//    val out = new OutputStreamWriter(bout, cs)
-//    writeTo(out)
-//    bh.consume(bout.getSize)
-//    bh.consume(bout.getBuffer)
-//  }
-//
-//  @Benchmark
-//  def array_OutputStreamWriter_preallocated(bh: Blackhole): Unit = {
-//    val bout = new MyByteArrayOutputStream(totalLength)
-//    val out = new OutputStreamWriter(bout, cs)
-//    writeTo(out)
-//    bh.consume(bout.getSize)
-//    bh.consume(bout.getBuffer)
-//  }
-//
-//  @Benchmark
-//  def array_FlushingBufferedOutput_growing(bh: Blackhole): Unit = {
-//    val bout = new MyByteArrayOutputStream
-//    val out = BufferedOutput(bout)
-//    writeTo(out)
-//    bh.consume(bout.getSize)
-//    bh.consume(bout.getBuffer)
-//  }
-//
-//  @Benchmark
-//  def array_FlushingBufferedOutput_fixed(bh: Blackhole): Unit = {
-//    val bout = new MyByteArrayOutputStream(totalLength)
-//    val out = BufferedOutput(bout)
-//    writeTo(out)
-//    bh.consume(bout.getSize)
-//    bh.consume(bout.getBuffer)
-//  }
-//
-//  @Benchmark
-//  def array_FullyBufferedOutput_growing(bh: Blackhole): Unit = {
-//    val out = BufferedOutput.growing()
-//    writeTo(out)
-//    bh.consume(out.getBuffer)
-//    bh.consume(out.getSize)
-//  }
-//
-//  @Benchmark
-//  def array_FullyBufferedOutput_growing_preallocated(bh: Blackhole): Unit = {
-//    val out = BufferedOutput.growing(initialBufferSize = totalLength)
-//    writeTo(out)
-//    bh.consume(out.getBuffer)
-//    bh.consume(out.getSize)
-//  }
-//
-//  @Benchmark
-//  def array_FullyBufferedOutput_fixed(bh: Blackhole): Unit = {
-//    val out = BufferedOutput.fixed(new Array[Byte](totalLength))
-//    writeTo(out)
-//    bh.consume(out.getBuffer)
-//    bh.consume(out.getSize)
-//  }
-//
-//  @Benchmark
-//  def file_PrintStream(bh: Blackhole): Unit = {
-//    val fout = new FileOutputStream("/dev/null")
-//    //val bout = new BufferedOutputStream(fout)
-//    val out = new PrintStream(fout, false, cs)
-//    writeTo(out)
-//    out.close()
-//  }
+  @Benchmark
+  def array_PrintStream_growing(bh: Blackhole): Unit = {
+    val bout = new MyByteArrayOutputStream
+    val out = new PrintStream(bout, false, cs)
+    writeTo(out)
+    bh.consume(bout.getSize)
+    bh.consume(bout.getBuffer)
+  }
+
+  @Benchmark
+  def array_PrintStream_preallocated(bh: Blackhole): Unit = {
+    val bout = new MyByteArrayOutputStream(totalLength)
+    val out = new PrintStream(bout, false, cs)
+    writeTo(out)
+    bh.consume(bout.getSize)
+    bh.consume(bout.getBuffer)
+  }
+
+  @Benchmark
+  def array_OutputStreamWriter_growing(bh: Blackhole): Unit = {
+    val bout = new MyByteArrayOutputStream
+    val out = new OutputStreamWriter(bout, cs)
+    writeTo(out)
+    bh.consume(bout.getSize)
+    bh.consume(bout.getBuffer)
+  }
+
+  @Benchmark
+  def array_OutputStreamWriter_preallocated(bh: Blackhole): Unit = {
+    val bout = new MyByteArrayOutputStream(totalLength)
+    val out = new OutputStreamWriter(bout, cs)
+    writeTo(out)
+    bh.consume(bout.getSize)
+    bh.consume(bout.getBuffer)
+  }
+
+  @Benchmark
+  def array_FlushingBufferedOutput_growing(bh: Blackhole): Unit = {
+    val bout = new MyByteArrayOutputStream
+    val out = BufferedOutput(bout)
+    writeTo(out)
+    bh.consume(bout.getSize)
+    bh.consume(bout.getBuffer)
+  }
+
+  @Benchmark
+  def array_FlushingBufferedOutput_fixed(bh: Blackhole): Unit = {
+    val bout = new MyByteArrayOutputStream(totalLength)
+    val out = BufferedOutput(bout)
+    writeTo(out)
+    bh.consume(bout.getSize)
+    bh.consume(bout.getBuffer)
+  }
+
+  @Benchmark
+  def array_FullyBufferedOutput_growing(bh: Blackhole): Unit = {
+    val out = BufferedOutput.growing()
+    writeTo(out)
+    bh.consume(out.getBuffer)
+    bh.consume(out.getLength)
+  }
+
+  @Benchmark
+  def array_FullyBufferedOutput_growing_preallocated(bh: Blackhole): Unit = {
+    val out = BufferedOutput.growing(initialBufferSize = totalLength)
+    writeTo(out)
+    bh.consume(out.getBuffer)
+    bh.consume(out.getLength)
+  }
+
+  @Benchmark
+  def array_FullyBufferedOutput_fixed(bh: Blackhole): Unit = {
+    val out = BufferedOutput.fixed(new Array[Byte](totalLength))
+    writeTo(out)
+    bh.consume(out.getBuffer)
+    bh.consume(out.getLength)
+  }
+
+  @Benchmark
+  def file_PrintStream(bh: Blackhole): Unit = {
+    val fout = new FileOutputStream("/dev/null")
+    val out = new PrintStream(fout, false, cs)
+    writeTo(out)
+  }
 
   @Benchmark
   def file_FileWriter(bh: Blackhole): Unit = {
     val fout = new FileWriter("/dev/null", cs)
     val out = new BufferedWriter(fout)
     writeTo(out)
-    out.close()
   }
 
   @Benchmark
   def file_FlushingBufferedOutput(bh: Blackhole): Unit = {
-    val fout = new FileOutputStream("/dev/null")
-    val out = BufferedOutput(fout)
+    val out = BufferedOutput.ofFile(Paths.get("/dev/null"))
     writeTo(out)
-    out.close()
   }
 }

@@ -8,6 +8,7 @@ import scala.reflect.ClassTag
 import BufferedOutput.{SHARING_EXCLUSIVE, SHARING_LEFT, SHARING_RIGHT}
 
 import java.nio.charset.{Charset, StandardCharsets}
+import java.nio.file.{Files, OpenOption, Path}
 
 object BufferedOutput {
   def apply(out: OutputStream, byteOrder: ByteOrder = ByteOrder.BIG_ENDIAN, initialBufferSize: Int = 32768): BufferedOutput = {
@@ -22,6 +23,16 @@ object BufferedOutput {
 
   def fixed(buf: Array[Byte], start: Int = 0, len: Int = -1, byteOrder: ByteOrder = ByteOrder.BIG_ENDIAN, initialBufferSize: Int = 32768): FullyBufferedOutput =
     new FullyBufferedOutput(buf, byteOrder == ByteOrder.BIG_ENDIAN, start, start, if(len == -1) buf.length else len+start, initialBufferSize, true)
+
+  def ofFile(path: Path, byteOrder: ByteOrder, initialBufferSize: Int, option: OpenOption*): BufferedOutput = {
+    val out = Files.newOutputStream(path, option: _*)
+    apply(out, byteOrder, initialBufferSize)
+  }
+
+  def ofFile(path: Path, option: OpenOption*): BufferedOutput = {
+    val out = Files.newOutputStream(path, option: _*)
+    apply(out)
+  }
 
   private[this] val MinBufferSize = 16
 
@@ -286,6 +297,9 @@ abstract class BufferedOutput(
   /** Force flush to the upstream after flushBlocks. Must only be called on the root block. */
   private[perfio] def flushUpstream(): Unit
 
+  /** Called at the end of the first close(). */
+  protected def closeUpstream(): Unit = ()
+
   final def flush(): Unit = {
     checkState()
     if(prev eq root) {
@@ -294,23 +308,25 @@ abstract class BufferedOutput(
     }
   }
 
-  def close(): Unit = {
-    checkState()
-    if(!truncate) checkUnderflow()
-    closed = true
-    lim = pos
-    if(root eq this) {
-      var b = next
-      while(b ne this) {
-        if(!b.closed) {
-          if(!b.truncate) b.checkUnderflow()
-          b.closed = true
+  final def close(): Unit = {
+    if(!closed) {
+      if(!truncate) checkUnderflow()
+      closed = true
+      lim = pos
+      if(root eq this) {
+        var b = next
+        while(b ne this) {
+          if(!b.closed) {
+            if(!b.truncate) b.checkUnderflow()
+            b.closed = true
+          }
+          b = b.next
         }
-        b = b.next
+        flushBlocks(true)
+      } else {
+        if(prev eq root) root.flushBlocks(false)
       }
-      flushBlocks(true)
-    } else {
-      if(prev eq root) root.flushBlocks(false)
+      closeUpstream()
     }
   }
 
@@ -442,8 +458,7 @@ final class NestedBufferedOutput(_buf: Array[Byte], _fixed: Boolean, _cacheRoot:
 
   private[perfio] def flushUpstream(): Unit = ()
 
-  override def close(): Unit = {
-    super.close()
+  protected override def closeUpstream(): Unit = {
     if(parent != null) parent.appendNested(this)
   }
 }
@@ -543,20 +558,26 @@ class FullyBufferedOutput(_buf: Array[Byte], _bigEndian: Boolean, _start: Int, _
     if(buflen > outbuf.length) outbuf = Arrays.copyOf(outbuf, buflen)
   }
 
-  private[perfio] def flushUpstream(): Unit = ()
-
-  def copyToByteArray: Array[Byte] = {
+  protected override def closeUpstream(): Unit = {
     flushSingle(this, false)
-    if(outbuf != null && outpos > 0) Arrays.copyOf(outbuf, outpos)
-    else new Array[Byte](0)
   }
 
+  private[perfio] def flushUpstream(): Unit = ()
+
+  private[this] def checkClosed(): Unit =
+    if(!closed) throw new IOException("Cannot access buffer before closing")
+
+  def copyToByteArray: Array[Byte] = Arrays.copyOf(getBuffer, getLength)
+
   def getBuffer: Array[Byte] = {
-    flushSingle(this, false)
+    checkClosed()
     outbuf
   }
 
-  def getSize = outpos
+  def getLength = {
+    checkClosed()
+    outpos
+  }
 }
 
 
@@ -565,8 +586,6 @@ class FlushingBufferedOutput(_buf: Array[Byte], _bigEndian: Boolean, _start: Int
   extends CacheRootBufferedOutput(_buf, _bigEndian, _start, _pos, _lim, _initialBufferSize, _fixed, _totalLimit) {
 
   private[perfio] def flushUpstream(): Unit = out.flush()
-
-  private[perfio] def closeUpstream(): Unit = out.close()
 
   private[perfio] def flushBlocks(forceFlush: Boolean): Unit = {
     while(next ne this) {
