@@ -133,40 +133,19 @@ sealed abstract class BufferedInput protected (
     totalBuffered - available
   }
 
-//  def readFully(a: Array[Byte]): Unit = {
-//    var copied = a.length min available
-//    if(copied > 0) {
-//      System.arraycopy(buf, pos, a, 0, copied)
-//      pos += copied
-//    }
-//    var rem = a.length - copied
-//    while(rem > 0) {
-//      if(rem > bufReadLimit) {
-//        val r = in.read(a, copied, rem)
-//        if(r <= 0) throw new EOFException()
-//        totalBuffered += r
-//        rem -= r
-//        copied += r
-//      } else {
-//        ensure(rem)
-//        System.arraycopy(buf, pos, a, copied, rem)
-//        pos += rem
-//        return
-//      }
-//    }
-//  }
+  def bytes(a: Array[Byte], off: Int, len: Int): Unit
+
+  def bytes(len: Int): Array[Byte] = {
+    val a = new Array[Byte](len)
+    bytes(a, 0, len)
+    a
+  }
 
   /** Skip over n bytes, or until the end of the input if it occurs first.
    *
    * @return The number of skipped bytes. It is equal to the requested number unless the end of the input was reached.
    */
   def skip(bytes: Long): Long
-
-//  def readByteArray(len: Int): Array[Byte] = {
-//    val a = new Array[Byte](len)
-//    readFully(a)
-//    a
-//  }
 
   /** Read a non-terminated string of the specified encoded length. */
   def string(len: Int, charset: Charset = StandardCharsets.UTF_8): String
@@ -342,6 +321,28 @@ private class HeapBufferedInput(
     }
   }
 
+  def bytes(a: Array[Byte], off: Int, len: Int): Unit = {
+    val tot = totalBytesRead + len
+    if(tot < 0 || tot > totalReadLimit) throw new EOFException()
+    var copied = len min available
+    if(copied > 0) {
+      System.arraycopy(buf, pos, a, off, copied)
+      pos += copied
+    }
+    var rem = len - copied
+    while(rem >= minRead && in != null) {
+      val r = in.read(a, off + copied, rem)
+      if(r <= 0) throw new EOFException()
+      totalBuffered += r
+      copied += r
+      rem -= r
+    }
+    if(rem > 0) {
+      val p = fwd(rem)
+      System.arraycopy(buf, p, a, off + copied, rem)
+    }
+  }
+
   protected[this] def createEmptyView(): BufferedInput = new HeapBufferedInput(null, null, 0, 0, 0, in, minRead, this)
 
   def int8(): Byte = {
@@ -432,6 +433,11 @@ private class DirectBufferedInput(
         totalBuffered -= excessRead
       }
     }
+  }
+
+  def bytes(a: Array[Byte], off: Int, len: Int): Unit = {
+    val p = fwd(len)
+    bb.get(p, a, off, len)
   }
 
   protected[this] def createEmptyView(): BufferedInput = new DirectBufferedInput(null, 0, 0, 0L, ms, null, this, linebuf)
