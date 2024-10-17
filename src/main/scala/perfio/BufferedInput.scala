@@ -1,7 +1,7 @@
 package perfio
 
 import java.io.{EOFException, IOException, InputStream}
-import java.lang.foreign.MemorySegment
+import java.lang.foreign.{MemorySegment, ValueLayout}
 import java.nio.charset.{Charset, StandardCharsets}
 import java.nio.file.Path
 import java.nio.{ByteBuffer, ByteOrder}
@@ -14,28 +14,42 @@ object BufferedInput {
     new HeapBufferedInput(buf, bb, buf.length, buf.length, Long.MaxValue, in, buf.length/2, null)
   }
 
-  def fromArray(buf: Array[Byte], byteOrder: ByteOrder = ByteOrder.BIG_ENDIAN): BufferedInput = {
-    val bb = ForeignSupport.createByteBuffer(buf, byteOrder)
-    new HeapBufferedInput(buf, bb, 0, buf.length, Long.MaxValue, null, 0, null)
+  def fromArray(buf: Array[Byte]): BufferedInput = fromArray(buf, 0, buf.length, ByteOrder.BIG_ENDIAN)
+
+  def fromArray(buf: Array[Byte], byteOrder: ByteOrder): BufferedInput = fromArray(buf, 0, buf.length, byteOrder)
+
+  def fromArray(buf: Array[Byte], off: Int, len: Int): BufferedInput = fromArray(buf, off, len, ByteOrder.BIG_ENDIAN)
+
+  def fromArray(buf: Array[Byte], off: Int, len: Int, byteOrder: ByteOrder): BufferedInput = {
+    val bb = ForeignSupport.createByteBuffer(buf, byteOrder).position(off).limit(off+len)
+    new HeapBufferedInput(buf, bb, off, off+len, Long.MaxValue, null, 0, null)
   }
 
   def fromMemorySegment(ms: MemorySegment, closeable: AutoCloseable = null, order: ByteOrder = ByteOrder.BIG_ENDIAN): BufferedInput = {
     val len = ms.byteSize()
-    if(len > MaxDirectBufferSize) create(ms.asSlice(0, MaxDirectBufferSize).asByteBuffer().order(order), ms.byteSize(), ms, closeable)
-    else create(ms.asByteBuffer().order(order), ms.byteSize(), null, closeable)
+    if(len > MaxDirectBufferSize) create(ms.asSlice(0, MaxDirectBufferSize), ms, closeable, order)
+    else create(ms, ms, closeable, order)
+  }
+  private[this] def create(bbSegment: MemorySegment, ms: MemorySegment, closeable: AutoCloseable, order: ByteOrder): DirectBufferedInput = {
+    val bb = bbSegment.asByteBuffer().order(order)
+    new DirectBufferedInput(bb, bbSegment, bb.position(), bb.limit(), ms.byteSize(), ms, closeable, null, Array(new Array[Byte](1024)))
   }
 
-  private[this] def create(bb: ByteBuffer, totalReadLimit: Long, ms: MemorySegment, closeable: AutoCloseable): DirectBufferedInput =
-    new DirectBufferedInput(bb, bb.position(), bb.limit(), totalReadLimit, ms, closeable, null, Array(new Array[Byte](1024)))
-
-  def fromByteBuffer(bb: ByteBuffer): BufferedInput =
-    if(bb.isDirect) create(bb, Long.MaxValue, null, null)
+  def fromByteBuffer(bb: ByteBuffer): BufferedInput = {
+    if(bb.isDirect) {
+      val p = bb.position()
+      bb.position(0)
+      val ms = MemorySegment.ofBuffer(bb)
+      bb.position(p)
+      new DirectBufferedInput(bb, ms, p, bb.limit(), bb.limit() - p, ms, null, null, Array(new Array[Byte](1024)))
+    }
     else new HeapBufferedInput(bb.array(), bb, bb.position(), bb.limit(), Long.MaxValue, null, 0, null)
+  }
 
   def fromMappedFile(file: Path, order: ByteOrder = ByteOrder.BIG_ENDIAN): BufferedInput =
     fromMemorySegment(ForeignSupport.mapRO(file), null, order)
 
-  private[this] val MinBufferSize = 16
+  private[this] val MinBufferSize = VectorSupport.vlen * 2
   private[perfio] var MaxDirectBufferSize = Int.MaxValue-15 //modified by unit tests
 
   private val STATE_LIVE = 0
@@ -50,28 +64,28 @@ object BufferedInput {
  * reading more than Long.MaxValue (8 exabytes) is undefined.
  */
 sealed abstract class BufferedInput protected (
-  protected[this] var buf: Array[Byte],
-  // We have to use a ByteBuffer to get efficient implementations of methods like int32() without using
-  // jdk.internal.misc.Unsafe directly.
-  protected[this] var bb: ByteBuffer,
-  protected[this] var pos: Int, // first used byte in buf
-  protected[this] var lim: Int, // last used byte + 1 in buf
-  protected[this] var totalReadLimit: Long, // max number of bytes that may be returned
+  private[perfio] var bb: ByteBuffer, // always available
+  private[perfio] var pos: Int, // first used byte in buf/bb
+  private[perfio] var lim: Int, // last used byte + 1 in buf/bb
+  private[perfio] var totalReadLimit: Long, // max number of bytes that may be returned
   protected[this] val closeable: AutoCloseable,
   parent: BufferedInput
 ) extends AutoCloseable { self =>
   import BufferedInput._
 
-  protected[this] var totalBuffered = (lim-pos).toLong // total number of bytes read from input
-  protected[this] var excessRead = 0 // number of bytes read into buf beyond lim if totalReadLimit was reached
+  private[perfio] var totalBuffered = (lim-pos).toLong // total number of bytes read from input
+  private[perfio] var excessRead = 0 // number of bytes read into buf beyond lim if totalReadLimit was reached
   private[this] var state = STATE_LIVE
   private[this] var activeView: BufferedInput = null
   private[this] var activeViewInitialBuffered = 0
   private[this] var detachOnClose, skipOnClose = false
   protected[this] var parentTotalOffset = 0L
 
-  private def reinitView(buf: Array[Byte], bb: ByteBuffer, pos: Int, lim: Int, totalReadLimit: Long, skipOnClose: Boolean, parentTotalOffset: Long): Unit = {
-    this.buf = buf
+  protected[this] def createEmptyView(): BufferedInput
+  protected[this] def clearBuffer(): Unit
+  private[perfio] def copyBufferFrom(b: BufferedInput): Unit
+
+  private def reinitView(bb: ByteBuffer, pos: Int, lim: Int, totalReadLimit: Long, skipOnClose: Boolean, parentTotalOffset: Long): Unit = {
     this.bb = bb
     this.pos = pos
     this.lim = lim
@@ -81,11 +95,11 @@ sealed abstract class BufferedInput protected (
     this.excessRead = 0
     this.totalBuffered = lim-pos
     this.parentTotalOffset = parentTotalOffset
+    bigEndian = bb.order == ByteOrder.BIG_ENDIAN
+    copyBufferFrom(parent)
   }
 
-  protected[this] def createEmptyView(): BufferedInput
-
-  protected[this] def available: Int = lim - pos
+  private[perfio] def available: Int = lim - pos
 
   protected[this] def checkState(): Unit = {
     if(state != STATE_LIVE) {
@@ -94,9 +108,12 @@ sealed abstract class BufferedInput protected (
     }
   }
 
+  protected[this] var bigEndian = bb != null && bb.order == ByteOrder.BIG_ENDIAN
+
   /** Change the byte order of this BufferedInput. */
   def order(order: ByteOrder): this.type = {
     bb.order(order)
+    bigEndian = order == ByteOrder.BIG_ENDIAN
     this
   }
 
@@ -106,12 +123,12 @@ sealed abstract class BufferedInput protected (
 
   @inline protected[this] final def throwFormatError(msg: String): Nothing = throw new IOException(msg)
 
-  protected[this] def prepareAndFillBuffer(count: Int): Unit
+  private[perfio] def prepareAndFillBuffer(count: Int): Unit
 
   /** Request `count` bytes to be available to read in the buffer. Less may be available if the end of the input
    * is reached. This method may change the `buf` and `bb` references when requesting more than
    * [[BufferedInput!.MinBufferSize]] / 2 bytes. */
-  protected[this] def request(count: Int): Unit =
+  private[perfio] def request(count: Int): Unit =
     if(available < count) prepareAndFillBuffer(count)
 
   /** Request `count` bytes to be available to read in the buffer, advance the buffer to the position after these
@@ -163,37 +180,19 @@ sealed abstract class BufferedInput protected (
 
   def uint8(): Int = int8() & 0xFF
 
-  def int16(): Short = {
-    val p = fwd(2)
-    bb.getShort(p)
-  }
+  def int16(): Short
 
-  def uint16(): Char = {
-    val p = fwd(2)
-    bb.getChar(p)
-  }
-
-  def int32(): Int = {
-    val p = fwd(4)
-    bb.getInt(p)
-  }
+  def uint16(): Char
 
   def uint32(): Long = int32() & 0xFFFFFFFFL
 
-  def int64(): Long = {
-    val p = fwd(8)
-    bb.getLong(p)
-  }
+  def int32(): Int
 
-  def float32(): Float = {
-    val p = fwd(4)
-    bb.getFloat(p)
-  }
+  def int64(): Long
 
-  def float64(): Double = {
-    val p = fwd(8)
-    bb.getDouble(p)
-  }
+  def float32(): Float
+
+  def float64(): Double
 
   /** Close this BufferedInput and any open views based on it. Calling any other method after closing will result in an
    * IOException. If this object is a view of another BufferedInput, this operation transfers control back to the
@@ -203,7 +202,7 @@ sealed abstract class BufferedInput protected (
       if(activeView != null) activeView.markClosed()
       if(parent != null) {
         if(skipOnClose) skip(Long.MaxValue)
-        parent.closedView(buf, bb, pos, lim + excessRead, totalBuffered + excessRead, detachOnClose)
+        parent.closedView(bb, pos, lim + excessRead, totalBuffered + excessRead, detachOnClose)
       }
       markClosed()
       if(parent == null && closeable != null) closeable.close()
@@ -213,16 +212,16 @@ sealed abstract class BufferedInput protected (
   private def markClosed(): Unit = {
     pos = lim
     state = STATE_CLOSED
-    buf = null
     bb = null
+    clearBuffer()
   }
 
-  private def closedView(vbuf: Array[Byte], vbb: ByteBuffer, vpos: Int, vlim: Int, vTotalBuffered: Long, vDetach: Boolean): Unit = {
+  private def closedView(vbb: ByteBuffer, vpos: Int, vlim: Int, vTotalBuffered: Long, vDetach: Boolean): Unit = {
     if(vTotalBuffered == activeViewInitialBuffered) { // view has not advanced the buffer
       pos = vpos
       totalBuffered += vTotalBuffered
     } else {
-      buf = vbuf
+      copyBufferFrom(activeView)
       bb = vbb
       pos = vpos
       lim = vlim
@@ -264,7 +263,7 @@ sealed abstract class BufferedInput protected (
     if(t < 0) t = totalReadLimit // overflow due to huge limit
     if(activeView == null) activeView = createEmptyView()
     val vLim = if(t <= totalBuffered) (lim - totalBuffered + t).toInt else lim
-    activeView.reinitView(buf, bb, pos, vLim, t - tbread, skipRemaining, parentTotalOffset + tbread)
+    activeView.reinitView(bb, pos, vLim, t - tbread, skipRemaining, parentTotalOffset + tbread)
     activeViewInitialBuffered = vLim - pos
     state = STATE_ACTIVE_VIEW
     totalBuffered -= activeViewInitialBuffered
@@ -274,16 +273,24 @@ sealed abstract class BufferedInput protected (
 }
 
 private class HeapBufferedInput(
-  _buf: Array[Byte],
+  private[perfio] var buf: Array[Byte],
   _bb: ByteBuffer,
   _pos: Int,
   _lim: Int,
   _totalReadLimit: Long,
-  in: InputStream,
-  minRead: Int,
+  private[perfio] val in: InputStream,
+  private[perfio] val minRead: Int,
   _parent: BufferedInput
-) extends BufferedInput(_buf, _bb, _pos, _lim, _totalReadLimit, in, _parent) {
-  import BufferedInput._
+) extends BufferedInput(_bb, _pos, _lim, _totalReadLimit, in, _parent) {
+  import BufferUtil._
+
+  private[perfio] def copyBufferFrom(b: BufferedInput): Unit = {
+    buf = b.asInstanceOf[HeapBufferedInput].buf
+  }
+
+  protected[this] def clearBuffer(): Unit = {
+    buf = null
+  }
 
   private[this] def fillBuffer(): Int = {
     val read = in.read(buf, lim, buf.length - lim)
@@ -299,23 +306,29 @@ private class HeapBufferedInput(
     read
   }
 
-  protected[this] def prepareAndFillBuffer(count: Int): Unit = {
+  private[perfio] def prepareAndFillBuffer(count: Int): Unit = {
     checkState()
+    //println(s"      prepareAndFillBuffer($count): limits $totalBuffered of $totalReadLimit; $pos $lim ${buf.length}")
     if(in != null && totalBuffered < totalReadLimit) {
       if(pos + count > buf.length || pos >= buf.length-minRead) {
         val a = available
-        if(count > buf.length) {
+        // Buffer shifts must be aligned to the vector size, otherwise VectorizedLineTokenizer
+        // performance will tank after rebuffering even when all vector reads are aligned.
+        val offset = if(a > 0) pos % VectorSupport.vlen else 0
+        //println(s"      prepareAndFillBuffer($count): $offset")
+        if(count + offset > buf.length) {
+          //println(s"      prepareAndFillBuffer($count): Growing")
           var buflen = buf.length
-          while(buflen < count) buflen *= 2
+          while(buflen < count + offset) buflen *= 2
           val buf2 = new Array[Byte](buflen)
-          if(a > 0) System.arraycopy(buf, pos, buf2, 0, a)
+          if(a > 0) System.arraycopy(buf, pos, buf2, offset, a)
           buf = buf2
           bb = ForeignSupport.createByteBuffer(buf, bb.order())
-        } else if (a > 0 && pos > 0) {
-          System.arraycopy(buf, pos, buf, 0, a)
+        } else if (a > 0 && pos != offset) {
+          System.arraycopy(buf, pos, buf, offset, a)
         }
-        pos = 0
-        lim = a
+        pos = offset
+        lim = a + offset
       }
       while(fillBuffer() >= 0 && available < count) {}
     }
@@ -348,6 +361,36 @@ private class HeapBufferedInput(
   def int8(): Byte = {
     val p = fwd(1)
     buf(p)
+  }
+
+  def int16(): Short = {
+    val p = fwd(2)
+    (if(bigEndian) BA_SHORT_BIG else BA_SHORT_LITTLE).get(buf, p)
+  }
+
+  def uint16(): Char = {
+    val p = fwd(2)
+    (if(bigEndian) BA_CHAR_BIG else BA_CHAR_LITTLE).get(buf, p)
+  }
+
+  def int32(): Int = {
+    val p = fwd(4)
+    (if(bigEndian) BA_INT_BIG else BA_INT_LITTLE).get(buf, p)
+  }
+
+  def int64(): Long = {
+    val p = fwd(8)
+    (if(bigEndian) BA_LONG_BIG else BA_LONG_LITTLE).get(buf, p)
+  }
+
+  def float32(): Float = {
+    val p = fwd(4)
+    (if(bigEndian) BA_FLOAT_BIG else BA_FLOAT_LITTLE).get(buf, p)
+  }
+
+  def float64(): Double = {
+    val p = fwd(8)
+    (if(bigEndian) BA_DOUBLE_BIG else BA_DOUBLE_LITTLE).get(buf, p)
   }
 
   def string(len: Int, charset: Charset = StandardCharsets.UTF_8): String =
@@ -405,25 +448,43 @@ private class HeapBufferedInput(
   }
 }
 
+// This could be a lot simpler if we didn't have to do pagination but ByteBuffer is limited
+// to 2 GB and direct MemorySegment access is much, much slower as of JDK 22.
 private class DirectBufferedInput(
   _bb: ByteBuffer,
+  private[perfio] var bbSegment: MemorySegment,
   _pos: Int,
   _lim: Int,
   _totalReadLimit: Long,
-  ms: MemorySegment,
+  private[perfio] val ms: MemorySegment,
   _closeable: AutoCloseable,
   _parent: BufferedInput,
   linebuf: Array[Array[Byte]]
-) extends BufferedInput(null, _bb, _pos, _lim, _totalReadLimit, _closeable, _parent) {
+) extends BufferedInput(_bb, _pos, _lim, _totalReadLimit, _closeable, _parent) {
   import BufferedInput._
+  import BufferUtil._
 
-  protected[this] def prepareAndFillBuffer(count: Int): Unit = {
+  private[perfio] var bbStart = 0L
+
+  private[perfio] def copyBufferFrom(b: BufferedInput): Unit = {
+    val db = b.asInstanceOf[DirectBufferedInput]
+    bbSegment = db.bbSegment
+    bbStart = db.bbStart
+  }
+
+  protected[this] def clearBuffer(): Unit = {
+    bbSegment = null
+  }
+
+  private[perfio] def prepareAndFillBuffer(count: Int): Unit = {
     checkState()
     if(ms != null && totalBuffered < totalReadLimit) {
       val a = available
       val newStart = parentTotalOffset+totalBuffered-a
       val newLen = (ms.byteSize()-newStart) min MaxDirectBufferSize
-      bb = ms.asSlice(newStart, newLen).asByteBuffer().order(bb.order())
+      bbSegment = ms.asSlice(newStart, newLen)
+      bb = bbSegment.asByteBuffer().order(bb.order())
+      bbStart = newStart
       pos = 0
       lim = newLen.toInt
       totalBuffered += newLen - a
@@ -440,7 +501,7 @@ private class DirectBufferedInput(
     bb.get(p, a, off, len)
   }
 
-  protected[this] def createEmptyView(): BufferedInput = new DirectBufferedInput(null, 0, 0, 0L, ms, null, this, linebuf)
+  protected[this] def createEmptyView(): BufferedInput = new DirectBufferedInput(null, null, 0, 0, 0L, ms, null, this, linebuf)
 
   private[this] def extendBuffer(len: Int): Array[Byte] = {
     var buflen = linebuf(0).length
@@ -461,6 +522,36 @@ private class DirectBufferedInput(
   def int8(): Byte = {
     val p = fwd(1)
     bb.get(p)
+  }
+
+  def int16(): Short = {
+    val p = fwd(2)
+    (if(bigEndian) BB_SHORT_BIG else BB_SHORT_LITTLE).get(bb, p)
+  }
+
+  def uint16(): Char = {
+    val p = fwd(2)
+    (if(bigEndian) BB_CHAR_BIG else BB_CHAR_LITTLE).get(bb, p)
+  }
+
+  def int32(): Int = {
+    val p = fwd(4)
+    (if(bigEndian) BB_INT_BIG else BB_INT_LITTLE).get(bb, p)
+  }
+
+  def int64(): Long = {
+    val p = fwd(8)
+    (if(bigEndian) BB_LONG_BIG else BB_LONG_LITTLE).get(bb, p)
+  }
+
+  def float32(): Float = {
+    val p = fwd(4)
+    (if(bigEndian) BB_FLOAT_BIG else BB_FLOAT_LITTLE).get(bb, p)
+  }
+
+  def float64(): Double = {
+    val p = fwd(8)
+    (if(bigEndian) BB_DOUBLE_BIG else BB_DOUBLE_LITTLE).get(bb, p)
   }
 
   def string(len: Int, charset: Charset = StandardCharsets.UTF_8): String =

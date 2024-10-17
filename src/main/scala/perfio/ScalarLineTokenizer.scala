@@ -86,3 +86,69 @@ abstract class ScalarLineTokenizer(
 
   def close(): Unit = if(in != null) in.close()
 }
+
+
+
+
+
+
+
+
+
+object ScalarLineTokenizer2 {
+  /** Create a ScalarLineTokenizer2 from a BufferedInput. See [[LineTokenizer.apply]] for details. */
+  def apply(in: BufferedInput, charset: Charset = StandardCharsets.UTF_8): ScalarLineTokenizer2 = {
+    if(charset eq StandardCharsets.ISO_8859_1)
+      new ScalarLineTokenizer2(in.asInstanceOf[HeapBufferedInput]) {
+        // Use the slightly faster constructor for Latin-1
+        protected[this] def makeString(buf: Array[Byte], start: Int, len: Int): String = new String(buf, 0, start, len)
+      }
+    else
+      new ScalarLineTokenizer2(in.asInstanceOf[HeapBufferedInput]) {
+        protected[this] def makeString(buf: Array[Byte], start: Int, len: Int): String = new String(buf, start, len, charset)
+      }
+  }
+}
+
+abstract class ScalarLineTokenizer2(bin: HeapBufferedInput) extends LineTokenizer {
+
+  protected[this] def makeString(buf: Array[Byte], start: Int, len: Int): String
+
+  private[this] def emit(start: Int, p: Int): String = {
+    val lfpos = p-1
+    bin.pos = p
+    val end = if(lfpos > 0 && bin.buf(lfpos-1) == '\r'.toByte) lfpos-1 else lfpos
+    if(start == end) "" else makeString(bin.buf, start, end-start)
+  }
+
+  private[this] def rest(p: Int): String =
+    if(bin.pos < p) {
+      val s = makeString(bin.buf, bin.pos, p-bin.pos)
+      bin.pos = p
+      s
+    } else null
+
+  final def readLine(): String = {
+    var bp, p = bin.pos
+    while(true) {
+      while(p < bin.lim) {
+        val b = bin.buf(p)
+        p += 1
+        if(b == '\n'.toByte) return emit(bp, p)
+      }
+      val done = rebuffer()
+      p -= bp - bin.pos
+      if(done) return rest(p)
+      bp = bin.pos
+    }
+    null // unreachable
+  }
+
+  private[this] def rebuffer(): Boolean = {
+    val oldav = bin.available
+    bin.prepareAndFillBuffer(1)
+    oldav == bin.available
+  }
+
+  def close(): Unit = bin.close()
+}

@@ -36,23 +36,6 @@ object BufferedOutput {
 
   private[this] val MinBufferSize = 16
 
-  private val LONG_BIG = vh[Long](true)
-  private val INT_BIG = vh[Int](true)
-  private val SHORT_BIG = vh[Short](true)
-  private val CHAR_BIG = vh[Char](true)
-  private val DOUBLE_BIG = vh[Double](true)
-  private val FLOAT_BIG = vh[Float](true)
-
-  private val LONG_LITTLE = vh[Long](false)
-  private val INT_LITTLE = vh[Int](false)
-  private val SHORT_LITTLE = vh[Short](false)
-  private val CHAR_LITTLE = vh[Char](false)
-  private val DOUBLE_LITTLE = vh[Double](false)
-  private val FLOAT_LITTLE = vh[Float](false)
-
-  @inline private[this] def vh[T](@inline be: Boolean)(implicit @inline ct: ClassTag[Array[T]]) =
-    MethodHandles.byteArrayViewVarHandle(ct.runtimeClass, if(be) ByteOrder.BIG_ENDIAN else ByteOrder.LITTLE_ENDIAN)
-
   private[perfio] val SHARING_EXCLUSIVE = 0.toByte // buffer is not shared
   private[perfio] val SHARING_LEFT = 1.toByte      // buffer is shared with next block
   private[perfio] val SHARING_RIGHT = 2.toByte     // buffer is shared with previous blocks only
@@ -67,6 +50,7 @@ abstract class BufferedOutput(
   private[perfio] val fixed: Boolean, // buffer cannot be reallocated or grown beyond lim
   private[perfio] var totalLimit: Long,
 ) extends AutoCloseable with Flushable {
+  import BufferUtil._
 
   private[perfio] var totalFlushed = 0L
   private[perfio] var next, prev: BufferedOutput = this // prefix list as a double-linked ring
@@ -130,19 +114,19 @@ abstract class BufferedOutput(
 
   final def int16(s: Short): this.type = {
     val p = fwd(2)
-    (if(bigEndian) BufferedOutput.SHORT_BIG else BufferedOutput.SHORT_LITTLE).set(buf, p, s)
+    (if(bigEndian) BA_SHORT_BIG else BA_SHORT_LITTLE).set(buf, p, s)
     this
   }
 
   final def uint16(c: Char): this.type = {
     val p = fwd(2)
-    (if(bigEndian) BufferedOutput.CHAR_BIG else BufferedOutput.CHAR_LITTLE).set(buf, p, c)
+    (if(bigEndian) BA_CHAR_BIG else BA_CHAR_LITTLE).set(buf, p, c)
     this
   }
 
   final def int32(i: Int): this.type = {
     val p = fwd(4)
-    (if(bigEndian) BufferedOutput.INT_BIG else BufferedOutput.INT_LITTLE).set(buf, p, i)
+    (if(bigEndian) BA_INT_BIG else BA_INT_LITTLE).set(buf, p, i)
     this
   }
 
@@ -150,19 +134,19 @@ abstract class BufferedOutput(
 
   final def int64(l: Long): this.type = {
     val p = fwd(8)
-    (if(bigEndian) BufferedOutput.LONG_BIG else BufferedOutput.LONG_LITTLE).set(buf, p, l)
+    (if(bigEndian) BA_LONG_BIG else BA_LONG_LITTLE).set(buf, p, l)
     this
   }
 
   final def float32(f: Float): this.type = {
     val p = fwd(4)
-    (if(bigEndian) BufferedOutput.FLOAT_BIG else BufferedOutput.FLOAT_LITTLE).set(buf, p, f)
+    (if(bigEndian) BA_FLOAT_BIG else BA_FLOAT_LITTLE).set(buf, p, f)
     this
   }
 
   final def float64(d: Double): this.type = {
     val p = fwd(8)
-    (if(bigEndian) BufferedOutput.DOUBLE_BIG else BufferedOutput.DOUBLE_LITTLE).set(buf, p, d)
+    (if(bigEndian) BA_DOUBLE_BIG else BA_DOUBLE_LITTLE).set(buf, p, d)
     this
   }
 
@@ -239,7 +223,7 @@ abstract class BufferedOutput(
 
   private[this] def growBufferClear(count: Int): Unit = {
     val tlim = ((totalLimit - totalBytesWritten) min count).toInt
-    val buflen = BufferUtil.growBuffer(buf.length, tlim, 1)
+    val buflen = growBuffer(buf.length, tlim, 1)
     //println(s"$show.growBufferClear($count): ${buf.length} -> $buflen")
     if(buflen > buf.length) buf = new Array[Byte](buflen)
     lim = buf.length
@@ -250,7 +234,7 @@ abstract class BufferedOutput(
 
   private[this] def growBufferCopy(count: Int): Unit = {
     val tlim = ((totalLimit - totalBytesWritten) min (pos + count)).toInt
-    val buflen = BufferUtil.growBuffer(buf.length, tlim, 1)
+    val buflen = growBuffer(buf.length, tlim, 1)
     //println(s"$show.growBufferCopy($count): ${buf.length} -> $buflen")
     if(buflen > buf.length) buf = Arrays.copyOf(buf, buflen)
     lim = buf.length

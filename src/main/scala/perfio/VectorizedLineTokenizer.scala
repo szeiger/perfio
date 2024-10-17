@@ -56,40 +56,47 @@ abstract class VectorizedLineTokenizer private (
 ) extends LineTokenizer {
   import VectorSupport._
 
-  private[this] var pos = start-vlen // start of the current vector in buf
+  private[this] var vpos = start-vlen // start of the current vector in buf
   private[this] var mask = 0L // vector mask that marks the LFs
 
   private[this] def buffer(): Int = {
-    if(pos == Int.MaxValue || in == null) return 0
-    val offsetInVector = limit % vlen
+    if(vpos == Int.MaxValue || in == null) return 0
+    val scanned = limit - start
+
     if(limit > buf.length-inputBufferHeadroom) {
-      val shift = species.loopBound(start)
+      val shift = if(start % 32 == 0) start else start - (start % 32) // species.loopBound(start)
       if(shift > buf.length/2) {
-        System.arraycopy(buf, start, buf, start-shift, pos-start)
-        pos -= shift
+        System.arraycopy(buf, start, buf, start-shift, (vpos min limit)-start)
         start -= shift
         limit -= shift
       } else buf = Arrays.copyOf(buf, buf.length*2)
     }
     val read = in.read(buf, limit, buf.length-limit)
-    if(read > 0) {
-      limit += read
-      // old limit was not at vector boundary -> rewind and mask the already read lanes
-      if(offsetInVector > 0) {
-        pos -= vlen
-        mask = computeMask() & (-1L >>> offsetInVector << offsetInVector)
-      } else mask = computeMask()
-      read
-    } else 0
+    if(read > 0) { limit += read }
+
+    if(limit-start == scanned) return 0
+
+    vpos = start + scanned
+
+    val offsetInVector = vpos % vlen
+    //println(offsetInVector)
+    // old limit was not at vector boundary -> rewind and mask the already read lanes
+    if(offsetInVector != 0) {
+      vpos -= offsetInVector
+      val rem = offsetInVector
+      //println(s"${vpos % vlen}, $rem, $offsetInVector")
+      mask = computeMask() & (-1L >>> rem << rem)
+    } else mask = computeMask()
+    1
   }
 
   private[this] def rest(): String = {
-    val r = if(pos != Int.MaxValue) {
+    val r = if(vpos != Int.MaxValue) {
       val l = limit-start
       mask = 0
       if(l != 0) makeString(buf, start, l) else null
     } else null
-    pos = Int.MaxValue - vlen
+    vpos = Int.MaxValue - vlen
     r
   }
 
@@ -103,26 +110,131 @@ abstract class VectorizedLineTokenizer private (
   @tailrec final def readLine(): String = {
     val f = JLong.numberOfTrailingZeros(mask)
     if(f < vlen) {
-      val lfpos = pos+f
+      val lfpos = vpos+f
       val s = emit(start, lfpos)
       start = lfpos+1
       mask &= ~(1L<<f)
       return s
     }
-    pos += vlen
-    if(pos < limit) mask = computeMask()
+    vpos += vlen
+    if(vpos < limit) mask = computeMask()
     else if(buffer() == 0) return rest()
     readLine()
   }
 
   private[this] final def computeMask(): Long = {
-    val overshoot = pos+vlen-limit
+    val overshoot = vpos+vlen-limit
+    //println(pos % vlen)
     val v =
-      if(overshoot <= 0) ByteVector.fromArray(species, buf, pos)
-      else ByteVector.fromArray(species, buf, pos, VectorMask.fromLong(species, fullMask >>> overshoot))
+      if(overshoot <= 0) ByteVector.fromArray(species, buf, vpos)
+      else ByteVector.fromArray(species, buf, vpos, VectorMask.fromLong(species, fullMask >>> overshoot))
     // Seems to be slightly faster than comparing against a scalar:
     v.compare(VectorOperators.EQ, lfs).toLong
   }
 
   def close(): Unit = if(in != null) in.close()
+}
+
+
+
+
+
+
+
+
+
+
+
+object VectorizedLineTokenizer2 {
+
+  /** Create a VectorizedLineTokenizer2 from a BufferedInput. See [[LineTokenizer.apply]] for details. */
+  def apply(in: BufferedInput, charset: Charset = StandardCharsets.UTF_8): VectorizedLineTokenizer2 = {
+    if(charset eq StandardCharsets.ISO_8859_1)
+      new VectorizedLineTokenizer2(in.asInstanceOf[HeapBufferedInput]) {
+        // Use the slightly faster constructor for Latin-1
+        protected[this] def makeString(buf: Array[Byte], start: Int, len: Int): String = new String(buf, 0, start, len)
+      }
+    else
+      new VectorizedLineTokenizer2(in.asInstanceOf[HeapBufferedInput]) {
+        protected[this] def makeString(buf: Array[Byte], start: Int, len: Int): String = new String(buf, start, len, charset)
+      }
+  }
+}
+
+abstract class VectorizedLineTokenizer2(bin: HeapBufferedInput) extends LineTokenizer {
+  import VectorSupport._
+
+  private[this] var vpos = bin.pos-vlen // start of the current vector in buf
+  private[this] var mask = 0L // vector mask that marks the LFs
+
+  if(bin.pos < bin.lim) {
+    // Make sure the position is aligned if we have buffered data.
+    // Otherwise we leave the initial buffering to the main loop in readLine().
+    vpos += vlen
+    alignPosAndComputeMask()
+  }
+
+  private[this] def buffer(): Int = {
+    //println(s"  buffer(): pos=${bin.pos}, lim=${bin.lim}, vpos=$vpos, buflen=${bin.buf.length}")
+    if(vpos == Int.MaxValue) return 0
+    val scanned = bin.lim - bin.pos
+    val oldav = bin.available
+    bin.prepareAndFillBuffer(oldav + vlen)
+    //println(s"    $oldav -> ${bin.available}")
+    if(oldav == bin.available) return 0
+    vpos = bin.pos + scanned
+    alignPosAndComputeMask()
+    1
+  }
+
+  private[this] def alignPosAndComputeMask(): Unit = {
+    val offsetInVector = vpos % vlen
+    vpos -= offsetInVector
+    mask = computeMask() & (-1L >>> offsetInVector << offsetInVector)
+  }
+
+  private[this] def rest(): String = {
+    //println(s"rest: pos=$pos")
+    val r = if(vpos != Int.MaxValue) {
+      val l = bin.available
+      mask = 0
+      if(l != 0) makeString(bin.buf, bin.pos, l) else null
+    } else null
+    vpos = Int.MaxValue - vlen
+    r
+  }
+
+  protected[this] def makeString(buf: Array[Byte], start: Int, len: Int): String
+
+  @inline private[this] def emit(start: Int, lfpos: Int): String = {
+    val end = if(lfpos > 0 && bin.buf(lfpos-1) == '\r'.toByte) lfpos-1 else lfpos
+    if(start == end) "" else makeString(bin.buf, start, end-start)
+  }
+
+  @tailrec final def readLine(): String = {
+    val f = JLong.numberOfTrailingZeros(mask)
+    //println(s"readLine(): ${bin.pos}, ${bin.lim}, $vpos, $mask -> $f")
+    if(f < vlen) {
+      val lfpos = vpos+f
+      val s = emit(bin.pos, lfpos)
+      bin.pos = lfpos+1
+      mask &= ~(1L<<f)
+      return s
+    }
+    vpos += vlen
+    if(vpos < bin.lim) mask = computeMask()
+    else if(buffer() == 0) return rest()
+    readLine()
+  }
+
+  private[this] final def computeMask(): Long = {
+    val excess = vpos+vlen-bin.lim
+    val v =
+      if(excess <= 0) ByteVector.fromArray(species, bin.buf, vpos)
+      else ByteVector.fromArray(species, bin.buf, vpos, VectorMask.fromLong(species, fullMask >>> excess))
+    // Seems to be slightly faster than comparing against a scalar:
+    v.compare(VectorOperators.EQ, lfs).toLong
+  }
+
+  def close(): Unit = bin.close()
 }
