@@ -88,7 +88,7 @@ object BufferedInput {
   /** Read data from a file which is memory-mapped for efficient reading.
    *
    * @param file           File to read.
-   * @param byteOrder      Byte order used for reading multi-byte values. Default: Big endian.
+   * @param order          Byte order used for reading multi-byte values. Default: Big endian.
    */
   def ofMappedFile(file: Path, order: ByteOrder = ByteOrder.BIG_ENDIAN): BufferedInput =
     ofMemorySegment(ForeignSupport.mapRO(file), null, order)
@@ -318,6 +318,29 @@ sealed abstract class BufferedInput protected (
     totalBuffered -= activeViewInitialBuffered
     pos = lim
     activeView
+  }
+
+  /** Create a view that is identical to this buffer (including `totalBytesRead`) so that this
+   * buffer can be protected against accidental access while reading from the view. */
+  private[perfio] def identicalView(): BufferedInput = {
+    checkState()
+    if(activeView == null) activeView = createEmptyView()
+    activeView.reinitView(bb, pos, lim, totalReadLimit, false, parentTotalOffset)
+    activeViewInitialBuffered = 0
+    state = STATE_ACTIVE_VIEW
+    pos = lim
+    activeView
+  }
+
+  private[perfio] def lock(): Unit = {
+    checkState()
+    val p = pos
+    state = STATE_ACTIVE_VIEW
+    pos = lim
+  }
+
+  private[perfio] def unlock(): Unit = {
+    state = STATE_LIVE
   }
 }
 

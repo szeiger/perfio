@@ -58,7 +58,7 @@ private sealed abstract class HeapScalarLineTokenizer(_bin: HeapBufferedInput, _
 
 private sealed abstract class DirectScalarLineTokenizer(_bin: DirectBufferedInput, _eolChar: Byte, _preEolChar: Byte)
   extends DirectLineTokenizer(_bin, _eolChar, _preEolChar) {
-  private[this] var pos, start = bin.bbStart + bin.pos
+  private[this] var pos = start
   private[this] val limit = bin.totalReadLimit
 
   private[this] def rest(): String = {

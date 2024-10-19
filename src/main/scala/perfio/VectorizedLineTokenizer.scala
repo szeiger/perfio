@@ -111,7 +111,6 @@ abstract class DirectVectorizedLineTokenizer(_bin: DirectBufferedInput, _eolChar
   extends DirectLineTokenizer(_bin, _eolChar, _preEolChar) {
   import VectorSupport._
 
-  private[this] var start = bin.bbStart + bin.pos
   private[this] var vpos = start-vlen
   private[this] val limit = ms.byteSize()
   private[this] var mask = 0L

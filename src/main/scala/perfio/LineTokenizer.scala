@@ -39,21 +39,24 @@ object LineTokenizer {
 }
 
 private[perfio] abstract class HeapLineTokenizer(
-  private[perfio] val bin: HeapBufferedInput, _eolChar: Byte, _preEolChar: Byte) extends LineTokenizer(_eolChar, _preEolChar) {
+  private[perfio] val parentBin: HeapBufferedInput, _eolChar: Byte, _preEolChar: Byte) extends LineTokenizer(_eolChar, _preEolChar) {
   protected[this] def makeString(buf: Array[Byte], start: Int, len: Int): String
+  protected[this] val bin: HeapBufferedInput = parentBin.identicalView().asInstanceOf[HeapBufferedInput]
 
   protected[this] def emit(start: Int, lfpos: Int): String = {
     val end = if(lfpos > 0 && preEolChar != (-1).toByte && bin.buf(lfpos-1) == preEolChar) lfpos-1 else lfpos
     if(start == end) "" else makeString(bin.buf, start, end-start)
   }
 
-  def close(): Unit = bin.close()
+  def close(): Unit = parentBin.close()
 }
 
 private[perfio] abstract class DirectLineTokenizer(
   private[perfio] val bin: DirectBufferedInput, _eolChar: Byte, _preEolChar: Byte) extends LineTokenizer(_eolChar, _preEolChar) {
   private[this] var linebuf = new Array[Byte](256)
   protected[this] val ms = bin.ms
+  protected[this] var start = bin.bbStart + bin.pos
+  bin.lock()
 
   protected[this] def makeString(buf: Array[Byte], start: Int, len: Int): String
 
@@ -75,5 +78,8 @@ private[perfio] abstract class DirectLineTokenizer(
     if(start == end) "" else makeString(ms, start, end-start)
   }
 
-  def close(): Unit = bin.close()
+  def close(): Unit = {
+    bin.unlock()
+    bin.close()
+  }
 }
