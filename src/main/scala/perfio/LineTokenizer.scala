@@ -42,7 +42,7 @@ private[perfio] abstract class HeapLineTokenizer(private[perfio] val bin: HeapBu
 }
 
 private[perfio] abstract class DirectLineTokenizer(private[perfio] val bin: DirectBufferedInput) extends LineTokenizer {
-  private[this] var linebuf = new Array[Byte](1024)
+  private[this] var linebuf = new Array[Byte](256)
   protected[this] val ms = bin.ms
 
   protected[this] def makeString(buf: Array[Byte], start: Int, len: Int): String

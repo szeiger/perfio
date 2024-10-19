@@ -1,6 +1,6 @@
 package perfio
 
-import java.lang.foreign.{MemorySegment, ValueLayout}
+import java.lang.foreign.ValueLayout
 import java.nio.charset.{Charset, StandardCharsets}
 
 object ScalarLineTokenizer {

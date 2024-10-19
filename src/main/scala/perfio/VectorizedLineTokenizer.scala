@@ -2,7 +2,6 @@ package perfio
 
 import jdk.incubator.vector.{ByteVector, VectorMask, VectorOperators}
 
-import java.lang.foreign.{MemorySegment, ValueLayout}
 import java.lang.{Long => JLong}
 import java.nio.ByteOrder
 import java.nio.charset.{Charset, StandardCharsets}
@@ -87,10 +86,14 @@ abstract class HeapVectorizedLineTokenizer(_bin: HeapBufferedInput) extends Heap
       return s
     }
     vpos += vlen
-    if(vpos < bin.lim) mask = computeMask()
+    if(vpos <= bin.lim-vlen) mask = computeSimpleMask()
+    else if(vpos < bin.lim) mask = computeMask()
     else if(buffer() == 0) return rest()
     readLine()
   }
+
+  private[this] final def computeSimpleMask(): Long =
+    ByteVector.fromArray(species, bin.buf, vpos).compare(VectorOperators.EQ, lfs).toLong
 
   private[this] final def computeMask(): Long = {
     val excess = vpos+vlen-bin.lim
@@ -106,40 +109,44 @@ abstract class DirectVectorizedLineTokenizer(_bin: DirectBufferedInput) extends 
   import VectorSupport._
 
   private[this] var start = bin.bbStart + bin.pos
-  private[this] var pos = start-vlen
+  private[this] var vpos = start-vlen
   private[this] val limit = ms.byteSize()
   private[this] var mask = 0L
 
   private[this] def rest(): String = {
-    val r = if(pos != Int.MaxValue) {
+    val r = if(vpos != Int.MaxValue) {
       val l = limit-start
       mask = 0
       if(l != 0) makeString(ms, start, l) else null
     } else null
-    pos = Int.MaxValue - vlen
+    vpos = Int.MaxValue - vlen
     r
   }
 
   @tailrec final def readLine(): String = {
     val f = JLong.numberOfTrailingZeros(mask)
     if(f < vlen) {
-      val lfpos = pos+f
+      val lfpos = vpos+f
       val s = emit(start, lfpos)
       start = lfpos+1
       mask &= ~(1L<<f)
       return s
     }
-    pos += vlen
-    if(pos < limit) mask = computeMask()
+    vpos += vlen
+    if(vpos <= limit-vlen) mask = computeSimpleMask()
+    else if(vpos < limit) mask = computeMask()
     else return rest()
     readLine()
   }
 
+  @inline private[this] final def computeSimpleMask(): Long =
+    ByteVector.fromMemorySegment(species, ms, vpos, ByteOrder.BIG_ENDIAN).compare(VectorOperators.EQ, lfs).toLong
+
   private[this] final def computeMask(): Long = {
-    val overshoot = pos+vlen-limit
+    val excess = vpos+vlen-limit
     val v =
-      if(overshoot <= 0) ByteVector.fromMemorySegment(species, ms, pos, ByteOrder.BIG_ENDIAN)
-      else ByteVector.fromMemorySegment(species, ms, pos, ByteOrder.BIG_ENDIAN, VectorMask.fromLong(species, fullMask >>> overshoot))
+      if(excess <= 0) ByteVector.fromMemorySegment(species, ms, vpos, ByteOrder.BIG_ENDIAN)
+      else ByteVector.fromMemorySegment(species, ms, vpos, ByteOrder.BIG_ENDIAN, VectorMask.fromLong(species, fullMask >>> excess))
     // Seems to be slightly faster than comparing against a scalar:
     v.compare(VectorOperators.EQ, lfs).toLong
   }
