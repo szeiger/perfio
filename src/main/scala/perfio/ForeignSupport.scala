@@ -13,9 +13,6 @@ private object ForeignSupport {
     finally ch.close()
   }
 
-  @inline def createByteBuffer(buf: Array[Byte], byteOrder: ByteOrder): ByteBuffer = {
-    val bb = ByteBuffer.wrap(buf)
-    bb.order(byteOrder)
-    bb
-  }
+  @inline def createByteBuffer(buf: Array[Byte], byteOrder: ByteOrder): ByteBuffer =
+    ByteBuffer.wrap(buf).order(byteOrder)
 }

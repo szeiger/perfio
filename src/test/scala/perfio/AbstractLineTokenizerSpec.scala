@@ -61,17 +61,12 @@ abstract class ScalarLineTokenizerSpec extends AbstractLineTokenizerSpec[Int] {
 
 object ScalarLineTokenizerSpec extends ScalarLineTokenizerSpec {
   def createTokenizer(s: String, cs: Charset, ib: Int): LineTokenizer =
-    ScalarLineTokenizer(new ByteArrayInputStream(s.getBytes(cs)), cs, ib)
-}
-
-object ScalarLineTokenizer2Spec extends ScalarLineTokenizerSpec {
-  def createTokenizer(s: String, cs: Charset, ib: Int): LineTokenizer =
-    ScalarLineTokenizer2(BufferedInput(new ByteArrayInputStream(s.getBytes(cs)), initialBufferSize = ib), cs)
+    ScalarLineTokenizer(BufferedInput(new ByteArrayInputStream(s.getBytes(cs)), initialBufferSize = ib), cs)
 }
 
 object LineTokenizerSpec extends ScalarLineTokenizerSpec {
   def createTokenizer(s: String, cs: Charset, ib: Int): LineTokenizer =
-    LineTokenizer(new ByteArrayInputStream(s.getBytes(cs)), cs, ib)
+    LineTokenizer(BufferedInput(new ByteArrayInputStream(s.getBytes(cs)), initialBufferSize = ib), cs)
 }
 
 object VectorizedLineTokenizerSpec extends AbstractLineTokenizerSpec[(Int, Int)] {
@@ -93,30 +88,7 @@ object VectorizedLineTokenizerSpec extends AbstractLineTokenizerSpec[(Int, Int)]
 
   def createTokenizer(s: String, cs: Charset, params: (Int, Int)): LineTokenizer = {
     val (ib, maxRead) = params
-    VectorizedLineTokenizer(new LimitedInputStream(new ByteArrayInputStream(s.getBytes(cs)), maxRead), cs, ib)
-  }
-}
-
-object VectorizedLineTokenizer2Spec extends AbstractLineTokenizerSpec[(Int, Int)] {
-  val base: List[(String, Int, Int, (Int, Int), Int)] = List(
-    ("small.aligned", 64, 64, (4096, Int.MaxValue), 10000),
-    ("large.aligned", 128, 128, (64, Int.MaxValue), 10000),
-    ("small.unaligned", 0, 63, (4096, Int.MaxValue), 10000),
-    ("large.unaligned", 65, 127, (64, Int.MaxValue), 10000),
-    ("small.aligned.limited1", 64, 64, (4096, 1), 10000),
-    ("large.aligned.limited1", 128, 128, (64, 1), 10000),
-    ("small.unaligned.limited1", 0, 63, (4096, 1), 10000),
-    ("large.unaligned.limited1", 65, 127, (64, 1), 10000),
-    ("small.aligned.limited16", 64, 64, (4096, 16), 10000),
-    ("large.aligned.limited16", 128, 128, (64, 16), 10000),
-    ("small.unaligned.limited16", 0, 63, (4096, 16), 10000),
-    ("large.unaligned.limited16", 65, 127, (64, 16), 10000),
-    ("mixed", 0, 513, (128, Int.MaxValue), 50000),
-  )
-
-  def createTokenizer(s: String, cs: Charset, params: (Int, Int)): LineTokenizer = {
-    val (ib, maxRead) = params
-    VectorizedLineTokenizer2(BufferedInput(new LimitedInputStream(new ByteArrayInputStream(s.getBytes(cs)), maxRead), initialBufferSize = ib), cs)
+    VectorizedLineTokenizer(BufferedInput(new LimitedInputStream(new ByteArrayInputStream(s.getBytes(cs)), maxRead), initialBufferSize = ib), cs)
   }
 }
 
@@ -165,40 +137,20 @@ abstract class ForeignSpec extends FromArraySpec {
 
 object ScalarLineTokenizerFromArraySpec extends FromArraySpec {
   def create(a: Array[Byte], off: Int, len: Int): LineTokenizer =
-    ScalarLineTokenizer.fromArray(a, off, len)
-}
-
-object ScalarLineTokenizer2FromArraySpec extends FromArraySpec {
-  def create(a: Array[Byte], off: Int, len: Int): LineTokenizer =
-    ScalarLineTokenizer2(BufferedInput.fromArray(a, off, len-off))
+    ScalarLineTokenizer(BufferedInput.ofArray(a, off, len-off))
 }
 
 object VectorizedLineTokenizerFromArraySpec extends FromArraySpec {
   def create(a: Array[Byte], off: Int, len: Int): LineTokenizer =
-    VectorizedLineTokenizer.fromArray(a, off, len)
+    VectorizedLineTokenizer(BufferedInput.ofArray(a, off, len-off))
 }
 
-object VectorizedLineTokenizer2FromArraySpec extends FromArraySpec {
+object DirectScalarLineTokenizerSpec extends ForeignSpec {
   def create(a: Array[Byte], off: Int, len: Int): LineTokenizer =
-    VectorizedLineTokenizer2(BufferedInput.fromArray(a, off, len-off))
+    ScalarLineTokenizer(BufferedInput.ofMemorySegment(MemorySegment.ofArray(a)))
 }
 
-object ForeignScalarLineTokenizerSpec extends ForeignSpec {
+object DirectVectorizedLineTokenizerSpec extends ForeignSpec {
   def create(a: Array[Byte], off: Int, len: Int): LineTokenizer =
-    ForeignScalarLineTokenizer.fromMemorySegment(MemorySegment.ofArray(a))
-}
-
-object ForeignScalarLineTokenizer2Spec extends ForeignSpec {
-  def create(a: Array[Byte], off: Int, len: Int): LineTokenizer =
-    ForeignScalarLineTokenizer2(BufferedInput.fromMemorySegment(MemorySegment.ofArray(a)))
-}
-
-object ForeignVectorizedLineTokenizerSpec extends ForeignSpec {
-  def create(a: Array[Byte], off: Int, len: Int): LineTokenizer =
-    ForeignVectorizedLineTokenizer.fromMemorySegment(MemorySegment.ofArray(a))
-}
-
-object ForeignVectorizedLineTokenizer2Spec extends ForeignSpec {
-  def create(a: Array[Byte], off: Int, len: Int): LineTokenizer =
-    ForeignVectorizedLineTokenizer2(BufferedInput.fromMemorySegment(MemorySegment.ofArray(a)))
+    VectorizedLineTokenizer(BufferedInput.ofMemorySegment(MemorySegment.ofArray(a)))
 }

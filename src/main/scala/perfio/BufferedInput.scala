@@ -8,34 +8,73 @@ import java.nio.{ByteBuffer, ByteOrder}
 import scala.annotation.tailrec
 
 object BufferedInput {
-  def apply(in: InputStream, byteOrder: ByteOrder = ByteOrder.BIG_ENDIAN, initialBufferSize: Int = 32768): BufferedInput = {
+  /**
+   * Read data from an [[InputStream]].
+   *
+   * @param in                InputStream from which to read data.
+   * @param order             Byte order used for reading multi-byte values. Default: Big endian.
+   * @param initialBufferSize Initial size of the buffer in bytes. It is automatically extended if necessary. This also
+   *                          affects the minimum block size to read from the InputStream. BufferedInput tries to read
+   *                          at least half of initialBufferSize at once.
+   */
+  def apply(in: InputStream, order: ByteOrder = ByteOrder.BIG_ENDIAN, initialBufferSize: Int = 32768): BufferedInput = {
     val buf: Array[Byte] = new Array(initialBufferSize max MinBufferSize)
-    val bb = ForeignSupport.createByteBuffer(buf, byteOrder)
+    val bb = ForeignSupport.createByteBuffer(buf, order)
     new HeapBufferedInput(buf, bb, buf.length, buf.length, Long.MaxValue, in, buf.length/2, null)
   }
 
-  def fromArray(buf: Array[Byte]): BufferedInput = fromArray(buf, 0, buf.length, ByteOrder.BIG_ENDIAN)
+  /** Read data from a byte array with the default byte order (big endian).
+   *
+   * @param buf            Array from which to read data.
+   */
+  def ofArray(buf: Array[Byte]): BufferedInput = ofArray(buf, 0, buf.length, ByteOrder.BIG_ENDIAN)
 
-  def fromArray(buf: Array[Byte], byteOrder: ByteOrder): BufferedInput = fromArray(buf, 0, buf.length, byteOrder)
+  /** Read data from a byte array with the given byte order.
+   *
+   * @param buf            Array from which to read data.
+   * @param order          Byte order used for reading multi-byte values.
+   */
+  def ofArray(buf: Array[Byte], order: ByteOrder): BufferedInput = ofArray(buf, 0, buf.length, order)
 
-  def fromArray(buf: Array[Byte], off: Int, len: Int): BufferedInput = fromArray(buf, off, len, ByteOrder.BIG_ENDIAN)
+  /** Read data from part of a byte array with the default byte order (big endian).
+   *
+   * @param buf            Array from which to read data.
+   * @param off            Starting point within the array.
+   * @param len            Length of the data within the array, or -1 to read until the end of the array.
+   */
+  def ofArray(buf: Array[Byte], off: Int, len: Int): BufferedInput = ofArray(buf, off, len, ByteOrder.BIG_ENDIAN)
 
-  def fromArray(buf: Array[Byte], off: Int, len: Int, byteOrder: ByteOrder): BufferedInput = {
-    val bb = ForeignSupport.createByteBuffer(buf, byteOrder).position(off).limit(off+len)
+  /** Read data from part of a byte array with the given byte order.
+   *
+   * @param buf            Array from which to read data.
+   * @param off            Starting point within the array.
+   * @param len            Length of the data within the array, or -1 to read until the end of the array.
+   * @param order          Byte order used for reading multi-byte values. Default: Big endian.
+   */
+  def ofArray(buf: Array[Byte], off: Int, len: Int, order: ByteOrder): BufferedInput = {
+    val bb = ForeignSupport.createByteBuffer(buf, order).position(off).limit(off+len)
     new HeapBufferedInput(buf, bb, off, off+len, Long.MaxValue, null, 0, null)
   }
 
-  def fromMemorySegment(ms: MemorySegment, closeable: AutoCloseable = null, order: ByteOrder = ByteOrder.BIG_ENDIAN): BufferedInput = {
+  /** Read data from a MemorySegment. Use `ms.asSlice(...)` for reading only part of a segment.
+   *
+   * @param ms             Segment from which to read.
+   * @param closeable      An optional AutoCloseable object to close when the BufferedInput is closed. This can be used
+   *                       to deallocate a segment which is not managed by the garbage-collector.
+   * @param order          Byte order used for reading multi-byte values. Default: Big endian.
+   */
+  def ofMemorySegment(ms: MemorySegment, closeable: AutoCloseable = null, order: ByteOrder = ByteOrder.BIG_ENDIAN): BufferedInput = {
     val len = ms.byteSize()
     if(len > MaxDirectBufferSize) create(ms.asSlice(0, MaxDirectBufferSize), ms, closeable, order)
     else create(ms, ms, closeable, order)
   }
-  private[this] def create(bbSegment: MemorySegment, ms: MemorySegment, closeable: AutoCloseable, order: ByteOrder): DirectBufferedInput = {
-    val bb = bbSegment.asByteBuffer().order(order)
-    new DirectBufferedInput(bb, bbSegment, bb.position(), bb.limit(), ms.byteSize(), ms, closeable, null, Array(new Array[Byte](1024)))
-  }
 
-  def fromByteBuffer(bb: ByteBuffer): BufferedInput = {
+  /** Read data from a ByteBuffer. The BufferedInput will start at the current position and end at the current
+   * limit of the ByteBuffer. The initial byte order is also taken from the ByteBuffer. The ByteBuffer's position
+   * may be temporarily modified during initialization so it should not be used concurrently. After this method
+   * returns the ByteBuffer is treated as read-only and never modified (including its position, limit and byte order).
+   */
+  def ofByteBuffer(bb: ByteBuffer): BufferedInput = {
     if(bb.isDirect) {
       val p = bb.position()
       bb.position(0)
@@ -46,8 +85,18 @@ object BufferedInput {
     else new HeapBufferedInput(bb.array(), bb, bb.position(), bb.limit(), Long.MaxValue, null, 0, null)
   }
 
-  def fromMappedFile(file: Path, order: ByteOrder = ByteOrder.BIG_ENDIAN): BufferedInput =
-    fromMemorySegment(ForeignSupport.mapRO(file), null, order)
+  /** Read data from a file which is memory-mapped for efficient reading.
+   *
+   * @param file           File to read.
+   * @param byteOrder      Byte order used for reading multi-byte values. Default: Big endian.
+   */
+  def ofMappedFile(file: Path, order: ByteOrder = ByteOrder.BIG_ENDIAN): BufferedInput =
+    ofMemorySegment(ForeignSupport.mapRO(file), null, order)
+
+  private[this] def create(bbSegment: MemorySegment, ms: MemorySegment, closeable: AutoCloseable, order: ByteOrder): DirectBufferedInput = {
+    val bb = bbSegment.asByteBuffer().order(order)
+    new DirectBufferedInput(bb, bbSegment, bb.position(), bb.limit(), ms.byteSize(), ms, closeable, null, Array(new Array[Byte](1024)))
+  }
 
   private[this] val MinBufferSize = VectorSupport.vlen * 2
   private[perfio] var MaxDirectBufferSize = Int.MaxValue-15 //modified by unit tests
@@ -57,7 +106,7 @@ object BufferedInput {
   private val STATE_ACTIVE_VIEW = 2
 }
 
-/** BufferedInput provides buffered streaming reads from an InputStream or similar input source.
+/** BufferedInput provides buffered streaming reads from an InputStream or similar data source.
  *
  * The API is not thread-safe. Access from multiple threads must be synchronized externally.
  * The number of bytes read is tracked as a 64-bit signed Long value. The behaviour after

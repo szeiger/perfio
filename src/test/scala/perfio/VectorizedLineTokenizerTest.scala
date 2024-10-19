@@ -33,6 +33,12 @@ class VectorizedLineTokenizerTest {
     """a""".stripMargin
   )
 
+  @Test def largeAligned1: Unit = check(64,
+    """b
+      |daaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaae
+      |""".stripMargin
+  )
+
   @Test def largeUnaligned1: Unit = check(64,
     """aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
       |""".stripMargin
@@ -48,16 +54,24 @@ class VectorizedLineTokenizerTest {
   )
 
   def check(ib: Int, s: String, maxRead: Int = Int.MaxValue): Unit = {
-    val exp = s.lines().toList.asScala.map(_.length)
+    val exp = s.lines().toList.asScala
+    val expL = exp.map(_.length)
     val bytes = s.getBytes(StandardCharsets.UTF_8)
-    val t = VectorizedLineTokenizer(new LimitedInputStream(new ByteArrayInputStream(bytes), maxRead), initialBufferSize = ib)
+    val t = VectorizedLineTokenizer(BufferedInput(new LimitedInputStream(new ByteArrayInputStream(bytes), maxRead), initialBufferSize = ib))
     val buf = mutable.ArrayBuffer.empty[String]
     while(t.readLine() match {
       case null => false
       case s => buf += s; true
     }) ()
     val res = buf.map(_.length)
-    assertEquals(exp, res)
+    assertEquals(
+      s"""
+         |---- expected: -------------------
+         |${exp.mkString("\n")}
+         |---- got: ------------------------
+         |${buf.mkString("\n")}
+         |----------------------------------
+         |""".stripMargin, expL, res)
     assertNull(t.readLine())
   }
 }

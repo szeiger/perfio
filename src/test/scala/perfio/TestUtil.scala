@@ -55,9 +55,9 @@ class TestData(val bytes: Array[Byte], val name: String, owner: Class[_]) {
     BufferedInput(new ByteArrayInputStream(bytes), initialBufferSize = initialBufferSize)
   def createBufferedInputFromMappedFile(maxDirectBufferSize: Int = 128): BufferedInput = {
     BufferedInput.MaxDirectBufferSize = maxDirectBufferSize // ensure that we test rebuffering
-    BufferedInput.fromMappedFile(getFile().toPath)
+    BufferedInput.ofMappedFile(getFile().toPath)
   }
-  def createBufferedInputFromArray(): BufferedInput = BufferedInput.fromArray(bytes)
+  def createBufferedInputFromArray(): BufferedInput = BufferedInput.ofArray(bytes)
 
   def createBufferedOutputToOutputStream(initialBufferSize: Int = 64): (BufferedOutput, () => Unit) = {
     val bout = new ByteArrayOutputStream()
