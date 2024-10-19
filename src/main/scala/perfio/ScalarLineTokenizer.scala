@@ -4,23 +4,24 @@ import java.lang.foreign.ValueLayout
 import java.nio.charset.{Charset, StandardCharsets}
 
 object ScalarLineTokenizer {
-  def apply(in: BufferedInput, charset: Charset = StandardCharsets.UTF_8): LineTokenizer = in match {
+  def apply(in: BufferedInput, charset: Charset = StandardCharsets.UTF_8, eol: Byte = '\n'.toByte, preEol: Byte = '\r'.toByte): LineTokenizer = in match {
     case in: HeapBufferedInput =>
-      if(charset eq StandardCharsets.ISO_8859_1) new HeapScalarLineTokenizer(in) {
+      if(charset eq StandardCharsets.ISO_8859_1) new HeapScalarLineTokenizer(in, eol, preEol) {
         protected[this] def makeString(buf: Array[Byte], start: Int, len: Int): String = new String(buf, 0, start, len)
-      } else new HeapScalarLineTokenizer(in) {
+      } else new HeapScalarLineTokenizer(in, eol, preEol) {
         protected[this] def makeString(buf: Array[Byte], start: Int, len: Int): String = new String(buf, start, len, charset)
       }
     case in: DirectBufferedInput =>
-      if(charset eq StandardCharsets.ISO_8859_1) new DirectScalarLineTokenizer(in) {
+      if(charset eq StandardCharsets.ISO_8859_1) new DirectScalarLineTokenizer(in, eol, preEol) {
         protected[this] def makeString(buf: Array[Byte], start: Int, len: Int): String = new String(buf, 0, start, len)
-      } else new DirectScalarLineTokenizer(in) {
+      } else new DirectScalarLineTokenizer(in, eol, preEol) {
         protected[this] def makeString(buf: Array[Byte], start: Int, len: Int): String = new String(buf, start, len, charset)
       }
   }
 }
 
-private sealed abstract class HeapScalarLineTokenizer(_bin: HeapBufferedInput) extends HeapLineTokenizer(_bin) {
+private sealed abstract class HeapScalarLineTokenizer(_bin: HeapBufferedInput, _eolChar: Byte, _preEolChar: Byte)
+  extends HeapLineTokenizer(_bin, _eolChar, _preEolChar) {
 
   private[this] def rest(p: Int): String =
     if(bin.pos < p) {
@@ -35,7 +36,7 @@ private sealed abstract class HeapScalarLineTokenizer(_bin: HeapBufferedInput) e
       while(p < bin.lim) {
         val b = bin.buf(p)
         p += 1
-        if(b == '\n'.toByte) {
+        if(b == eolChar) {
           bin.pos = p
           return emit(bp, p-1)
         }
@@ -55,7 +56,8 @@ private sealed abstract class HeapScalarLineTokenizer(_bin: HeapBufferedInput) e
   }
 }
 
-private sealed abstract class DirectScalarLineTokenizer(_bin: DirectBufferedInput) extends DirectLineTokenizer(_bin) {
+private sealed abstract class DirectScalarLineTokenizer(_bin: DirectBufferedInput, _eolChar: Byte, _preEolChar: Byte)
+  extends DirectLineTokenizer(_bin, _eolChar, _preEolChar) {
   private[this] var pos, start = bin.bbStart + bin.pos
   private[this] val limit = bin.totalReadLimit
 
@@ -72,7 +74,7 @@ private sealed abstract class DirectScalarLineTokenizer(_bin: DirectBufferedInpu
     while(p < limit) {
       val b = ms.get(ValueLayout.JAVA_BYTE, p)
       p += 1
-      if(b == '\n'.toByte) {
+      if(b == eolChar) {
         val s = emit(start, p-1)
         start = p
         pos = p

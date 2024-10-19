@@ -16,27 +16,29 @@ import scala.annotation.tailrec
 object VectorizedLineTokenizer {
 
   /** Create a VectorizedLineTokenizer2 from a BufferedInput. See [[LineTokenizer.apply]] for details. */
-  def apply(in: BufferedInput, charset: Charset = StandardCharsets.UTF_8): LineTokenizer = in match {
+  def apply(in: BufferedInput, charset: Charset = StandardCharsets.UTF_8, eol: Byte = '\n'.toByte, preEol: Byte = '\r'.toByte): LineTokenizer = in match {
     case in: HeapBufferedInput =>
-      if(charset eq StandardCharsets.ISO_8859_1) new HeapVectorizedLineTokenizer(in) {
+      if(charset eq StandardCharsets.ISO_8859_1) new HeapVectorizedLineTokenizer(in, eol, preEol) {
         protected[this] def makeString(buf: Array[Byte], start: Int, len: Int): String = new String(buf, 0, start, len)
-      } else new HeapVectorizedLineTokenizer(in) {
+      } else new HeapVectorizedLineTokenizer(in, eol, preEol) {
         protected[this] def makeString(buf: Array[Byte], start: Int, len: Int): String = new String(buf, start, len, charset)
       }
     case in: DirectBufferedInput =>
-      if(charset eq StandardCharsets.ISO_8859_1) new DirectVectorizedLineTokenizer(in) {
+      if(charset eq StandardCharsets.ISO_8859_1) new DirectVectorizedLineTokenizer(in, eol, preEol) {
         protected[this] def makeString(buf: Array[Byte], start: Int, len: Int): String = new String(buf, 0, start, len)
-      } else new DirectVectorizedLineTokenizer(in) {
+      } else new DirectVectorizedLineTokenizer(in, eol, preEol) {
         protected[this] def makeString(buf: Array[Byte], start: Int, len: Int): String = new String(buf, start, len, charset)
       }
   }
 }
 
-abstract class HeapVectorizedLineTokenizer(_bin: HeapBufferedInput) extends HeapLineTokenizer(_bin) {
+abstract class HeapVectorizedLineTokenizer(_bin: HeapBufferedInput, _eolChar: Byte, _preEolChar: Byte) extends
+  HeapLineTokenizer(_bin, _eolChar, _preEolChar) {
   import VectorSupport._
 
   private[this] var vpos = bin.pos-vlen // start of the current vector in buf
   private[this] var mask = 0L // vector mask that marks the LFs
+  private[this] val eolVector = ByteVector.broadcast(species, eolChar)
 
   if(bin.pos < bin.lim) {
     // Make sure the position is aligned if we have buffered data.
@@ -93,7 +95,7 @@ abstract class HeapVectorizedLineTokenizer(_bin: HeapBufferedInput) extends Heap
   }
 
   private[this] final def computeSimpleMask(): Long =
-    ByteVector.fromArray(species, bin.buf, vpos).compare(VectorOperators.EQ, lfs).toLong
+    ByteVector.fromArray(species, bin.buf, vpos).compare(VectorOperators.EQ, eolVector).toLong
 
   private[this] final def computeMask(): Long = {
     val excess = vpos+vlen-bin.lim
@@ -101,17 +103,19 @@ abstract class HeapVectorizedLineTokenizer(_bin: HeapBufferedInput) extends Heap
       if(excess <= 0) ByteVector.fromArray(species, bin.buf, vpos)
       else ByteVector.fromArray(species, bin.buf, vpos, VectorMask.fromLong(species, fullMask >>> excess))
     // Seems to be slightly faster than comparing against a scalar:
-    v.compare(VectorOperators.EQ, lfs).toLong
+    v.compare(VectorOperators.EQ, eolVector).toLong
   }
 }
 
-abstract class DirectVectorizedLineTokenizer(_bin: DirectBufferedInput) extends DirectLineTokenizer(_bin) {
+abstract class DirectVectorizedLineTokenizer(_bin: DirectBufferedInput, _eolChar: Byte, _preEolChar: Byte)
+  extends DirectLineTokenizer(_bin, _eolChar, _preEolChar) {
   import VectorSupport._
 
   private[this] var start = bin.bbStart + bin.pos
   private[this] var vpos = start-vlen
   private[this] val limit = ms.byteSize()
   private[this] var mask = 0L
+  private[this] val eolVector = ByteVector.broadcast(species, eolChar)
 
   private[this] def rest(): String = {
     val r = if(vpos != Int.MaxValue) {
@@ -140,7 +144,7 @@ abstract class DirectVectorizedLineTokenizer(_bin: DirectBufferedInput) extends 
   }
 
   @inline private[this] final def computeSimpleMask(): Long =
-    ByteVector.fromMemorySegment(species, ms, vpos, ByteOrder.BIG_ENDIAN).compare(VectorOperators.EQ, lfs).toLong
+    ByteVector.fromMemorySegment(species, ms, vpos, ByteOrder.BIG_ENDIAN).compare(VectorOperators.EQ, eolVector).toLong
 
   private[this] final def computeMask(): Long = {
     val excess = vpos+vlen-limit
@@ -148,6 +152,6 @@ abstract class DirectVectorizedLineTokenizer(_bin: DirectBufferedInput) extends 
       if(excess <= 0) ByteVector.fromMemorySegment(species, ms, vpos, ByteOrder.BIG_ENDIAN)
       else ByteVector.fromMemorySegment(species, ms, vpos, ByteOrder.BIG_ENDIAN, VectorMask.fromLong(species, fullMask >>> excess))
     // Seems to be slightly faster than comparing against a scalar:
-    v.compare(VectorOperators.EQ, lfs).toLong
+    v.compare(VectorOperators.EQ, eolVector).toLong
   }
 }
