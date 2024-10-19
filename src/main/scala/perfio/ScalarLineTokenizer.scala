@@ -31,28 +31,24 @@ private sealed abstract class HeapScalarLineTokenizer(_bin: HeapBufferedInput, _
     } else null
 
   final def readLine(): String = {
+    val eol = eolChar
     var bp, p = bin.pos
     while(true) {
       while(p < bin.lim) {
         val b = bin.buf(p)
         p += 1
-        if(b == eolChar) {
+        if(b == eol) {
           bin.pos = p
           return emit(bp, p-1)
         }
       }
-      val done = rebuffer()
+      val oldav = bin.available
+      bin.prepareAndFillBuffer(1)
       p -= bp - bin.pos
-      if(done) return rest(p)
+      if(oldav == bin.available) return rest(p)
       bp = bin.pos
     }
     null // unreachable
-  }
-
-  private[this] def rebuffer(): Boolean = {
-    val oldav = bin.available
-    bin.prepareAndFillBuffer(1)
-    oldav == bin.available
   }
 }
 
