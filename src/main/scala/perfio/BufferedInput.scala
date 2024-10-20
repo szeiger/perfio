@@ -117,7 +117,7 @@ sealed abstract class BufferedInput protected (
   private[perfio] var pos: Int, // first used byte in buf/bb
   private[perfio] var lim: Int, // last used byte + 1 in buf/bb
   private[perfio] var totalReadLimit: Long, // max number of bytes that may be returned
-  protected[this] val closeable: AutoCloseable,
+  closeable: AutoCloseable,
   parent: BufferedInput
 ) extends AutoCloseable { self =>
   import BufferedInput._
@@ -129,6 +129,7 @@ sealed abstract class BufferedInput protected (
   private[this] var activeViewInitialBuffered = 0
   private[this] var detachOnClose, skipOnClose = false
   protected[this] var parentTotalOffset = 0L
+  private[perfio] var closeableView: CloseableView = null
 
   protected[this] def createEmptyView(): BufferedInput
   protected[this] def clearBuffer(): Unit
@@ -263,6 +264,7 @@ sealed abstract class BufferedInput protected (
     state = STATE_CLOSED
     bb = null
     clearBuffer()
+    if(closeableView != null) closeableView.markClosed()
   }
 
   private def closedView(vbb: ByteBuffer, vpos: Int, vlim: Int, vTotalBuffered: Long, vDetach: Boolean): Unit = {

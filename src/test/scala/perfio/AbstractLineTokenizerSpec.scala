@@ -3,14 +3,14 @@ package perfio
 import hedgehog._
 import hedgehog.runner._
 
-import java.io.{ByteArrayInputStream, InputStream}
+import java.io.{ByteArrayInputStream, IOException, InputStream}
 import java.lang.foreign.MemorySegment
 import java.nio.charset.{Charset, StandardCharsets}
 import java.util.Arrays
 import scala.collection.mutable
 import scala.jdk.CollectionConverters._
 
-abstract class AbstractLineTokenizerSpec[T] extends Properties {
+abstract class AbstractLineTokenizerSpec[T] extends Properties with TestUtil {
 
   def base: List[(String, Int, Int, T, Int)]
 
@@ -50,12 +50,14 @@ abstract class AbstractLineTokenizerSpec[T] extends Properties {
         i += 1
         if(i % 2 == 0) {
           t.end()
+          assertException[IOException](t.readLine())
           t = createTok(in, cs)
         }
         true
     }) ()
     val next = t.readLine()
     t.close()
+    assertException[IOException](t.readLine())
     (buf, next)
   }
 
@@ -68,6 +70,7 @@ abstract class AbstractLineTokenizerSpec[T] extends Properties {
     }) ()
     val next = t.readLine()
     t.close()
+    assertException[IOException](t.readLine())
     (buf, next)
   }
 }
@@ -86,7 +89,7 @@ class LimitedInputStream(in: InputStream, limit: Int) extends InputStream {
   override def read(b: Array[Byte], off: Int, len: Int): Int = in.read(b, off, len min limit)
 }
 
-object ScalarLineTokenizerSpec extends SimpleLineTokenizerSpec[Int] {
+object HeapScalarLineTokenizerSpec extends SimpleLineTokenizerSpec[Int] {
   val base: List[(String, Int, Int, Int, Int)] = List(
     ("small.aligned", 64, 64, 4096, 2000),
     ("large.aligned", 128, 128, 64, 2000),
@@ -100,7 +103,7 @@ object ScalarLineTokenizerSpec extends SimpleLineTokenizerSpec[Int] {
   def createTok(in: BufferedInput, cs: Charset): LineTokenizer = ScalarLineTokenizer(in, cs)
 }
 
-object VectorizedLineTokenizerSpec extends SimpleLineTokenizerSpec[(Int, Int)] {
+object HeapVectorizedLineTokenizerSpec extends SimpleLineTokenizerSpec[(Int, Int)] {
   val base: List[(String, Int, Int, (Int, Int), Int)] = List(
     ("small.aligned", 64, 64, (4096, Int.MaxValue), 2000),
     ("large.aligned", 128, 128, (64, Int.MaxValue), 2000),

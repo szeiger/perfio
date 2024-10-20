@@ -57,7 +57,13 @@ private sealed abstract class DirectScalarLineTokenizer(_bin: DirectBufferedInpu
   private[this] var pos = start
   private[this] val limit = bin.totalReadLimit
 
+  override private[perfio] def markClosed(): Unit = {
+    super.markClosed()
+    pos = limit
+  }
+
   private[this] def rest(): String = {
+    checkState()
     if(start < pos) {
       val s = makeString(ms, start, pos-start)
       start = pos

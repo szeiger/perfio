@@ -48,8 +48,12 @@ abstract class HeapVectorizedLineTokenizer(_bin: HeapBufferedInput, _eolChar: By
   }
 
   private[this] def buffer(): Int = {
+    //println(s"buffer: $closed, $mask, $vpos")
     //println(s"  buffer(): pos=${bin.pos}, lim=${bin.lim}, vpos=$vpos, buflen=${bin.buf.length}")
-    if(vpos == Int.MaxValue) return 0
+    if(vpos == Int.MaxValue) {
+      vpos = Int.MaxValue - vlen
+      return 0
+    }
     val scanned = bin.lim - bin.pos
     val oldav = bin.available
     bin.prepareAndFillBuffer(oldav + vlen)
@@ -60,6 +64,12 @@ abstract class HeapVectorizedLineTokenizer(_bin: HeapBufferedInput, _eolChar: By
     1
   }
 
+  override private[perfio] def markClosed(): Unit = {
+    super.markClosed()
+    mask = 0L
+    vpos = Int.MaxValue - vlen
+  }
+
   private[this] def alignPosAndComputeMask(): Unit = {
     val offsetInVector = vpos % vlen
     vpos -= offsetInVector
@@ -67,6 +77,7 @@ abstract class HeapVectorizedLineTokenizer(_bin: HeapBufferedInput, _eolChar: By
   }
 
   private[this] def rest(): String = {
+    checkState()
     //println(s"rest: pos=$pos")
     val r = if(vpos != Int.MaxValue) {
       val l = bin.available
@@ -120,8 +131,14 @@ abstract class DirectVectorizedLineTokenizer(_bin: DirectBufferedInput, _eolChar
   private[this] var mask = 0L
   private[this] val eolVector = ByteVector.broadcast(species, eolChar)
 
+  override private[perfio] def markClosed(): Unit = {
+    super.markClosed()
+    mask = 0L
+    vpos = Long.MaxValue - vlen
+  }
+
   private[this] def rest(): String = {
-    val r = if(vpos != Int.MaxValue) {
+    val r = if(vpos != Long.MaxValue) {
       val l = limit-start
       mask = 0
       if(l != 0) {
@@ -129,8 +146,11 @@ abstract class DirectVectorizedLineTokenizer(_bin: DirectBufferedInput, _eolChar
         start = limit
         s
       } else null
-    } else null
-    vpos = Int.MaxValue - vlen
+    } else {
+      checkState()
+      null
+    }
+    vpos = Long.MaxValue - vlen
     r
   }
 

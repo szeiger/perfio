@@ -1,10 +1,8 @@
 package perfio
 
 import java.io.{EOFException, Flushable, IOException, OutputStream}
-import java.lang.invoke.MethodHandles
 import java.nio.ByteOrder
 import java.util.Arrays
-import scala.reflect.ClassTag
 import BufferedOutput.{SHARING_EXCLUSIVE, SHARING_LEFT, SHARING_RIGHT}
 
 import java.nio.charset.{Charset, StandardCharsets}
