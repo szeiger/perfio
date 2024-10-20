@@ -32,7 +32,7 @@ object VectorizedLineTokenizer {
   }
 }
 
-abstract class HeapVectorizedLineTokenizer(_bin: HeapBufferedInput, _eolChar: Byte, _preEolChar: Byte) extends
+private sealed abstract class HeapVectorizedLineTokenizer(_bin: HeapBufferedInput, _eolChar: Byte, _preEolChar: Byte) extends
   HeapLineTokenizer(_bin, _eolChar, _preEolChar) {
   import VectorSupport._
 
@@ -122,7 +122,7 @@ abstract class HeapVectorizedLineTokenizer(_bin: HeapBufferedInput, _eolChar: By
   }
 }
 
-abstract class DirectVectorizedLineTokenizer(_bin: DirectBufferedInput, _eolChar: Byte, _preEolChar: Byte)
+private sealed abstract class DirectVectorizedLineTokenizer(_bin: DirectBufferedInput, _eolChar: Byte, _preEolChar: Byte)
   extends DirectLineTokenizer(_bin, _eolChar, _preEolChar) {
   import VectorSupport._
 

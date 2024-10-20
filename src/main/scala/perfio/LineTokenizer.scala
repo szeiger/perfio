@@ -2,7 +2,6 @@ package perfio
 
 import java.io.IOException
 import java.lang.foreign.{MemorySegment, ValueLayout}
-import java.nio.charset.{Charset, StandardCharsets}
 
 /**
  * Read text from a [[BufferedInput]] and split it into lines. If the input ends with a newline, no
@@ -46,27 +45,8 @@ sealed abstract class LineTokenizer(protected[this] val eolChar: Byte, protected
   }
 }
 
-object LineTokenizer {
-  /**
-   * Create a [[VectorizedLineTokenizer]] or [[ScalarLineTokenizer]] depending on JVM and hardware support.
-   *
-   * The underlying BufferedInput treats a LineTokenizer like a view, i.e. no other access is allowed (other than
-   * closing it) until the LineTokenizer is closed with [[LineTokenizer.close]] (thus closing the BufferedInput as well)
-   * or [[LineTokenizer.end]] (to keep the BufferedInput open for further reading).
-   *
-   * @param in        BufferedInput to parse starting at its current position
-   * @param charset   Charset for decoding strings. Decoding is applied to individual lines after splitting.
-   *                  Default: UTF-8
-   * @param eol       End-of-line character. Default: LF (\n)
-   * @param preEol    Optional character that is removed if it occurs before an EOL. Default: CR (\r). Set to -1 to
-   *                  disable this feature.
-   */
-  def apply(in: BufferedInput, charset: Charset = StandardCharsets.UTF_8, eol: Byte = '\n'.toByte, preEol: Byte = '\r'.toByte): LineTokenizer =
-    if(VectorSupport.isEnabled) VectorizedLineTokenizer(in, charset, eol, preEol)
-    else ScalarLineTokenizer(in, charset, eol, preEol)
-}
 
-private[perfio] abstract class HeapLineTokenizer(
+private abstract class HeapLineTokenizer(
   private[perfio] val parentBin: HeapBufferedInput, _eolChar: Byte, _preEolChar: Byte) extends LineTokenizer(_eolChar, _preEolChar) with CloseableView {
   protected[this] def makeString(buf: Array[Byte], start: Int, len: Int): String
   protected[this] val bin: HeapBufferedInput = parentBin.identicalView().asInstanceOf[HeapBufferedInput]
@@ -104,7 +84,8 @@ private[perfio] abstract class HeapLineTokenizer(
   }
 }
 
-private[perfio] abstract class DirectLineTokenizer(
+
+private abstract class DirectLineTokenizer(
   private[perfio] val bin: DirectBufferedInput, _eolChar: Byte, _preEolChar: Byte) extends LineTokenizer(_eolChar, _preEolChar) with CloseableView {
   private[this] var linebuf = new Array[Byte](256)
   protected[this] val ms = bin.ms

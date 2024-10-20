@@ -1,7 +1,7 @@
 package perfio
 
 import java.io.{EOFException, IOException, InputStream}
-import java.lang.foreign.{MemorySegment, ValueLayout}
+import java.lang.foreign.MemorySegment
 import java.nio.charset.{Charset, StandardCharsets}
 import java.nio.file.Path
 import java.nio.{ByteBuffer, ByteOrder}
@@ -321,6 +321,23 @@ sealed abstract class BufferedInput protected (
     pos = lim
     activeView
   }
+
+  /**
+   * Create a vectorized or scalar [[LineTokenizer]] depending on JVM and hardware support.
+   *
+   * The LineTokenizer is treated like a view, i.e. no other access of this BufferedReader (except closing it) is
+   * allowed until the LineTokenizer is closed with [[LineTokenizer.close]] (thus closing this BufferedInput as well)
+   * or [[LineTokenizer.end]] (to keep this BufferedInput open for further reading).
+   *
+   * @param charset   Charset for decoding strings. Decoding is applied to individual lines after splitting.
+   *                  Default: UTF-8
+   * @param eol       End-of-line character. Default: LF (\n)
+   * @param preEol    Optional character that is removed if it occurs before an EOL. Default: CR (\r). Set to -1 to
+   *                  disable this feature.
+   */
+  def lines(charset: Charset = StandardCharsets.UTF_8, eol: Byte = '\n'.toByte, preEol: Byte = '\r'.toByte): LineTokenizer =
+    if(VectorSupport.isEnabled) VectorizedLineTokenizer(this, charset, eol, preEol)
+    else ScalarLineTokenizer(this, charset, eol, preEol)
 
   /** Create a view that is identical to this buffer (including `totalBytesRead`) so that this
    * buffer can be protected against accidental access while reading from the view. */
