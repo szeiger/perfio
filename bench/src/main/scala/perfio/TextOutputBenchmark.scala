@@ -11,7 +11,7 @@ import java.util.concurrent.TimeUnit
 @BenchmarkMode(Array(Mode.AverageTime))
 @Fork(value = 1, jvmArgsAppend = Array("-Xmx12g", "-Xss32M", "-XX:+UnlockExperimentalVMOptions", "-XX:+UseZGC", "--enable-native-access=ALL-UNNAMED", "--add-modules", "jdk.incubator.vector"))
 @Threads(1)
-@Warmup(iterations = 12, time = 1)
+@Warmup(iterations = 15, time = 1)
 @Measurement(iterations = 10, time = 1)
 @OutputTimeUnit(TimeUnit.MILLISECONDS)
 @State(Scope.Benchmark)
@@ -24,17 +24,16 @@ class TextOutputBenchmark extends BenchUtil {
   val autoFlush = false
 
   //@Param(Array("UTF-8", "ASCII", "Latin1", "Latin1-fast", "UTF-16"))
-  @Param(Array("Latin1"))
+  @Param(Array("UTF-8"))
   var charset: String = _
   var cs: Charset = _
   var strictUnicode = true
 
   //@Param(Array("array", "file"))
-  @Param(Array("array"))
+  @Param(Array("file"))
   var output: String = _
 
-  //@Param(Array("PrintWriter", "TextOutput"))
-  @Param(Array("TextOutput"))
+  @Param(Array("PrintWriter", "TextOutput"))
   var mode: String = _
 
   @Setup(Level.Trial)
@@ -64,7 +63,7 @@ class TextOutputBenchmark extends BenchUtil {
 
   private[this] def printlnNull(out: PrintWriter): Unit = {
     var i = 0
-    while(i < count) {
+    while(i < count/2) {
       out.println(null: String)
       out.println(null: String)
       i += 1
@@ -73,7 +72,7 @@ class TextOutputBenchmark extends BenchUtil {
 
   private[this] def printlnNull(out: TextOutput): Unit = {
     var i = 0
-    while(i < count) {
+    while(i < count/2) {
       out.println(null: String)
       out.println(null: String)
       i += 1
@@ -82,7 +81,7 @@ class TextOutputBenchmark extends BenchUtil {
 
   private[this] def printlnInt(out: PrintWriter): Unit = {
     var i = 0
-    while(i < count/100000) {
+    while(i < count/200000) {
       var j = 0
       while(j <= 200000) {
         out.println(j)
@@ -94,7 +93,7 @@ class TextOutputBenchmark extends BenchUtil {
 
   private[this] def printlnInt(out: TextOutput): Unit = {
     var i = 0
-    while(i < count/100000) {
+    while(i < count/200000) {
       var j = 0
       while(j <= 200000) {
         out.println(j)
@@ -106,7 +105,7 @@ class TextOutputBenchmark extends BenchUtil {
 
   private[this] def printlnLong(out: PrintWriter): Unit = {
     var i = 0
-    while(i < count/100000) {
+    while(i < count/200000) {
       var j = 0
       while(j <= 200000) {
         out.println(j.toLong)
@@ -118,7 +117,7 @@ class TextOutputBenchmark extends BenchUtil {
 
   private[this] def printlnLong(out: TextOutput): Unit = {
     var i = 0
-    while(i < count/100000) {
+    while(i < count/200000) {
       var j = 0
       while(j <= 200000) {
         out.println(j.toLong)
@@ -130,7 +129,7 @@ class TextOutputBenchmark extends BenchUtil {
 
   private[this] def printlnBoolean(out: PrintWriter): Unit = {
     var i = 0
-    while(i < count) {
+    while(i < count/2) {
       out.println(true)
       out.println(false)
       i += 1
@@ -139,7 +138,7 @@ class TextOutputBenchmark extends BenchUtil {
 
   private[this] def printlnBoolean(out: TextOutput): Unit = {
     var i = 0
-    while(i < count) {
+    while(i < count/2) {
       out.println(true)
       out.println(false)
       i += 1
@@ -174,6 +173,7 @@ class TextOutputBenchmark extends BenchUtil {
     var i = 0
     while(i < count) {
       out.println()
+      out.println()
       i += 1
     }
   }
@@ -182,13 +182,14 @@ class TextOutputBenchmark extends BenchUtil {
     var i = 0
     while(i < count) {
       out.println()
+      out.println()
       i += 1
     }
   }
 
   private[this] def printChar(out: PrintWriter): Unit = {
     var i = 0
-    while(i < count/100) {
+    while(i < count/50) {
       var j = 0
       while(j <= 100) {
         out.print(j.toChar)
@@ -200,7 +201,7 @@ class TextOutputBenchmark extends BenchUtil {
 
   private[this] def printChar(out: TextOutput): Unit = {
     var i = 0
-    while(i < count/100) {
+    while(i < count/50) {
       var j = 0
       while(j <= 100) {
         out.print(j.toChar)
@@ -250,27 +251,27 @@ class TextOutputBenchmark extends BenchUtil {
     if(mode == "PrintWriter") runPrintWriter(bh, f)
     else runTextOutput(bh, g)
 
-//  @Benchmark
-//  def println_String(bh: Blackhole): Unit = run(bh)(printlnString)(printlnString)
-//
-//  @Benchmark
-//  def println_null(bh: Blackhole): Unit = run(bh)(printlnNull)(printlnNull)
+  @Benchmark
+  def println_String(bh: Blackhole): Unit = run(bh)(printlnString)(printlnString)
+
+  @Benchmark
+  def println_null(bh: Blackhole): Unit = run(bh)(printlnNull)(printlnNull)
 
   @Benchmark
   def println_Int(bh: Blackhole): Unit = run(bh)(printlnInt)(printlnInt)
 
-//  @Benchmark
-//  def println_Long(bh: Blackhole): Unit = run(bh)(printlnLong)(printlnLong)
-//
-//  @Benchmark
-//  def println_Boolean(bh: Blackhole): Unit = run(bh)(printlnBoolean)(printlnBoolean)
-//
-//  @Benchmark
-//  def println_Char(bh: Blackhole): Unit = run(bh)(printlnChar)(printlnChar)
-//
-//  @Benchmark
-//  def print_Char(bh: Blackhole): Unit = run(bh)(printChar)(printChar)
-//
-//  @Benchmark
-//  def println_unit(bh: Blackhole): Unit = run(bh)(printlnUnit)(printlnUnit)
+  @Benchmark
+  def println_Long(bh: Blackhole): Unit = run(bh)(printlnLong)(printlnLong)
+
+  @Benchmark
+  def println_Boolean(bh: Blackhole): Unit = run(bh)(printlnBoolean)(printlnBoolean)
+
+  @Benchmark
+  def println_Char(bh: Blackhole): Unit = run(bh)(printlnChar)(printlnChar)
+
+  @Benchmark
+  def print_Char(bh: Blackhole): Unit = run(bh)(printChar)(printChar)
+
+  @Benchmark
+  def println_unit(bh: Blackhole): Unit = run(bh)(printlnUnit)(printlnUnit)
 }
