@@ -53,16 +53,17 @@ class VectorizedLineTokenizerTest {
       |a""".stripMargin, 30
   )
 
-  def check(ib: Int, s: String, maxRead: Int = Int.MaxValue): Unit = {
+  @Test def split1: Unit = check(4096,
+    """
+      |a""".stripMargin, split = true
+  )
+
+  def check(ib: Int, s: String, maxRead: Int = Int.MaxValue, split: Boolean = false): Unit = {
     val exp = s.lines().toList.asScala
     val expL = exp.map(_.length)
     val bytes = s.getBytes(StandardCharsets.UTF_8)
-    val t = VectorizedLineTokenizer(BufferedInput(new LimitedInputStream(new ByteArrayInputStream(bytes), maxRead), initialBufferSize = ib))
-    val buf = mutable.ArrayBuffer.empty[String]
-    while(t.readLine() match {
-      case null => false
-      case s => buf += s; true
-    }) ()
+    val in = BufferedInput(new LimitedInputStream(new ByteArrayInputStream(bytes), maxRead), initialBufferSize = ib)
+    val (buf, t) = if(split) buildSplit(in) else buildNormal(in)
     val res = buf.map(_.length)
     assertEquals(
       s"""
@@ -73,5 +74,34 @@ class VectorizedLineTokenizerTest {
          |----------------------------------
          |""".stripMargin, expL, res)
     assertNull(t.readLine())
+    t.close()
+  }
+
+  def buildSplit(in: BufferedInput): (mutable.ArrayBuffer[String], LineTokenizer) = {
+    var i = 0
+    var t = VectorizedLineTokenizer(in)
+    val buf = mutable.ArrayBuffer.empty[String]
+    while(t.readLine() match {
+      case null => false
+      case s =>
+        buf += s
+        i += 1
+        if(i % 2 == 0) {
+          t.end()
+          t = VectorizedLineTokenizer(in)
+        }
+        true
+    }) ()
+    (buf, t)
+  }
+
+  def buildNormal(in: BufferedInput): (mutable.ArrayBuffer[String], LineTokenizer) = {
+    val t = VectorizedLineTokenizer(in)
+    val buf = mutable.ArrayBuffer.empty[String]
+    while(t.readLine() match {
+      case null => false
+      case s => buf += s; true
+    }) ()
+    (buf, t)
   }
 }

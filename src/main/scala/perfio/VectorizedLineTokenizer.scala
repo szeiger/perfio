@@ -71,7 +71,11 @@ abstract class HeapVectorizedLineTokenizer(_bin: HeapBufferedInput, _eolChar: By
     val r = if(vpos != Int.MaxValue) {
       val l = bin.available
       mask = 0
-      if(l != 0) makeString(bin.buf, bin.pos, l) else null
+      if(l != 0) {
+        val s = makeString(bin.buf, bin.pos, l)
+        bin.pos = bin.lim
+        s
+      } else null
     } else null
     vpos = Int.MaxValue - vlen
     r
@@ -120,7 +124,11 @@ abstract class DirectVectorizedLineTokenizer(_bin: DirectBufferedInput, _eolChar
     val r = if(vpos != Int.MaxValue) {
       val l = limit-start
       mask = 0
-      if(l != 0) makeString(ms, start, l) else null
+      if(l != 0) {
+        val s = makeString(ms, start, l)
+        start = limit
+        s
+      } else null
     } else null
     vpos = Int.MaxValue - vlen
     r

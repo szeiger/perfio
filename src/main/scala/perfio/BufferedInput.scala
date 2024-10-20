@@ -80,7 +80,7 @@ object BufferedInput {
       bb.position(0)
       val ms = MemorySegment.ofBuffer(bb)
       bb.position(p)
-      new DirectBufferedInput(bb, ms, p, bb.limit(), bb.limit() - p, ms, null, null, Array(new Array[Byte](1024)))
+      new DirectBufferedInput(bb, ms, p, bb.limit(), bb.limit(), ms, null, null, Array(new Array[Byte](1024)))
     }
     else new HeapBufferedInput(bb.array(), bb, bb.position(), bb.limit(), Long.MaxValue, null, 0, null)
   }
@@ -553,7 +553,7 @@ private class DirectBufferedInput(
     if(ms != null && totalBuffered < totalReadLimit) {
       val a = available
       val newStart = parentTotalOffset+totalBuffered-a
-      val newLen = (ms.byteSize()-newStart) min MaxDirectBufferSize
+      val newLen = (totalReadLimit+parentTotalOffset-newStart) min MaxDirectBufferSize max 0
       bbSegment = ms.asSlice(newStart, newLen)
       bb = bbSegment.asByteBuffer().order(bb.order())
       bbStart = newStart
@@ -657,7 +657,7 @@ private class DirectBufferedInput(
       //println(s"  skipAv=$skipAv, remTotal=$remTotal, rem=$rem")
       if(rem > 0 && ms != null) {
         val newStart = parentTotalOffset+totalBuffered+rem
-        val newLen = (ms.byteSize()-newStart) min MaxDirectBufferSize
+        val newLen = (totalReadLimit+parentTotalOffset-newStart) min MaxDirectBufferSize
         bb = ms.asSlice(newStart, newLen).asByteBuffer().order(bb.order())
         totalBuffered += rem + newLen
         pos = 0
@@ -665,5 +665,24 @@ private class DirectBufferedInput(
         skipAv + rem
       } else skipAv
     } else 0
+  }
+
+  /** Move this buffer to the given absolute position, updating the ByteBuffer and local position if necessary.
+   * If the position is beyond the absolute limit, the buffer is moved to the limit instead. */
+  private[perfio] def reposition(_absPos: Long): Unit = {
+    //val absPos = bbStart + pos
+    val abs = if(_absPos > totalReadLimit) totalReadLimit else _absPos
+    if(abs < bbStart || abs > bbStart + lim) {
+      val offset = abs % VectorSupport.vlen
+      val newStart = abs - offset
+      val shift = newStart - bbStart
+      totalBuffered += shift
+      val newLen = (totalReadLimit+parentTotalOffset-newStart) min MaxDirectBufferSize
+      bbSegment = ms.asSlice(newStart, newLen)
+      bb = bbSegment.asByteBuffer().order(bb.order())
+      bbStart = newStart
+      lim = newLen.toInt
+    }
+    pos = (abs - bbStart).toInt
   }
 }

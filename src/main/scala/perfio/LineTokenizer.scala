@@ -20,11 +20,20 @@ import java.nio.charset.{Charset, StandardCharsets}
 sealed abstract class LineTokenizer(protected[this] val eolChar: Byte, protected[this] val preEolChar: Byte) extends AutoCloseable {
   /** Returns the next line of text, or null if the end of the input has been reached. */
   def readLine(): String
+
+  /** Close this LineTokenizer without closing the underlying BufferedInput. The BufferedInput continues reading
+   * from the current position of this LineTokenizer (i.e. directly after the last end-of-line character that was
+   * read). A subsequent call to [[close]] has no effect. */
+  def end(): Unit
 }
 
 object LineTokenizer {
   /**
    * Create a [[VectorizedLineTokenizer]] or [[ScalarLineTokenizer]] depending on JVM and hardware support.
+   *
+   * The underlying BufferedInput treats a LineTokenizer like a view, i.e. no other access is allowed (other than
+   * closing it) until the LineTokenizer is closed with [[LineTokenizer.close]] (thus closing the BufferedInput as well)
+   * or [[LineTokenizer.end]] (to keep the BufferedInput open for further reading).
    *
    * @param in        BufferedInput to parse starting at its current position
    * @param charset   Charset for decoding strings. Decoding is applied to individual lines after splitting.
@@ -43,6 +52,9 @@ private[perfio] abstract class HeapLineTokenizer(
   protected[this] def makeString(buf: Array[Byte], start: Int, len: Int): String
   protected[this] val bin: HeapBufferedInput = parentBin.identicalView().asInstanceOf[HeapBufferedInput]
 
+  // The view is already positioned at the start of the line so we can simply return control to the parent
+  def end(): Unit = bin.close()
+
   protected[this] def emit(start: Int, lfpos: Int): String = {
     val end = if(lfpos > 0 && preEolChar != (-1).toByte && bin.buf(lfpos-1) == preEolChar) lfpos-1 else lfpos
     if(start == end) "" else makeString(bin.buf, start, end-start)
@@ -57,6 +69,11 @@ private[perfio] abstract class DirectLineTokenizer(
   protected[this] val ms = bin.ms
   protected[this] var start = bin.bbStart + bin.pos
   bin.lock()
+
+  def end(): Unit = {
+    bin.reposition(start)
+    bin.unlock()
+  }
 
   protected[this] def makeString(buf: Array[Byte], start: Int, len: Int): String
 
