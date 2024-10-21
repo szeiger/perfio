@@ -14,7 +14,7 @@ class TextOutputTest(_name: String, cs: Charset, eol: String) extends TestUtil {
 
   def check(cs: Charset, eol: String, msg: String)(f: TextOutput => Unit)(g: PrintWriter => Unit): Unit = {
     val bout = BufferedOutput.growing()
-    val tout = if(cs eq StandardCharsets.ISO_8859_1) TextOutput.fastLatin1(bout, eol, false) else TextOutput(bout, cs, eol, false)
+    val tout = TextOutput(bout, cs, eol, false)
     f(tout)
     tout.close()
     val buf = bout.copyToByteArray
@@ -93,7 +93,7 @@ class TextOutputTest(_name: String, cs: Charset, eol: String) extends TestUtil {
 object TextOutputTest {
   @Parameterized.Parameters(name = "{0}")
   def params: java.util.List[Array[Any]] = (for {
-    cs <- Vector(StandardCharsets.ISO_8859_1, StandardCharsets.UTF_8, StandardCharsets.UTF_16)
+    cs <- Vector(StandardCharsets.ISO_8859_1, StandardCharsets.UTF_8, StandardCharsets.UTF_16, StandardCharsets.US_ASCII)
     (eol, eolName) <- Vector(("\n", "LF"), ("\r\n", "CRLF"), ("XXX", "XXX"))
   } yield Array[Any](s"${cs}_${eolName}", cs, eol)).asJava
 }

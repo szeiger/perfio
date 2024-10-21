@@ -3,6 +3,7 @@
 val jvmopts = Seq(
   "--add-modules", "jdk.incubator.vector",
   "--add-opens", "java.base/jdk.internal.misc=ALL-UNNAMED",
+  "--add-opens", "java.base/java.lang=ALL-UNNAMED",
 )
 
 javaOptions in Global ++= jvmopts

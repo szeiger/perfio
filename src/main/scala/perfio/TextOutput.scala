@@ -15,16 +15,10 @@ object TextOutput {
    *           `java.io.PrintWriter` because it can write directly to a BufferedOutput).
    * */
   def apply(out: BufferedOutput, cs: Charset, eol: String = System.lineSeparator, autoFlush: Boolean = false): TextOutput =
-    if((cs eq StandardCharsets.ISO_8859_1) || (cs eq StandardCharsets.UTF_8) || (cs eq StandardCharsets.US_ASCII))
-      new ASCIICompatibleTextOutput(out, cs, eol.getBytes(cs), autoFlush)
+    if(cs eq StandardCharsets.ISO_8859_1) new Latin1TextOutput(out, eol.getBytes(cs), autoFlush)
+    else if(cs eq StandardCharsets.UTF_8) new UTF8TextOutput(out, eol.getBytes(cs), autoFlush)
+    else if(cs eq StandardCharsets.US_ASCII) new ASCIITextOutput(out, eol.getBytes(cs), autoFlush)
     else new GenericTextOutput(out, cs, eol, autoFlush)
-
-  /** Create an optimized TextOutput for Latin-1 (ISO-8859-1) or ASCII encoding that does not check for valid character
-   * ranges and will produce incorrect replacement characters when outputting a string with an unsupported charater. It
-   * is safe to use when you know that all strings are valid Latin-1/ASCII (or when you don't care that unsupported
-   * characters are translated to a replacement character other than `?`). */
-  def fastLatin1(out: BufferedOutput, eol: String = System.lineSeparator, autoFlush: Boolean = false): TextOutput =
-    new Latin1TextOutput(out, eol.getBytes(StandardCharsets.ISO_8859_1), autoFlush)
 }
 
 /** TextOutput prints formatted text to a BufferedOutput. It generally behaves like java.io.PrintWriter except that it
@@ -157,6 +151,7 @@ abstract class TextOutput(protected val out: BufferedOutput, protected val cs: C
 
   def close(): Unit = out.close()
 }
+
 
 /** TextOutput implementation for ASCII-compatible charsets. All ASCII characters are encoded as a single ASCII byte. */
 private class ASCIICompatibleTextOutput(_out: BufferedOutput, _cs: Charset, protected val eol: Array[Byte], _autoFlush: Boolean) extends TextOutput(_out, _cs, _autoFlush) {
@@ -367,25 +362,86 @@ private class ASCIICompatibleTextOutput(_out: BufferedOutput, _cs: Charset, prot
   }
 }
 
-/** TextOutput implementation for ISO-8859-1 which uses the old, deprecated, but much more efficient `String.getBytes` method.
- * It cannot check whether characters are actually in the Latin-1 range so it may produce non-standard replacements for unsupported
- * characters. The method to check if this conversion is safe (`String.isLatin1()`) is not publicly accessible. */
+
 private class Latin1TextOutput(_out: BufferedOutput, _eol: Array[Byte], _autoFlush: Boolean) extends ASCIICompatibleTextOutput(_out, StandardCharsets.ISO_8859_1, _eol, _autoFlush) {
   override protected def printRaw(s: String): Unit = {
-    if(!s.isEmpty) {
-      val l = s.length
-      val p = out.fwd(l)
-      if(l > 0) s.getBytes(0, l, out.buf, p)
+    val l = s.length
+    if(l > 0) {
+      if(StringInternals.isLatin1(s)) {
+        val p = out.fwd(l)
+        val v = StringInternals.value(s)
+        System.arraycopy(v, 0, out.buf, p, v.length)
+      } else super.printRaw(s)
     }
   }
 
   override protected def printlnRaw(s: String): Unit = {
     val l = s.length
-    val p = out.fwd(l + eolLen)
-    if(l > 0) s.getBytes(0, l, out.buf, p)
-    unsafeWriteEOL(p + l)
+    if(StringInternals.isLatin1(s)) {
+      val p = out.fwd(l + eolLen)
+      val v = StringInternals.value(s)
+      if(l > 0) System.arraycopy(v, 0, out.buf, p, v.length)
+      unsafeWriteEOL(p + l)
+    } else super.printlnRaw(s)
   }
 }
+
+
+private class UTF8TextOutput(_out: BufferedOutput, _eol: Array[Byte], _autoFlush: Boolean) extends ASCIICompatibleTextOutput(_out, StandardCharsets.UTF_8, _eol, _autoFlush) {
+  override protected def printRaw(s: String): Unit = {
+    val l = s.length
+    if(l > 0) {
+      if(StringInternals.isLatin1(s)) {
+        val v = StringInternals.value(s)
+        if(!StringInternals.hasNegatives(v, 0, v.length)) {
+          val p = out.fwd(l)
+          System.arraycopy(v, 0, out.buf, p, v.length)
+        } else super.printRaw(s)
+      } else super.printRaw(s)
+    }
+  }
+
+  override protected def printlnRaw(s: String): Unit = {
+    val l = s.length
+    if(StringInternals.isLatin1(s)) {
+      val v = StringInternals.value(s)
+      if(!StringInternals.hasNegatives(v, 0, v.length)) {
+        val p = out.fwd(l + eolLen)
+        if(l > 0) System.arraycopy(v, 0, out.buf, p, v.length)
+        unsafeWriteEOL(p + l)
+      } else super.printlnRaw(s)
+    } else super.printlnRaw(s)
+  }
+}
+
+
+private class ASCIITextOutput(_out: BufferedOutput, _eol: Array[Byte], _autoFlush: Boolean) extends ASCIICompatibleTextOutput(_out, StandardCharsets.US_ASCII, _eol, _autoFlush) {
+  override protected def printRaw(s: String): Unit = {
+    val l = s.length
+    if(l > 0) {
+      if(StringInternals.isLatin1(s)) {
+        val v = StringInternals.value(s)
+        if(!StringInternals.hasNegatives(v, 0, v.length)) {
+          val p = out.fwd(l)
+          System.arraycopy(v, 0, out.buf, p, v.length)
+        } else super.printRaw(s)
+      } else super.printRaw(s)
+    }
+  }
+
+  override protected def printlnRaw(s: String): Unit = {
+    val l = s.length
+    if(StringInternals.isLatin1(s)) {
+      val v = StringInternals.value(s)
+      if(!StringInternals.hasNegatives(v, 0, v.length)) {
+        val p = out.fwd(l + eolLen)
+        if(l > 0) System.arraycopy(v, 0, out.buf, p, v.length)
+        unsafeWriteEOL(p + l)
+      } else super.printlnRaw(s)
+    } else super.printlnRaw(s)
+  }
+}
+
 
 /** Generic TextOutput implementation that should work for arbitrary Charsets (including support for BOMs and end markers). */
 private class GenericTextOutput(_out: BufferedOutput, _cs: Charset, eol: String, _autoFlush: Boolean) extends TextOutput(_out, _cs, _autoFlush) {
@@ -487,6 +543,7 @@ private class GenericTextOutput(_out: BufferedOutput, _cs: Charset, eol: String,
     this
   }
 }
+
 
 private object TextOutputUtil {
   private[this] val bigEndian = ByteOrder.nativeOrder() == ByteOrder.BIG_ENDIAN

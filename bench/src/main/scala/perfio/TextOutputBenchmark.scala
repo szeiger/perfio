@@ -23,26 +23,33 @@ class TextOutputBenchmark extends BenchUtil {
   val totalLength = count * (stringData.length + eol.length)
   val autoFlush = false
 
-  //@Param(Array("UTF-8", "ASCII", "Latin1", "Latin1-fast", "UTF-16"))
-  @Param(Array("UTF-8"))
+  @Param(Array("UTF-8", "UTF-8-internal", "ASCII", "Latin1", "Latin1-internal", "UTF-16"))
+  //@Param(Array("Latin1", "Latin1-internal"))
+  //@Param(Array("UTF-8", "UTF-8-internal"))
   var charset: String = _
   var cs: Charset = _
-  var strictUnicode = true
 
   //@Param(Array("array", "file"))
   @Param(Array("file"))
   var output: String = _
 
   @Param(Array("PrintWriter", "TextOutput"))
+  //@Param(Array("TextOutput"))
   var mode: String = _
 
   @Setup(Level.Trial)
   def setup(): Unit = {
-    if(charset == "Latin1-fast") {
+    if(charset.endsWith("-internal")) {
       if(mode == "PrintWriter") throw new IllegalArgumentException()
-      cs = StandardCharsets.ISO_8859_1
-      strictUnicode = false
-    } else cs = Charset.forName(charset)
+      sys.props.put("perfio.disableStringInternals", "false")
+      if(StringInternals.internalAccessError != null) throw StringInternals.internalAccessError
+      assert(StringInternals.internalAccessEnabled)
+      charset = charset.substring(0, charset.length - 9)
+    } else {
+      sys.props.put("perfio.disableStringInternals", "true")
+      assert(!StringInternals.internalAccessEnabled)
+    }
+    cs = Charset.forName(charset)
   }
 
   private[this] def printlnString(out: PrintWriter): Unit = {
@@ -236,9 +243,7 @@ class TextOutputBenchmark extends BenchUtil {
       fbout = BufferedOutput.growing(initialBufferSize = totalLength)
       fbout
     }
-    val tout =
-      if((cs eq StandardCharsets.ISO_8859_1) && !strictUnicode) TextOutput.fastLatin1(bout, autoFlush = autoFlush)
-      else TextOutput(bout, cs, autoFlush = autoFlush)
+    val tout = TextOutput(bout, cs, autoFlush = autoFlush)
     f(tout)
     tout.close()
     if(fbout != null) {
@@ -254,24 +259,24 @@ class TextOutputBenchmark extends BenchUtil {
   @Benchmark
   def println_String(bh: Blackhole): Unit = run(bh)(printlnString)(printlnString)
 
-  @Benchmark
-  def println_null(bh: Blackhole): Unit = run(bh)(printlnNull)(printlnNull)
-
-  @Benchmark
-  def println_Int(bh: Blackhole): Unit = run(bh)(printlnInt)(printlnInt)
-
-  @Benchmark
-  def println_Long(bh: Blackhole): Unit = run(bh)(printlnLong)(printlnLong)
-
-  @Benchmark
-  def println_Boolean(bh: Blackhole): Unit = run(bh)(printlnBoolean)(printlnBoolean)
-
-  @Benchmark
-  def println_Char(bh: Blackhole): Unit = run(bh)(printlnChar)(printlnChar)
-
-  @Benchmark
-  def print_Char(bh: Blackhole): Unit = run(bh)(printChar)(printChar)
-
-  @Benchmark
-  def println_unit(bh: Blackhole): Unit = run(bh)(printlnUnit)(printlnUnit)
+//  @Benchmark
+//  def println_null(bh: Blackhole): Unit = run(bh)(printlnNull)(printlnNull)
+//
+//  @Benchmark
+//  def println_Int(bh: Blackhole): Unit = run(bh)(printlnInt)(printlnInt)
+//
+//  @Benchmark
+//  def println_Long(bh: Blackhole): Unit = run(bh)(printlnLong)(printlnLong)
+//
+//  @Benchmark
+//  def println_Boolean(bh: Blackhole): Unit = run(bh)(printlnBoolean)(printlnBoolean)
+//
+//  @Benchmark
+//  def println_Char(bh: Blackhole): Unit = run(bh)(printlnChar)(printlnChar)
+//
+//  @Benchmark
+//  def print_Char(bh: Blackhole): Unit = run(bh)(printChar)(printChar)
+//
+//  @Benchmark
+//  def println_unit(bh: Blackhole): Unit = run(bh)(printlnUnit)(printlnUnit)
 }

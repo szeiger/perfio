@@ -11,7 +11,7 @@ object TextOutputSpec extends Properties {
 
   def tests: List[Test] =
     (for {
-      cs <- List(StandardCharsets.UTF_8, StandardCharsets.ISO_8859_1, StandardCharsets.UTF_16)
+      cs <- List(StandardCharsets.UTF_8, StandardCharsets.ISO_8859_1, StandardCharsets.UTF_16, StandardCharsets.US_ASCII)
       eol <- List("\n", "\r\n", "XXX")
       t <- createTests(cs, eol)
     } yield t).sortBy(_.name)
@@ -77,7 +77,7 @@ object TextOutputSpec extends Properties {
 
   def check(cs: Charset, eol: String)(f: TextOutput => Unit)(g: PrintWriter => Unit): Result = {
     val bout = BufferedOutput.growing()
-    val tout = if(cs eq StandardCharsets.ISO_8859_1) TextOutput.fastLatin1(bout, eol, false) else TextOutput(bout, cs, eol, false)
+    val tout = TextOutput(bout, cs, eol, false)
     f(tout)
     tout.close()
     val buf: Vector[Int] = bout.copyToByteArray.toVector.map(b => b & 0xFF)
