@@ -1,6 +1,6 @@
 package perfio
 
-import java.lang.foreign.ValueLayout
+import java.lang.foreign.{MemorySegment, ValueLayout}
 import java.nio.charset.{Charset, StandardCharsets}
 
 object ScalarLineTokenizer {
@@ -12,8 +12,13 @@ object ScalarLineTokenizer {
         protected[this] def makeString(buf: Array[Byte], start: Int, len: Int): String = new String(buf, start, len, charset)
       }
     case in: DirectBufferedInput =>
-      if(charset eq StandardCharsets.ISO_8859_1) new DirectScalarLineTokenizer(in, eol, preEol) {
-        protected[this] def makeString(buf: Array[Byte], start: Int, len: Int): String = new String(buf, 0, start, len)
+      if(charset eq StandardCharsets.ISO_8859_1) {
+        if(StringInternals.internalAccessEnabled) new DirectScalarLineTokenizer(in, eol, preEol) {
+          protected[this] def makeString(buf: Array[Byte], start: Int, len: Int): String = new String(buf, 0, start, len)
+          override protected[this] def makeString(buf: MemorySegment, start: Long, llen: Long): String = makeStringLatin1Internal(buf, start, llen)
+        } else new DirectScalarLineTokenizer(in, eol, preEol) {
+          protected[this] def makeString(buf: Array[Byte], start: Int, len: Int): String = new String(buf, 0, start, len)
+        }
       } else new DirectScalarLineTokenizer(in, eol, preEol) {
         protected[this] def makeString(buf: Array[Byte], start: Int, len: Int): String = new String(buf, start, len, charset)
       }

@@ -2,6 +2,7 @@ package perfio
 
 import jdk.incubator.vector.{ByteVector, VectorMask, VectorOperators}
 
+import java.lang.foreign.MemorySegment
 import java.lang.{Long => JLong}
 import java.nio.ByteOrder
 import java.nio.charset.{Charset, StandardCharsets}
@@ -24,8 +25,13 @@ object VectorizedLineTokenizer {
         protected[this] def makeString(buf: Array[Byte], start: Int, len: Int): String = new String(buf, start, len, charset)
       }
     case in: DirectBufferedInput =>
-      if(charset eq StandardCharsets.ISO_8859_1) new DirectVectorizedLineTokenizer(in, eol, preEol) {
-        protected[this] def makeString(buf: Array[Byte], start: Int, len: Int): String = new String(buf, 0, start, len)
+      if(charset eq StandardCharsets.ISO_8859_1) {
+        if(StringInternals.internalAccessEnabled) new DirectVectorizedLineTokenizer(in, eol, preEol) {
+          protected[this] def makeString(buf: Array[Byte], start: Int, len: Int): String = new String(buf, 0, start, len)
+          override protected[this] def makeString(buf: MemorySegment, start: Long, llen: Long): String = makeStringLatin1Internal(buf, start, llen)
+        } else new DirectVectorizedLineTokenizer(in, eol, preEol) {
+          protected[this] def makeString(buf: Array[Byte], start: Int, len: Int): String = new String(buf, 0, start, len)
+        }
       } else new DirectVectorizedLineTokenizer(in, eol, preEol) {
         protected[this] def makeString(buf: Array[Byte], start: Int, len: Int): String = new String(buf, start, len, charset)
       }

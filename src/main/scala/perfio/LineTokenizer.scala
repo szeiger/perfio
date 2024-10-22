@@ -118,10 +118,21 @@ private abstract class DirectLineTokenizer(
   }
 
   protected[this] def makeString(buf: MemorySegment, start: Long, llen: Long): String = {
+    makeStringGeneric(buf, start, llen)
+  }
+
+  protected[this] final def makeStringGeneric(buf: MemorySegment, start: Long, llen: Long): String = {
     val len = llen.toInt
     if(linebuf.length < len) linebuf = extendBuffer(len)
     MemorySegment.copy(buf, ValueLayout.JAVA_BYTE, start, linebuf, 0, len)
     makeString(linebuf, 0, len)
+  }
+
+  protected[this] final def makeStringLatin1Internal(buf: MemorySegment, start: Long, llen: Long): String = {
+    val len = llen.toInt
+    val a = new Array[Byte](len)
+    MemorySegment.copy(buf, ValueLayout.JAVA_BYTE, start, a, 0, len)
+    StringInternals.newString(a, StringInternals.LATIN1)
   }
 
   protected[this] def emit(start: Long, lfpos: Long): String = {
