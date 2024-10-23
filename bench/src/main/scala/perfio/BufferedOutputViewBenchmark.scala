@@ -132,7 +132,7 @@ class BufferedOutputViewBenchmark extends BenchUtil {
   @Benchmark
   def array_FlushingBufferedOutput_direct_preallocated(bh: Blackhole): Unit = {
     val bout = new MyByteArrayOutputStream(byteSize)
-    val out = BufferedOutput(bout)
+    val out = BufferedOutput.of(bout)
     writeDirectTo(out)
     bh.consume(bout.getSize)
     bh.consume(bout.getBuffer)
@@ -141,7 +141,7 @@ class BufferedOutputViewBenchmark extends BenchUtil {
   @Benchmark
   def array_FlushingBufferedOutput_reserve_preallocated(bh: Blackhole): Unit = {
     val bout = new MyByteArrayOutputStream(byteSize)
-    val out = BufferedOutput(bout)
+    val out = BufferedOutput.of(bout)
     writeReserveTo(out)
     bh.consume(bout.getSize)
     bh.consume(bout.getBuffer)
@@ -150,7 +150,7 @@ class BufferedOutputViewBenchmark extends BenchUtil {
   @Benchmark
   def array_FlushingBufferedOutput_defer_preallocated(bh: Blackhole): Unit = {
     val bout = new MyByteArrayOutputStream(byteSize)
-    val out = BufferedOutput(bout)
+    val out = BufferedOutput.of(bout)
     writeDeferTo(out)
     bh.consume(bout.getSize)
     bh.consume(bout.getBuffer)

@@ -4,6 +4,7 @@ import org.openjdk.jmh.annotations._
 import org.openjdk.jmh.infra._
 
 import java.io._
+import java.nio.ByteOrder
 import java.nio.charset.{Charset, StandardCharsets}
 import java.nio.file.Paths
 import java.util.concurrent.TimeUnit
@@ -23,9 +24,10 @@ class TextOutputBenchmark extends BenchUtil {
   val totalLength = count * (stringData.length + eol.length)
   val autoFlush = false
 
-  @Param(Array("UTF-8", "UTF-8-internal", "ASCII", "Latin1", "Latin1-internal", "UTF-16"))
+  @Param(Array("UTF-8", "UTF-8-internal", "ASCII", "ASCII-internal", "Latin1", "Latin1-internal", "UTF-16"))
   //@Param(Array("Latin1", "Latin1-internal"))
-  //@Param(Array("UTF-8", "UTF-8-internal"))
+  //@Param(Array("ASCII", "ASCII-internal"))
+  //@Param(Array("ASCII-internal"))
   var charset: String = _
   var cs: Charset = _
 
@@ -33,8 +35,8 @@ class TextOutputBenchmark extends BenchUtil {
   @Param(Array("file"))
   var output: String = _
 
-  @Param(Array("PrintWriter", "TextOutput"))
-  //@Param(Array("TextOutput"))
+  //@Param(Array("PrintWriter", "TextOutput"))
+  @Param(Array("TextOutput"))
   var mode: String = _
 
   @Setup(Level.Trial)
@@ -240,10 +242,10 @@ class TextOutputBenchmark extends BenchUtil {
     var fbout: FullyBufferedOutput = null
     val bout = if(output == "file") BufferedOutput.ofFile(Paths.get("/dev/null"))
     else {
-      fbout = BufferedOutput.growing(initialBufferSize = totalLength)
+      fbout = BufferedOutput.growing(ByteOrder.BIG_ENDIAN, totalLength)
       fbout
     }
-    val tout = TextOutput(bout, cs, autoFlush = autoFlush)
+    val tout = TextOutput.of(bout, cs, System.lineSeparator(), autoFlush)
     f(tout)
     tout.close()
     if(fbout != null) {
@@ -259,24 +261,24 @@ class TextOutputBenchmark extends BenchUtil {
   @Benchmark
   def println_String(bh: Blackhole): Unit = run(bh)(printlnString)(printlnString)
 
-//  @Benchmark
-//  def println_null(bh: Blackhole): Unit = run(bh)(printlnNull)(printlnNull)
-//
-//  @Benchmark
-//  def println_Int(bh: Blackhole): Unit = run(bh)(printlnInt)(printlnInt)
-//
-//  @Benchmark
-//  def println_Long(bh: Blackhole): Unit = run(bh)(printlnLong)(printlnLong)
-//
-//  @Benchmark
-//  def println_Boolean(bh: Blackhole): Unit = run(bh)(printlnBoolean)(printlnBoolean)
-//
-//  @Benchmark
-//  def println_Char(bh: Blackhole): Unit = run(bh)(printlnChar)(printlnChar)
-//
-//  @Benchmark
-//  def print_Char(bh: Blackhole): Unit = run(bh)(printChar)(printChar)
-//
-//  @Benchmark
-//  def println_unit(bh: Blackhole): Unit = run(bh)(printlnUnit)(printlnUnit)
+  @Benchmark
+  def println_null(bh: Blackhole): Unit = run(bh)(printlnNull)(printlnNull)
+
+  @Benchmark
+  def println_Int(bh: Blackhole): Unit = run(bh)(printlnInt)(printlnInt)
+
+  @Benchmark
+  def println_Long(bh: Blackhole): Unit = run(bh)(printlnLong)(printlnLong)
+
+  @Benchmark
+  def println_Boolean(bh: Blackhole): Unit = run(bh)(printlnBoolean)(printlnBoolean)
+
+  @Benchmark
+  def println_Char(bh: Blackhole): Unit = run(bh)(printlnChar)(printlnChar)
+
+  @Benchmark
+  def print_Char(bh: Blackhole): Unit = run(bh)(printChar)(printChar)
+
+  @Benchmark
+  def println_unit(bh: Blackhole): Unit = run(bh)(printlnUnit)(printlnUnit)
 }

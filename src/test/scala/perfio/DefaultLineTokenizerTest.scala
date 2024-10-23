@@ -11,7 +11,7 @@ import scala.collection.mutable
 import scala.jdk.CollectionConverters._
 
 @RunWith(classOf[JUnit4])
-class VectorizedLineTokenizerTest {
+class DefaultLineTokenizerTest {
 
   @Test def smallAligned1: Unit = check(4096,
     """aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
@@ -79,7 +79,7 @@ class VectorizedLineTokenizerTest {
 
   def buildSplit(in: BufferedInput): (mutable.ArrayBuffer[String], LineTokenizer) = {
     var i = 0
-    var t = VectorizedLineTokenizer.of(in, StandardCharsets.UTF_8, '\n'.toByte, '\r'.toByte)
+    var t = in.lines()
     val buf = mutable.ArrayBuffer.empty[String]
     while(t.readLine() match {
       case null => false
@@ -88,7 +88,7 @@ class VectorizedLineTokenizerTest {
         i += 1
         if(i % 2 == 0) {
           t.end()
-          t = VectorizedLineTokenizer.of(in, StandardCharsets.UTF_8, '\n'.toByte, '\r'.toByte)
+          t = in.lines()
         }
         true
     }) ()
@@ -96,7 +96,7 @@ class VectorizedLineTokenizerTest {
   }
 
   def buildNormal(in: BufferedInput): (mutable.ArrayBuffer[String], LineTokenizer) = {
-    val t = VectorizedLineTokenizer.of(in, StandardCharsets.UTF_8, '\n'.toByte, '\r'.toByte)
+    val t = in.lines()
     val buf = mutable.ArrayBuffer.empty[String]
     while(t.readLine() match {
       case null => false

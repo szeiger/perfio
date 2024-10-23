@@ -4,15 +4,15 @@ import org.openjdk.jmh.annotations._
 import org.openjdk.jmh.infra._
 
 import java.io._
-import java.nio.ByteBuffer
+import java.nio.{ByteBuffer, ByteOrder}
 import java.nio.file.Paths
 import java.util.concurrent.TimeUnit
 
 @BenchmarkMode(Array(Mode.AverageTime))
 @Fork(value = 1, jvmArgsAppend = Array("-Xmx12g", "-Xss32M", "-XX:+UnlockExperimentalVMOptions", "-XX:+UseZGC", "--enable-native-access=ALL-UNNAMED", "--add-modules", "jdk.incubator.vector"))
 @Threads(1)
-@Warmup(iterations = 12, time = 1)
-@Measurement(iterations = 10, time = 1)
+@Warmup(iterations = 15, time = 1)
+@Measurement(iterations = 15, time = 1)
 @OutputTimeUnit(TimeUnit.MILLISECONDS)
 @State(Scope.Benchmark)
 class BufferedOutputNumBenchmark extends BenchUtil {
@@ -63,7 +63,7 @@ class BufferedOutputNumBenchmark extends BenchUtil {
   @Benchmark
   def array_FlushingBufferedOutput_growing(bh: Blackhole): Unit = {
     val bout = new MyByteArrayOutputStream
-    val out = BufferedOutput(bout)
+    val out = BufferedOutput.of(bout)
     writeTo(out)
     bh.consume(bout.getSize)
     bh.consume(bout.getBuffer)
@@ -72,7 +72,7 @@ class BufferedOutputNumBenchmark extends BenchUtil {
   @Benchmark
   def array_FlushingBufferedOutput_fixed(bh: Blackhole): Unit = {
     val bout = new MyByteArrayOutputStream(count * 13)
-    val out = BufferedOutput(bout)
+    val out = BufferedOutput.of(bout)
     writeTo(out)
     bh.consume(bout.getSize)
     bh.consume(bout.getBuffer)
@@ -88,7 +88,7 @@ class BufferedOutputNumBenchmark extends BenchUtil {
 
   @Benchmark
   def array_FullyBufferedOutput_growing_preallocated(bh: Blackhole): Unit = {
-    val out = BufferedOutput.growing(initialBufferSize = count*13)
+    val out = BufferedOutput.growing(ByteOrder.BIG_ENDIAN, count*13)
     writeTo(out)
     bh.consume(out.getBuffer)
     bh.consume(out.getLength)

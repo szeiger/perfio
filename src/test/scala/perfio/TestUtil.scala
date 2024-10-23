@@ -52,7 +52,7 @@ class TestData(val bytes: Array[Byte], val name: String, owner: Class[_]) {
   def createDataInput() = new DataInputStream(new ByteArrayInputStream(bytes))
 
   def createBufferedInputFromByteArrayInputStream(initialBufferSize: Int = 64): BufferedInput =
-    BufferedInput(new ByteArrayInputStream(bytes), initialBufferSize = initialBufferSize)
+    BufferedInput.of(new ByteArrayInputStream(bytes), initialBufferSize)
   def createBufferedInputFromMappedFile(maxDirectBufferSize: Int = 128): BufferedInput = {
     BufferedInput.MaxDirectBufferSize = maxDirectBufferSize // ensure that we test rebuffering
     BufferedInput.ofMappedFile(getFile().toPath)
@@ -61,7 +61,7 @@ class TestData(val bytes: Array[Byte], val name: String, owner: Class[_]) {
 
   def createBufferedOutputToOutputStream(initialBufferSize: Int = 64): (BufferedOutput, () => Unit) = {
     val bout = new ByteArrayOutputStream()
-    val bo = BufferedOutput(bout, initialBufferSize = initialBufferSize)
+    val bo = BufferedOutput.of(bout, ByteOrder.BIG_ENDIAN, initialBufferSize)
     val checker = () => {
       bo.close()
       val a = bout.toByteArray
@@ -70,7 +70,7 @@ class TestData(val bytes: Array[Byte], val name: String, owner: Class[_]) {
     (bo, checker)
   }
   def createGrowingBufferedOutput(initialBufferSize: Int = 64): (BufferedOutput, () => Unit) = {
-    val bo = BufferedOutput.growing(initialBufferSize = initialBufferSize)
+    val bo = BufferedOutput.growing(ByteOrder.BIG_ENDIAN, initialBufferSize)
     val checker = () => {
       bo.close()
       val a = bo.copyToByteArray

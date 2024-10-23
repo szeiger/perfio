@@ -1,13 +1,16 @@
 //cancelable in Global := false
 
-val jvmopts = Seq(
+val runtimeOpts = Seq(
   "--add-modules", "jdk.incubator.vector",
   "--add-opens", "java.base/jdk.internal.misc=ALL-UNNAMED",
   "--add-opens", "java.base/java.lang=ALL-UNNAMED",
 )
+val compileOpts = Seq(
+  "--add-modules", "jdk.incubator.vector",
+)
 
-javaOptions in Global ++= jvmopts
-javacOptions in Global ++= jvmopts
+javaOptions in Global ++= runtimeOpts
+javacOptions in Global ++= compileOpts
 
 // javaOptions in Global += "-Djmh.blackhole.autoDetect=false"
 

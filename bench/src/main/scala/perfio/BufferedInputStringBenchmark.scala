@@ -41,7 +41,7 @@ class BufferedInputStringBenchmark {
 
   @Benchmark
   def array_BufferedInput(bh: Blackhole): Unit = {
-    val bin = BufferedInput(new ByteArrayInputStream(testData))
+    val bin = BufferedInput.of(new ByteArrayInputStream(testData))
     var i = 0
     while(i < count) {
       val len = bin.uint16()

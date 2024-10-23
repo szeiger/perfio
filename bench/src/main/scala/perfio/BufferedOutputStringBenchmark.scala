@@ -4,7 +4,7 @@ import org.openjdk.jmh.annotations._
 import org.openjdk.jmh.infra._
 
 import java.io._
-import java.nio.ByteBuffer
+import java.nio.{ByteBuffer, ByteOrder}
 import java.nio.charset.Charset
 import java.nio.file.Paths
 import java.util.concurrent.TimeUnit
@@ -97,7 +97,7 @@ class BufferedOutputStringBenchmark extends BenchUtil {
   @Benchmark
   def array_FlushingBufferedOutput_growing(bh: Blackhole): Unit = {
     val bout = new MyByteArrayOutputStream
-    val out = BufferedOutput(bout)
+    val out = BufferedOutput.of(bout)
     writeTo(out)
     bh.consume(bout.getSize)
     bh.consume(bout.getBuffer)
@@ -106,7 +106,7 @@ class BufferedOutputStringBenchmark extends BenchUtil {
   @Benchmark
   def array_FlushingBufferedOutput_fixed(bh: Blackhole): Unit = {
     val bout = new MyByteArrayOutputStream(totalLength)
-    val out = BufferedOutput(bout)
+    val out = BufferedOutput.of(bout)
     writeTo(out)
     bh.consume(bout.getSize)
     bh.consume(bout.getBuffer)
@@ -122,7 +122,7 @@ class BufferedOutputStringBenchmark extends BenchUtil {
 
   @Benchmark
   def array_FullyBufferedOutput_growing_preallocated(bh: Blackhole): Unit = {
-    val out = BufferedOutput.growing(initialBufferSize = totalLength)
+    val out = BufferedOutput.growing(ByteOrder.BIG_ENDIAN, totalLength)
     writeTo(out)
     bh.consume(out.getBuffer)
     bh.consume(out.getLength)

@@ -104,11 +104,11 @@ class BufferedInputViewBenchmark extends BenchUtil {
   @Benchmark
   def array_LimitedInputStream(bh: Blackhole): Unit = runDataInputStream(bh, new ByteArrayInputStream(testData))
   @Benchmark
-  def array_fromInputStream_direct(bh: Blackhole): Unit = runDirect(bh, BufferedInput(new ByteArrayInputStream(testData)))
+  def array_fromInputStream_direct(bh: Blackhole): Unit = runDirect(bh, BufferedInput.of(new ByteArrayInputStream(testData)))
   @Benchmark
-  def array_fromInputStream_counting(bh: Blackhole): Unit = runCounting(bh, BufferedInput(new ByteArrayInputStream(testData)))
+  def array_fromInputStream_counting(bh: Blackhole): Unit = runCounting(bh, BufferedInput.of(new ByteArrayInputStream(testData)))
   @Benchmark
-  def array_fromInputStream_view(bh: Blackhole): Unit = runView(bh, BufferedInput(new ByteArrayInputStream(testData)))
+  def array_fromInputStream_view(bh: Blackhole): Unit = runView(bh, BufferedInput.of(new ByteArrayInputStream(testData)))
   @Benchmark
   def array_fromArray_direct(bh: Blackhole): Unit = runDirect(bh, BufferedInput.ofArray(testData))
   @Benchmark
@@ -119,11 +119,11 @@ class BufferedInputViewBenchmark extends BenchUtil {
   @Benchmark
   def mediumFile_LimitedInputStream(bh: Blackhole): Unit = runDataInputStream(bh, new BufferedInputStream(new FileInputStream(diskTestDataMedium)))
   @Benchmark
-  def mediumFile_fromInputStream_direct(bh: Blackhole): Unit = runDirect(bh, BufferedInput(new BufferedInputStream(new FileInputStream(diskTestDataMedium))))
+  def mediumFile_fromInputStream_direct(bh: Blackhole): Unit = runDirect(bh, BufferedInput.of(new BufferedInputStream(new FileInputStream(diskTestDataMedium))))
   @Benchmark
-  def mediumFile_fromInputStream_counting(bh: Blackhole): Unit = runCounting(bh, BufferedInput(new BufferedInputStream(new FileInputStream(diskTestDataMedium))))
+  def mediumFile_fromInputStream_counting(bh: Blackhole): Unit = runCounting(bh, BufferedInput.of(new BufferedInputStream(new FileInputStream(diskTestDataMedium))))
   @Benchmark
-  def mediumFile_fromInputStream_view(bh: Blackhole): Unit = runView(bh, BufferedInput(new BufferedInputStream(new FileInputStream(diskTestDataMedium))))
+  def mediumFile_fromInputStream_view(bh: Blackhole): Unit = runView(bh, BufferedInput.of(new BufferedInputStream(new FileInputStream(diskTestDataMedium))))
   @Benchmark
   def mediumFile_mapped_direct(bh: Blackhole): Unit = runDirect(bh, BufferedInput.ofMappedFile(diskTestDataMedium.toPath))
   @Benchmark

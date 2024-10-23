@@ -11,6 +11,8 @@ import java.nio.charset.StandardCharsets;
  * of constant MethodHandles for optimal performance.
  */
 class StringInternals {
+  private StringInternals() {}
+
   private static final MethodHandle isLatin1MH, valueMH, hasNegativesMH, newStringMH;
 
   /** Error encountered during initialization of internals call paths, or null if successful / manually disabled. */
@@ -19,11 +21,26 @@ class StringInternals {
   /** true if calls go to internal String methods, false for fallbacks. */
   public static final boolean internalAccessEnabled;
 
-  public static boolean isLatin1(String s) throws Throwable { return (boolean)isLatin1MH.invokeExact(s); }
-  public static byte[] value(String s) throws Throwable { return (byte[])valueMH.invokeExact(s); }
-  public static boolean hasNegatives(byte[] ba, int off, int len) throws Throwable { return (boolean)hasNegativesMH.invokeExact(ba, off, len); }
+  public static boolean isLatin1(String s) {
+    try { return (boolean)isLatin1MH.invokeExact(s); } catch (Throwable t) { throw wrap(t); }
+  }
 
-  public static String newString(byte[] bytes, byte coder) throws Throwable { return (String)newStringMH.invokeExact(bytes, coder); }
+  public static byte[] value(String s) {
+    try { return (byte[])valueMH.invokeExact(s); } catch (Throwable t) { throw wrap(t); }
+  }
+
+  public static boolean hasNegatives(byte[] ba, int off, int len) {
+    try { return (boolean)hasNegativesMH.invokeExact(ba, off, len); } catch (Throwable t) { throw wrap(t); }
+  }
+
+  public static String newString(byte[] bytes, byte coder) {
+    try { return (String)newStringMH.invokeExact(bytes, coder); } catch (Throwable t) { throw wrap(t); }
+  }
+
+  private static RuntimeException wrap(Throwable t) {
+    if(t instanceof RuntimeException r) return r;
+    else throw new RuntimeException(t);
+  }
 
   // Fallback implementations. These methods are used to special-case compact Latin-1 strings so we make
   // isLatin1() return false. Behavior of the other methods doesn't really matter because they won't be called.
@@ -50,7 +67,7 @@ class StringInternals {
       hasNegativesL = lookup.findStatic(stringCodingC, "hasNegatives",
         MethodType.methodType(Boolean.TYPE, byte[].class, Integer.TYPE, Integer.TYPE));
       var latin1VH = lookup.findStaticVarHandle(String.class, "LATIN1", Byte.TYPE);
-      if((byte)latin1VH.get() != 0) throw new RuntimeException("Invalid String.LATIN1");
+      if((byte)latin1VH.get() != LATIN1) throw new RuntimeException("Invalid String.LATIN1");
       newStringL = lookup.findConstructor(String.class, MethodType.methodType(void.class, byte[].class, byte.class));
 
       check(isLatin1L, valueL, hasNegativesL); // Perform some sanity checks

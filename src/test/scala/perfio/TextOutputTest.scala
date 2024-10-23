@@ -14,7 +14,7 @@ class TextOutputTest(_name: String, cs: Charset, eol: String) extends TestUtil {
 
   def check(cs: Charset, eol: String, msg: String)(f: TextOutput => Unit)(g: PrintWriter => Unit): Unit = {
     val bout = BufferedOutput.growing()
-    val tout = TextOutput(bout, cs, eol, false)
+    val tout = TextOutput.of(bout, cs, eol, false)
     f(tout)
     tout.close()
     val buf = bout.copyToByteArray

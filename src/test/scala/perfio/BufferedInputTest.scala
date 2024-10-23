@@ -131,7 +131,7 @@ abstract class AbstractBufferedInputTest extends TestUtil {
       val b1 = din.readByte()
       val i1 = din.readInt()
       din.readLong()
-      val bin2 = bin.delimitedView(13, skipRemaining = true)
+      val bin2 = bin.delimitedView(13, true)
       assertEquals(0, bin2.totalBytesRead)
       val b2 = bin2.int8()
       val i2 = bin2.int32()
