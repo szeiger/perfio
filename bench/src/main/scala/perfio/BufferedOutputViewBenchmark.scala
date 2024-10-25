@@ -160,16 +160,16 @@ class BufferedOutputViewBenchmark extends BenchUtil {
   def array_FullyBufferedOutput_reserve_fixed(bh: Blackhole): Unit = {
     val out = BufferedOutput.fixed(new Array[Byte](byteSize))
     writeReserveTo(out)
-    bh.consume(out.getBuffer)
-    bh.consume(out.getLength)
+    bh.consume(out.buffer)
+    bh.consume(out.length)
   }
 
   @Benchmark
   def array_FullyBufferedOutput_defer_fixed(bh: Blackhole): Unit = {
     val out = BufferedOutput.fixed(new Array[Byte](byteSize))
     writeDeferTo(out)
-    bh.consume(out.getBuffer)
-    bh.consume(out.getLength)
+    bh.consume(out.buffer)
+    bh.consume(out.length)
   }
 
   @Benchmark

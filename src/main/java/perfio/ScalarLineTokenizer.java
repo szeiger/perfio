@@ -12,23 +12,23 @@ class ScalarLineTokenizer {
   static LineTokenizer of(BufferedInput in, Charset charset, byte eol, byte preEol) throws IOException {
     if(in instanceof HeapBufferedInput h) {
       if(charset == StandardCharsets.ISO_8859_1) return new HeapScalarLineTokenizer(h, eol, preEol) {
-        protected String makeString(byte[] buf, int start, int len) { return new String(buf, 0, start, len); }
+        String makeString(byte[] buf, int start, int len) { return new String(buf, 0, start, len); }
       };
       else return new HeapScalarLineTokenizer(h, eol, preEol) {
-        protected String makeString(byte[] buf, int start, int len) { return new String(buf, start, len, charset); }
+        String makeString(byte[] buf, int start, int len) { return new String(buf, start, len, charset); }
       };
     } else {
       var i = (DirectBufferedInput)in;
       if(charset == StandardCharsets.ISO_8859_1) {
         if(StringInternals.internalAccessEnabled) return new DirectScalarLineTokenizer(i, eol, preEol) {
-          protected String makeString(byte[] buf, int start, int len) { return new String(buf, 0, start, len); }
-          @Override protected String makeString(MemorySegment buf, long start, long llen) { return makeStringLatin1Internal(buf, start, llen); }
+          String makeString(byte[] buf, int start, int len) { return new String(buf, 0, start, len); }
+          @Override String makeString(MemorySegment buf, long start, long llen) { return makeStringLatin1Internal(buf, start, llen); }
         };
         else return new DirectScalarLineTokenizer(i, eol, preEol) {
-          protected String makeString(byte[] buf, int start, int len) { return new String(buf, 0, start, len); }
+          String makeString(byte[] buf, int start, int len) { return new String(buf, 0, start, len); }
         };
       } else return new DirectScalarLineTokenizer(i, eol, preEol) {
-        protected String makeString(byte[] buf, int start, int len) { return new String(buf, start, len, charset); }
+        String makeString(byte[] buf, int start, int len) { return new String(buf, start, len, charset); }
       };
     }
   }
@@ -38,7 +38,7 @@ class ScalarLineTokenizer {
 
 
 abstract non-sealed class HeapScalarLineTokenizer extends HeapLineTokenizer {
-  protected HeapScalarLineTokenizer(HeapBufferedInput parentBin, byte eolChar, byte preEolChar) throws IOException {
+  HeapScalarLineTokenizer(HeapBufferedInput parentBin, byte eolChar, byte preEolChar) throws IOException {
     super(parentBin, eolChar, preEolChar);
   }
 
@@ -77,7 +77,7 @@ abstract non-sealed class DirectScalarLineTokenizer extends DirectLineTokenizer 
   private long pos;
   private final long limit;
 
-  protected DirectScalarLineTokenizer(DirectBufferedInput bin, byte eolChar, byte preEolChar) throws IOException {
+  DirectScalarLineTokenizer(DirectBufferedInput bin, byte eolChar, byte preEolChar) throws IOException {
     super(bin, eolChar, preEolChar);
     this.pos = start;
     limit = bin.totalReadLimit;

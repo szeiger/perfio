@@ -23,23 +23,23 @@ public class VectorizedLineTokenizer {
   static LineTokenizer of(BufferedInput in, Charset charset, byte eol, byte preEol) throws IOException {
     if(in instanceof HeapBufferedInput h) {
       if(charset == StandardCharsets.ISO_8859_1) return new HeapVectorizedLineTokenizer(h, eol, preEol) {
-        protected String makeString(byte[] buf, int start, int len) { return new String(buf, 0, start, len); }
+        String makeString(byte[] buf, int start, int len) { return new String(buf, 0, start, len); }
       };
       else return new HeapVectorizedLineTokenizer(h, eol, preEol) {
-        protected String makeString(byte[] buf, int start, int len) { return new String(buf, start, len, charset); }
+        String makeString(byte[] buf, int start, int len) { return new String(buf, start, len, charset); }
       };
     } else {
       var i = (DirectBufferedInput)in;
       if(charset == StandardCharsets.ISO_8859_1) {
         if(StringInternals.internalAccessEnabled) return new DirectVectorizedLineTokenizer(i, eol, preEol) {
-          protected String makeString(byte[] buf, int start, int len) { return new String(buf, 0, start, len); }
-          @Override protected String makeString(MemorySegment buf, long start, long llen) { return makeStringLatin1Internal(buf, start, llen); }
+          String makeString(byte[] buf, int start, int len) { return new String(buf, 0, start, len); }
+          @Override String makeString(MemorySegment buf, long start, long llen) { return makeStringLatin1Internal(buf, start, llen); }
         };
         else return new DirectVectorizedLineTokenizer(i, eol, preEol) {
-          protected String makeString(byte[] buf, int start, int len) { return new String(buf, 0, start, len); }
+          String makeString(byte[] buf, int start, int len) { return new String(buf, 0, start, len); }
         };
       } else return new DirectVectorizedLineTokenizer(i, eol, preEol) {
-        protected String makeString(byte[] buf, int start, int len) { return new String(buf, start, len, charset); }
+        String makeString(byte[] buf, int start, int len) { return new String(buf, start, len, charset); }
       };
     }
   }
@@ -53,7 +53,7 @@ abstract non-sealed class HeapVectorizedLineTokenizer extends HeapLineTokenizer 
   private long mask = 0L; // vector mask that marks the LFs
   private final ByteVector eolVector;
 
-  protected HeapVectorizedLineTokenizer(HeapBufferedInput parentBin, byte eolChar, byte preEolChar) throws IOException {
+  HeapVectorizedLineTokenizer(HeapBufferedInput parentBin, byte eolChar, byte preEolChar) throws IOException {
     super(parentBin, eolChar, preEolChar);
     this.vpos = bin.pos - VLEN;
     this.mask = 0L;
@@ -147,7 +147,7 @@ abstract non-sealed class DirectVectorizedLineTokenizer extends DirectLineTokeni
   private long mask = 0L;
   private final ByteVector eolVector;
 
-  protected DirectVectorizedLineTokenizer(DirectBufferedInput bin, byte eolChar, byte preEolChar) throws IOException {
+  DirectVectorizedLineTokenizer(DirectBufferedInput bin, byte eolChar, byte preEolChar) throws IOException {
     super(bin, eolChar, preEolChar);
     this.vpos = start - VLEN;
     this.limit = ms.byteSize();

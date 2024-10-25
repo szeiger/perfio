@@ -52,26 +52,26 @@ public abstract class TextOutput implements Closeable, Flushable {
 
   // ======================================================= non-static parts:
 
-  protected final BufferedOutput out;
-  protected final Charset cs;
-  protected final boolean autoFlush;
+  final BufferedOutput out;
+  final Charset cs;
+  final boolean autoFlush;
 
-  protected TextOutput(BufferedOutput out, Charset cs, boolean autoFlush) {
+  TextOutput(BufferedOutput out, Charset cs, boolean autoFlush) {
     this.out = out;
     this.cs = cs;
     this.autoFlush = autoFlush;
   }
 
-  protected final CharBuffer surrogateCharBuf = CharBuffer.allocate(2);
-  protected boolean hasSurrogate = false;
+  final CharBuffer surrogateCharBuf = CharBuffer.allocate(2);
+  boolean hasSurrogate = false;
 
-  protected abstract void printRaw(String s) throws IOException;
-  protected abstract void printlnRaw(String s) throws IOException;
-  protected abstract void printlnRaw() throws IOException;
-  protected abstract void printRawNull() throws IOException;
-  protected abstract void printlnRawNull() throws IOException;
+  abstract void printRaw(String s) throws IOException;
+  abstract void printlnRaw(String s) throws IOException;
+  abstract void printlnRaw() throws IOException;
+  abstract void printRawNull() throws IOException;
+  abstract void printlnRawNull() throws IOException;
 
-  protected final void maybeFlush() throws IOException { if(autoFlush) out.flush(); }
+  final void maybeFlush() throws IOException { if(autoFlush) out.flush(); }
 
   public final TextOutput println() throws IOException {
     printlnRaw();
@@ -181,9 +181,9 @@ public abstract class TextOutput implements Closeable, Flushable {
 
 
 /** TextOutput implementation for ASCII-compatible charsets. All ASCII characters are encoded as a single ASCII byte. */
-class ASCIICompatibleTextOutput extends TextOutput {
-  protected final byte[] eol;
-  protected final int eolLen;
+abstract class ASCIICompatibleTextOutput extends TextOutput {
+  final byte[] eol;
+  final int eolLen;
   private final byte eol0, eol1;
   private final int maxSafeChar;
 
@@ -196,7 +196,7 @@ class ASCIICompatibleTextOutput extends TextOutput {
     this.maxSafeChar = cs == StandardCharsets.ISO_8859_1 ? 255 : 127;
   }
 
-  protected void unsafeWriteEOL(int p) {
+  void unsafeWriteEOL(int p) {
     switch(eolLen) {
       case 1 -> out.buf[p] = eol0;
       case 2 -> { out.buf[p] = eol0; out.buf[p+1] = eol1; }
@@ -211,7 +211,7 @@ class ASCIICompatibleTextOutput extends TextOutput {
     }
   }
 
-  protected void printRaw(String s) throws IOException {
+  void printRaw(String s) throws IOException {
     if(!s.isEmpty()) {
       if(hasSurrogate || Character.isHighSurrogate(s.charAt(s.length()-1))) printRawWithSurrogates(s);
       else out.write(s.getBytes(cs));
@@ -237,7 +237,7 @@ class ASCIICompatibleTextOutput extends TextOutput {
     } else hasSurrogate = false;
   }
 
-  protected void printlnRaw(String s) throws IOException {
+  void printlnRaw(String s) throws IOException {
     if(!s.isEmpty()) {
       if(hasSurrogate || Character.isHighSurrogate(s.charAt(s.length()-1))) printlnRawWithSurrogates(s);
       else {
@@ -255,19 +255,19 @@ class ASCIICompatibleTextOutput extends TextOutput {
     printlnRaw();
   }
 
-  protected void printlnRaw() throws IOException {
+  void printlnRaw() throws IOException {
     flushSurrogate();
     var p = out.fwd(eolLen);
     unsafeWriteEOL(p);
   }
 
-  protected void printRawNull() throws IOException {
+  void printRawNull() throws IOException {
     flushSurrogate();
     var p = out.fwd(4);
     unsafeWriteNull(p);
   }
 
-  protected void printlnRawNull() throws IOException {
+  void printlnRawNull() throws IOException {
     flushSurrogate();
     var p = out.fwd(4 + eolLen);
     unsafeWriteNull(p);
@@ -356,8 +356,7 @@ class ASCIICompatibleTextOutput extends TextOutput {
     TextOutputUtil.INT_NATIVE.set(out.buf, p, TextOutputUtil.LIT_NULL);
   }
 
-  private void unsafeWriteInt(int _i, int p, int len) {
-    var i = _i;
+  private void unsafeWriteInt(int i, int p, int len) {
     if(i < 0) out.buf[p] = (byte)'-';
     else i = -i;
     var j = p + len - 2;
@@ -371,8 +370,7 @@ class ASCIICompatibleTextOutput extends TextOutput {
     else out.buf[j+1] = (byte)(-i + '0');
   }
 
-  private void unsafeWriteLong(long _l, int p, int len) {
-    var l = _l;
+  private void unsafeWriteLong(long l, int p, int len) {
     if(l < 0) out.buf[p] = (byte)'-';
     else l = -l;
     var j = p + len - 2;
@@ -418,7 +416,7 @@ class Latin1TextOutput extends ASCIICompatibleTextOutput {
   }
 
   @Override
-  protected void printRaw(String s) throws IOException {
+  void printRaw(String s) throws IOException {
     var l = s.length();
     if(l > 0) {
       if(StringInternals.isLatin1(s)) {
@@ -430,7 +428,7 @@ class Latin1TextOutput extends ASCIICompatibleTextOutput {
   }
 
   @Override
-  protected void printlnRaw(String s) throws IOException {
+  void printlnRaw(String s) throws IOException {
     var l = s.length();
     if(StringInternals.isLatin1(s)) {
       var p = out.fwd(l + eolLen);
@@ -448,7 +446,7 @@ class UTF8TextOutput extends ASCIICompatibleTextOutput {
   }
 
   @Override
-  protected void printRaw(String s) throws IOException {
+  void printRaw(String s) throws IOException {
     var l = s.length();
     if(l > 0) {
       if(StringInternals.isLatin1(s)) {
@@ -462,7 +460,7 @@ class UTF8TextOutput extends ASCIICompatibleTextOutput {
   }
 
   @Override
-  protected void printlnRaw(String s) throws IOException {
+  void printlnRaw(String s) throws IOException {
     var l = s.length();
     if(StringInternals.isLatin1(s)) {
       var v = StringInternals.value(s);
@@ -482,7 +480,7 @@ class ASCIITextOutput extends ASCIICompatibleTextOutput {
   }
 
   @Override
-  protected void printRaw(String s) throws IOException {
+  void printRaw(String s) throws IOException {
     var l = s.length();
     if(l > 0) {
       if(StringInternals.isLatin1(s)) {
@@ -496,7 +494,7 @@ class ASCIITextOutput extends ASCIICompatibleTextOutput {
   }
 
   @Override
-  protected void printlnRaw(String s) throws IOException {
+  void printlnRaw(String s) throws IOException {
     var l = s.length();
     if(StringInternals.isLatin1(s)) {
       var v = StringInternals.value(s);
@@ -547,7 +545,7 @@ class GenericTextOutput extends TextOutput {
     }
   }
 
-  private void printRaw(CharBuffer cb, boolean endOfInput) throws IOException {
+  private void printRaw(CharBuffer cb) throws IOException {
     if(cb.remaining() > 0) {
       if(hasSurrogate) {
         hasSurrogate = false;
@@ -556,15 +554,15 @@ class GenericTextOutput extends TextOutput {
           printRawInner(surrogateCharBuf, false);
         }
       }
-      printRawInner(cb, endOfInput);
+      printRawInner(cb, false);
     }
   }
 
-  protected void printRaw(String s) throws IOException { printRaw(CharBuffer.wrap(s), false); }
+  void printRaw(String s) throws IOException { printRaw(CharBuffer.wrap(s)); }
 
-  protected void printRawNull() throws IOException { printRaw("null"); }
+  void printRawNull() throws IOException { printRaw("null"); }
 
-  protected void printlnRawNull() throws IOException { printlnRaw("null"); }
+  void printlnRawNull() throws IOException { printlnRaw("null"); }
 
   @Override
   public void close() throws IOException {
@@ -586,24 +584,24 @@ class GenericTextOutput extends TextOutput {
     super.close();
   }
 
-  protected void printlnRaw(String s) throws IOException {
+  void printlnRaw(String s) throws IOException {
     printRaw(s);
     printlnRaw();
   }
 
-  protected void printlnRaw() throws IOException { printRaw(eol); }
+  void printlnRaw() throws IOException { printRaw(eol); }
 
   @Override
   public TextOutput print(char c) throws IOException {
     singleCharBuf.position(0).put(0, c);
-    printRaw(singleCharBuf, false);
+    printRaw(singleCharBuf);
     return this;
   }
 
   @Override
   public TextOutput println(char c) throws IOException {
     singleCharBuf.position(0).put(0, c);
-    printRaw(singleCharBuf, false);
+    printRaw(singleCharBuf);
     printlnRaw();
     maybeFlush();
     return this;
@@ -611,13 +609,13 @@ class GenericTextOutput extends TextOutput {
 
   @Override
   public TextOutput print(char[] s) throws IOException {
-    printRaw(CharBuffer.wrap(s), false);
+    printRaw(CharBuffer.wrap(s));
     return this;
   }
 
   @Override
   public TextOutput println(char[] s) throws IOException {
-    printRaw(CharBuffer.wrap(s), false);
+    printRaw(CharBuffer.wrap(s));
     printlnRaw();
     maybeFlush();
     return this;
@@ -648,19 +646,15 @@ class TextOutputUtil {
   }
 
   /** ASCII decimal digits of numbers 0 to 99 encoded as byte pairs in native byte order. */
-  static final short[] digitPairs;
+  static final short[] digitPairs = new short[100];
 
   static {
-    var a = new short[100];
-    var i = 0;
-    while(i < 100) {
+    for(var i=0; i<100; i++) {
       var d0 = (i % 10) + '0';
       var d1 = ((i/10) % 10) + '0';
       var c = bigEndian ? (d1 << 8) | d0 : (d0 << 8) | d1;
-      a[i] = (short)c;
-      i += 1;
+      digitPairs[i] = (short)c;
     }
-    digitPairs = a;
   }
 
   /** Number of chars needed to represent the given Int value using the same algorithm as `Integer.stringSize` (which
@@ -668,29 +662,24 @@ class TextOutputUtil {
    * (`if(x >= -9) ... else if(x >= -99) ...`) is faster for very small numbers, a constant-time algorithm like
    * https://github.com/ramanawithu/fast_int_to_string/blob/7a2d82bb4aea91afab48b741e87460f810141c71/fast_int_to_string.hpp#L47
    * may be faster for completely random numbers. */
-  static int numChars(int _x) {
-    int x, d;
-    if(_x < 0) { x = _x; d =  1; } else { x = -_x; d = 0; }
+  static int numChars(int x) {
+    int d = 1;
+    if(x >= 0) { x = -x; d = 0; }
     var p = -10;
-    var i = 1;
-    while(i < 10) {
+    for(var i=1; i<10; i++) {
       if(x > p) return d + i;
       p *= 10;
-      i += 1;
     }
     return d + 10;
   }
 
-  static int numChars(long _x) {
-    long x;
-    int d;
-    if(_x < 0) { x = _x; d =  1; } else { x = -_x; d = 0; }
+  static int numChars(long x) {
+    int d = 1;
+    if(x >= 0) { x = -x; d = 0; }
     var p = -10L;
-    var i = 1;
-    while(i < 19) {
+    for(var i=1; i<19; i++) {
       if(x > p) return d + i;
       p *= 10;
-      i += 1;
     }
     return d + 19;
   }

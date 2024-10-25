@@ -24,9 +24,8 @@ class VectorSupport {
     // Just a sanity check. We accept any reasonable size. Even 64-bit vectors (SWAR) are faster than scalar.
     // Hopefully this will guarantee that the preferred species is actually vectorized (which is not the case
     // with the experimental preview API at the moment).
-    var e = s.length() >= 8 && !"true".equals(System.getProperty("perfio.disableVectorized"));
+    __ENABLED = s.length() >= 8 && !"true".equals(System.getProperty("perfio.disableVectorized"));
 
-    __ENABLED = e;
     SPECIES = s;
     VLEN = SPECIES.length();
     FULL_MASK = -1L << (64-VLEN) >>> (64-VLEN);

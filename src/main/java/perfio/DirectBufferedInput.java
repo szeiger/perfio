@@ -9,7 +9,7 @@ import static perfio.BufferUtil.*;
 
 // This could be a lot simpler if we didn't have to do pagination but ByteBuffer is limited
 // to 2 GB and direct MemorySegment access is much, much slower as of JDK 22.
-class DirectBufferedInput extends BufferedInput {
+final class DirectBufferedInput extends BufferedInput {
   MemorySegment bbSegment;
   final MemorySegment ms;
   private final byte[][] linebuf;
@@ -29,7 +29,7 @@ class DirectBufferedInput extends BufferedInput {
     bbStart = db.bbStart;
   }
 
-  protected void clearBuffer() {
+  void clearBuffer() {
     bbSegment = null;
   }
 
@@ -58,7 +58,7 @@ class DirectBufferedInput extends BufferedInput {
     bb.get(p, a, off, len);
   }
 
-  protected BufferedInput createEmptyView() { return new DirectBufferedInput(null, null, 0, 0, 0L, ms, null, this, linebuf); }
+  BufferedInput createEmptyView() { return new DirectBufferedInput(null, null, 0, 0, 0L, ms, null, this, linebuf); }
 
   private byte[] extendBuffer(int len) {
     var buflen = linebuf[0].length;
@@ -127,7 +127,7 @@ class DirectBufferedInput extends BufferedInput {
       return "";
     } else {
       var p = fwd(len);
-      if(bb.get(pos-1) != 0) throwFormatError("Missing \\0 terminator in string");
+      if(bb.get(pos-1) != 0) throw new IOException("Missing \\0 terminator in string");
       return len == 1 ? "" : makeString(p, len-1, charset);
     }
   }
@@ -154,11 +154,11 @@ class DirectBufferedInput extends BufferedInput {
 
   /** Move this buffer to the given absolute position, updating the ByteBuffer and local position if necessary.
    * If the position is beyond the absolute limit, the buffer is moved to the limit instead. */
-  void reposition(long _absPos) {
-    var abs = _absPos > totalReadLimit ? totalReadLimit : _absPos;
-    if(abs < bbStart || abs > bbStart + lim) {
-      var offset = abs % BufferUtil.VECTOR_LENGTH;
-      var newStart = abs - offset;
+  void reposition(long absPos) {
+    absPos = Math.min(absPos, totalReadLimit);
+    if(absPos < bbStart || absPos > bbStart + lim) {
+      var offset = absPos % BufferUtil.VECTOR_LENGTH;
+      var newStart = absPos - offset;
       var shift = newStart - bbStart;
       totalBuffered += shift;
       var newLen = Math.min(totalReadLimit+parentTotalOffset-newStart, MaxDirectBufferSize);
@@ -167,6 +167,6 @@ class DirectBufferedInput extends BufferedInput {
       bbStart = newStart;
       lim = (int)newLen;
     }
-    pos = (int)(abs - bbStart);
+    pos = (int)(absPos - bbStart);
   }
 }

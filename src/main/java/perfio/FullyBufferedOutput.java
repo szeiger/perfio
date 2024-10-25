@@ -3,7 +3,7 @@ package perfio;
 import java.io.IOException;
 import java.util.Arrays;
 
-public class FullyBufferedOutput extends CacheRootBufferedOutput {
+public final class FullyBufferedOutput extends CacheRootBufferedOutput {
 
   FullyBufferedOutput(byte[] buf, boolean bigEndian, int start, int pos, int lim, int initialBufferSize, boolean fixed) {
     super(buf, bigEndian, start, pos, lim, initialBufferSize, fixed, Long.MAX_VALUE);
@@ -53,7 +53,7 @@ public class FullyBufferedOutput extends CacheRootBufferedOutput {
   }
 
   @Override
-  protected void closeUpstream() throws IOException {
+  void closeUpstream() throws IOException {
     flushSingle(this, false);
   }
 
@@ -63,15 +63,14 @@ public class FullyBufferedOutput extends CacheRootBufferedOutput {
     if(!closed) throw new IOException("Cannot access buffer before closing");
   }
 
-  public byte[] copyToByteArray() throws IOException { return Arrays.copyOf(getBuffer(), getLength()); }
+  public byte[] copyToByteArray() throws IOException { return Arrays.copyOf(buffer(), length()); }
 
-  //TODO rename these methods
-  public byte[] getBuffer() throws IOException {
+  public byte[] buffer() throws IOException {
     checkClosed();
     return outbuf;
   }
 
-  public int getLength() throws IOException {
+  public int length() throws IOException {
     checkClosed();
     return outpos;
   }

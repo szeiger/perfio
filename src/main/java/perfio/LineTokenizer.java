@@ -18,14 +18,14 @@ import java.io.IOException;
  * can be configured manually with `eol = '\r', preEol = -1`.
  */
 public abstract sealed class LineTokenizer implements Closeable permits HeapLineTokenizer, DirectLineTokenizer {
-  protected final byte eolChar, preEolChar;
+  final byte eolChar, preEolChar;
 
-  protected LineTokenizer(byte eolChar, byte preEolChar) {
+  LineTokenizer(byte eolChar, byte preEolChar) {
     this.eolChar = eolChar;
     this.preEolChar = preEolChar;
   }
 
-  protected boolean closed = false;
+  boolean closed = false;
 
   /** Returns the next line of text, or null if the end of the input has been reached. */
   public abstract String readLine() throws IOException;
@@ -38,7 +38,7 @@ public abstract sealed class LineTokenizer implements Closeable permits HeapLine
    */
   public abstract BufferedInput end() throws IOException;
 
-  protected void checkState() throws IOException {
+  void checkState() throws IOException {
     if(closed) throw new IOException("LineTokenizer has already been closed");
   }
 

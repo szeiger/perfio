@@ -11,7 +11,7 @@ import java.util.Arrays;
 import static perfio.BufferUtil.*;
 
 
-public abstract class BufferedOutput implements Closeable, Flushable {
+public abstract sealed class BufferedOutput implements Closeable, Flushable permits CacheRootBufferedOutput, NestedBufferedOutput {
 
   public static BufferedOutput of(OutputStream out, ByteOrder byteOrder, int initialBufferSize) {
     var buf = new byte[Math.max(initialBufferSize, MinBufferSize)];
@@ -63,9 +63,10 @@ public abstract class BufferedOutput implements Closeable, Flushable {
   private static final int MinBufferSize = 16;
   private static final int DefaultBufferSize = 32768;
 
-  final byte SHARING_EXCLUSIVE = (byte)0; // buffer is not shared
-  final byte SHARING_LEFT      = (byte)1; // buffer is shared with next block
-  final byte SHARING_RIGHT     = (byte)2; // buffer is shared with previous blocks only
+  static final byte SHARING_EXCLUSIVE = (byte)0; // buffer is not shared
+  static final byte SHARING_LEFT      = (byte)1; // buffer is shared with next block
+  static final byte SHARING_RIGHT     = (byte)2; // buffer is shared with previous blocks only
+
 
   // ======================================================= non-static parts:
 
@@ -75,7 +76,7 @@ public abstract class BufferedOutput implements Closeable, Flushable {
   final boolean fixed;
   long totalLimit;
 
-  protected BufferedOutput(byte[] buf, boolean bigEndian, int start, int pos, int lim, boolean fixed, long totalLimit) {
+  BufferedOutput(byte[] buf, boolean bigEndian, int start, int pos, int lim, boolean fixed, long totalLimit) {
     this.buf = buf;
     this.bigEndian = bigEndian;
     this.start = start;
@@ -312,7 +313,7 @@ public abstract class BufferedOutput implements Closeable, Flushable {
   abstract void flushUpstream() throws IOException;
 
   /** Called at the end of the first close(). */
-  protected void closeUpstream() throws IOException {}
+  void closeUpstream() throws IOException {}
 
   public final void flush() throws IOException {
     checkState();
@@ -328,13 +329,11 @@ public abstract class BufferedOutput implements Closeable, Flushable {
       closed = true;
       lim = pos;
       if(root == this) {
-        var b = next;
-        while(b != this) {
+        for(var b = next; b != this; b = b.next) {
           if(!b.closed) {
             if(!b.truncate) b.checkUnderflow();
             b.closed = true;
           }
-          b = b.next;
         }
         flushBlocks(true);
       } else {
@@ -428,8 +427,7 @@ public abstract class BufferedOutput implements Closeable, Flushable {
   }
 
   private void appendNestedToFixed(BufferedOutput r) throws IOException {
-    var b = r.next;
-    while(true) {
+    for(var b = r.next; true; b = b.next) {
       var blen = b.pos - b.start;
       if(blen > 0) {
         var p = fwd(blen);
@@ -437,7 +435,6 @@ public abstract class BufferedOutput implements Closeable, Flushable {
       }
       cacheRoot.returnToCache(b);
       if(b == r) return;
-      b = b.next;
     }
   }
 }
@@ -475,13 +472,13 @@ final class NestedBufferedOutput extends BufferedOutput {
   void flushUpstream() {}
 
   @Override
-  protected void closeUpstream() throws IOException {
+  void closeUpstream() throws IOException {
     if(parent != null) parent.appendNested(this);
   }
 }
 
 
-abstract class CacheRootBufferedOutput extends BufferedOutput {
+sealed abstract class CacheRootBufferedOutput extends BufferedOutput permits FlushingBufferedOutput, FullyBufferedOutput {
   final int initialBufferSize;
 
   CacheRootBufferedOutput(byte[] buf, boolean bigEndian, int start, int pos, int lim, int initialBufferSize, boolean fixed, long totalLimit) {
@@ -527,7 +524,7 @@ abstract class CacheRootBufferedOutput extends BufferedOutput {
 }
 
 
-class FlushingBufferedOutput extends CacheRootBufferedOutput {
+final class FlushingBufferedOutput extends CacheRootBufferedOutput {
   private final OutputStream out;
 
   FlushingBufferedOutput(byte[] buf, boolean bigEndian, int start, int pos, int lim, int initialBufferSize, boolean fixed, long totalLimit, OutputStream out) {

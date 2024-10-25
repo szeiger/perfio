@@ -8,7 +8,7 @@ import java.nio.charset.Charset;
 
 import static perfio.BufferUtil.*;
 
-class HeapBufferedInput extends BufferedInput {
+final class HeapBufferedInput extends BufferedInput {
   byte[] buf;
   final InputStream in;
   final int minRead;
@@ -24,7 +24,7 @@ class HeapBufferedInput extends BufferedInput {
     buf = ((HeapBufferedInput)b).buf;
   }
 
-  protected void clearBuffer() {
+  void clearBuffer() {
     buf = null;
   }
 
@@ -89,7 +89,7 @@ class HeapBufferedInput extends BufferedInput {
     }
   }
 
-  protected BufferedInput createEmptyView() { return new HeapBufferedInput(null, null, 0, 0, 0, in, minRead, this); }
+  BufferedInput createEmptyView() { return new HeapBufferedInput(null, null, 0, 0, 0, in, minRead, this); }
 
   public byte int8() throws IOException {
     var p = fwd(1);
@@ -142,7 +142,7 @@ class HeapBufferedInput extends BufferedInput {
       return "";
     } else {
       var p = fwd(len);
-      if(buf[pos-1] != 0) throwFormatError("Missing \\0 terminator in string");
+      if(buf[pos-1] != 0) throw new IOException("Missing \\0 terminator in string");
       return len == 1 ? "" : new String(buf, p, len-1, charset);
     }
   }

@@ -62,9 +62,9 @@ class BufferUtil {
 
   static MemorySegment mapReadOnlyFile(Path file) throws IOException {
     var a = Arena.ofAuto();
-    var ch = FileChannel.open(file, StandardOpenOption.READ);
-    try { return ch.map(FileChannel.MapMode.READ_ONLY, 0, ch.size(), a); }
-    finally { ch.close(); }
+    try (var ch = FileChannel.open(file, StandardOpenOption.READ)) {
+      return ch.map(FileChannel.MapMode.READ_ONLY, 0, ch.size(), a);
+    }
   }
 
   static final boolean VECTOR_ENABLED;

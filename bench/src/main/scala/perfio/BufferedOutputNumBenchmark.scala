@@ -82,24 +82,24 @@ class BufferedOutputNumBenchmark extends BenchUtil {
   def array_FullyBufferedOutput_growing(bh: Blackhole): Unit = {
     val out = BufferedOutput.growing()
     writeTo(out)
-    bh.consume(out.getBuffer)
-    bh.consume(out.getLength)
+    bh.consume(out.buffer)
+    bh.consume(out.length)
   }
 
   @Benchmark
   def array_FullyBufferedOutput_growing_preallocated(bh: Blackhole): Unit = {
     val out = BufferedOutput.growing(ByteOrder.BIG_ENDIAN, count*13)
     writeTo(out)
-    bh.consume(out.getBuffer)
-    bh.consume(out.getLength)
+    bh.consume(out.buffer)
+    bh.consume(out.length)
   }
 
   @Benchmark
   def array_FullyBufferedOutput_fixed(bh: Blackhole): Unit = {
     val out = BufferedOutput.fixed(new Array[Byte](count*13))
     writeTo(out)
-    bh.consume(out.getBuffer)
-    bh.consume(out.getLength)
+    bh.consume(out.buffer)
+    bh.consume(out.length)
   }
 
   @Benchmark

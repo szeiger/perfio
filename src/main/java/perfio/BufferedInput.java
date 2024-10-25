@@ -18,7 +18,7 @@ import java.nio.file.Path;
  * The number of bytes read is tracked as a 64-bit signed long value. The behaviour after
  * reading more than {@link Long#MAX_VALUE} (8 exabytes) is undefined.
  */
-public abstract class BufferedInput implements Closeable {
+public abstract sealed class BufferedInput implements Closeable permits HeapBufferedInput, DirectBufferedInput {
   /**
    * Read data from an {@link InputStream} using the default buffer size and byte order.
    * Same as {@code of(in, ByteOrder.BIG_ENDIAN, 32768)}
@@ -62,7 +62,7 @@ public abstract class BufferedInput implements Closeable {
    *                          at least half of initialBufferSize at once.
    */
   public static BufferedInput of(InputStream in, ByteOrder order, int initialBufferSize) {
-    var buf = new byte[Math.max(initialBufferSize, MinBufferSize)];
+    var buf = new byte[Math.max(initialBufferSize, MIN_BUFFER_SIZE)];
     var bb = ByteBuffer.wrap(buf).order(order);
     return new HeapBufferedInput(buf, bb, buf.length, buf.length, Long.MAX_VALUE, in, buf.length/2, null);
   }
@@ -152,7 +152,7 @@ public abstract class BufferedInput implements Closeable {
     return new DirectBufferedInput(bb, bbSegment, bb.position(), bb.limit(), ms.byteSize(), ms, closeable, null, newLinebuf());
   }
 
-  private static final int MinBufferSize = BufferUtil.VECTOR_LENGTH * 2;
+  private static final int MIN_BUFFER_SIZE = BufferUtil.VECTOR_LENGTH * 2;
   static int MaxDirectBufferSize = Integer.MAX_VALUE-15; //modified by unit tests
 
   private static final int STATE_LIVE        = 0;
@@ -169,7 +169,7 @@ public abstract class BufferedInput implements Closeable {
   private final Closeable closeable;
   private final BufferedInput parent;
 
-  protected BufferedInput(ByteBuffer bb, int pos, int lim, long totalReadLimit, Closeable closeable, BufferedInput parent) {
+  BufferedInput(ByteBuffer bb, int pos, int lim, long totalReadLimit, Closeable closeable, BufferedInput parent) {
     this.bb = bb;
     this.pos = pos;
     this.lim = lim;
@@ -182,17 +182,17 @@ public abstract class BufferedInput implements Closeable {
   }
 
   long totalBuffered; // total number of bytes read from input
-  protected boolean bigEndian;
+  boolean bigEndian;
   int excessRead = 0; // number of bytes read into buf beyond lim if totalReadLimit was reached
   private int state = STATE_LIVE;
   private BufferedInput activeView = null;
   private int activeViewInitialBuffered = 0;
   private boolean detachOnClose, skipOnClose = false;
-  protected long parentTotalOffset = 0L;
+  long parentTotalOffset = 0L;
   CloseableView closeableView= null;
 
-  protected abstract BufferedInput createEmptyView();
-  protected abstract void clearBuffer();
+  abstract BufferedInput createEmptyView();
+  abstract void clearBuffer();
   abstract void copyBufferFrom(BufferedInput b);
   abstract void prepareAndFillBuffer(int count) throws IOException;
 
@@ -212,7 +212,7 @@ public abstract class BufferedInput implements Closeable {
 
   int available() { return lim - pos; }
 
-  protected void checkState() throws IOException {
+  void checkState() throws IOException {
     if(state != STATE_LIVE) {
       if(state == STATE_CLOSED) throw new IOException("BufferedInput has already been closed");
       else if(state == STATE_ACTIVE_VIEW) throw new IOException("Cannot use BufferedInput while a view is active");
@@ -228,8 +228,6 @@ public abstract class BufferedInput implements Closeable {
     return this;
   }
 
-  protected final void throwFormatError(String msg) throws IOException { throw new IOException(msg); }
-
   /** Request `count` bytes to be available to read in the buffer. Less may be available if the end of the input
    * is reached. This method may change the `buf` and `bb` references when requesting more than
    * [[BufferedInput!.MinBufferSize]] / 2 bytes. */
@@ -238,7 +236,7 @@ public abstract class BufferedInput implements Closeable {
   /** Request `count` bytes to be available to read in the buffer, advance the buffer to the position after these
    * bytes and return the previous position. Throws EOFException if the end of the input is reached before the
    * requested number of bytes is available. This method may change the buffer references. */
-  protected int fwd(int count) throws IOException {
+  int fwd(int count) throws IOException {
     if(available() < count) {
       prepareAndFillBuffer(count);
       if(available() < count) throw new EOFException();
