@@ -5,20 +5,18 @@ import java.lang.invoke.MethodHandles;
 import java.lang.invoke.MethodType;
 import java.nio.charset.StandardCharsets;
 
-/**
- * Accessors for private String methods for faster string encoding that can be used when running with
- * `--add-opens java.base/java.lang=ALL-UNNAMED`. Lookup and fallback are implemented via load-time initialization
- * of constant MethodHandles for optimal performance.
- */
+/// Accessors for private String methods for faster string encoding that can be used when running with
+/// `--add-opens java.base/java.lang=ALL-UNNAMED`. Lookup and fallback are implemented via load-time initialization
+/// of constant MethodHandles for optimal performance.
 class StringInternals {
   private StringInternals() {}
 
   private static final MethodHandle isLatin1MH, valueMH, hasNegativesMH, newStringMH;
 
-  /** Error encountered during initialization of internals call paths, or null if successful / manually disabled. */
+  /// Error encountered during initialization of internals call paths, or null if successful / manually disabled.
   public static final Throwable internalAccessError;
 
-  /** true if calls go to internal String methods, false for fallbacks. */
+  /// true if calls go to internal String methods, false for fallbacks.
   public static final boolean internalAccessEnabled;
 
   public static boolean isLatin1(String s) {

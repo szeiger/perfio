@@ -15,29 +15,28 @@ import java.nio.charset.CodingErrorAction;
 import java.nio.charset.StandardCharsets;
 
 
-/** TextOutput prints formatted text to a BufferedOutput. It generally behaves like java.io.PrintWriter except that it
- * does not swallow IOExceptions. They are thrown immediately like in BufferedOutput/OutputStream/etc. Most methods
- * return `this` for convenient chaining of operations. Unlike PrintWriter/PrintStream it allows the end-of-line
- * sequence to be changed from the system default.
- *
- * This class is not thread-safe. Unless external synchronization is used, an instance may only be accessed from a
- * single thread (which must be the same thread that is used for accessing the underlying BufferedOutput).
- *
- * TextOutput does not perform any internal buffering, so you can mix calls to a TextOutput and the underlying
- * BufferedOutput instance. The only general exception to this is when a surrogate pair is split (i.e. the high and
- * low surrogate character are written in 2 separate `print(String)` or `print(Char)` calls), but more esoteric
- * Charset implementations may contain buffering of their own.
- */
+/// TextOutput prints formatted text to a [BufferedOutput]. It generally behaves like [java.io.PrintWriter] except that
+/// it does not swallow IOExceptions. They are thrown immediately like in BufferedOutput/OutputStream/etc. Most methods
+/// return `this` for convenient chaining of operations. Unlike PrintWriter/PrintStream it allows the end-of-line
+/// sequence to be changed from the system default.
+///
+/// This class is not thread-safe. Unless external synchronization is used, an instance may only be accessed from a
+/// single thread (which must be the same thread that is used for accessing the underlying BufferedOutput).
+///
+/// TextOutput does not perform any internal buffering, so you can mix calls to a TextOutput and the underlying
+/// BufferedOutput instance. The only general exception to this is when a surrogate pair is split (i.e. the high and
+/// low surrogate character are written in 2 separate [#print(String)] or [#print(char)] calls), but more esoteric
+/// Charset implementations may contain buffering of their own.
 public abstract class TextOutput implements Closeable, Flushable {
 
-  /** Create a TextOutput for a given BufferedOutput.
-   *
-   * @param out The underlying BufferedOutput
-   * @param cs The Charset for encoding text. ASCII-compatible standard Charsets (`StandardCharsets.ISO_8859_1`,
-   *           `StandardCharsets.UTF_8`, `StandardCharsets.US_ASCII`) are specially optimized and much faster than
-   *           the generic implementation for other Charsets (which is still significantly faster than
-   *           `java.io.PrintWriter` because it can write directly to a BufferedOutput).
-   * */
+  /// Create a TextOutput for a given BufferedOutput.
+  ///
+  /// @param out The underlying BufferedOutput
+  /// @param cs The Charset for encoding text. ASCII-compatible standard Charsets [StandardCharsets#ISO_8859_1],
+  ///           [StandardCharsets#UTF_8], [StandardCharsets#US_ASCII] are specially optimized and much faster than
+  ///           the generic implementation for other Charsets (which is still significantly faster than
+  ///           [java.io.PrintWriter] because it can write directly to a BufferedOutput).
+  ///
   public static TextOutput of(BufferedOutput out, Charset cs, String eol, boolean autoFlush) {
     if(cs == StandardCharsets.ISO_8859_1) return new Latin1TextOutput(out, eol.getBytes(cs), autoFlush);
     else if(cs == StandardCharsets.UTF_8) return new UTF8TextOutput(out, eol.getBytes(cs), autoFlush);
@@ -180,7 +179,7 @@ public abstract class TextOutput implements Closeable, Flushable {
 }
 
 
-/** TextOutput implementation for ASCII-compatible charsets. All ASCII characters are encoded as a single ASCII byte. */
+/// TextOutput implementation for ASCII-compatible charsets. All ASCII characters are encoded as a single ASCII byte.
 abstract class ASCIICompatibleTextOutput extends TextOutput {
   final byte[] eol;
   final int eolLen;
@@ -508,7 +507,7 @@ class ASCIITextOutput extends ASCIICompatibleTextOutput {
 }
 
 
-/** Generic TextOutput implementation that should work for arbitrary Charsets (including support for BOMs and end markers). */
+/// Generic TextOutput implementation that should work for arbitrary Charsets (including support for BOMs and end markers).
 class GenericTextOutput extends TextOutput {
   private final String eol;
   private final CharsetEncoder enc;
@@ -645,7 +644,7 @@ class TextOutputUtil {
         : (d3 << 24) | (d2 << 16) | (d1 << 8) | d0;
   }
 
-  /** ASCII decimal digits of numbers 0 to 99 encoded as byte pairs in native byte order. */
+  /// ASCII decimal digits of numbers 0 to 99 encoded as byte pairs in native byte order.
   static final short[] digitPairs = new short[100];
 
   static {
@@ -657,11 +656,11 @@ class TextOutputUtil {
     }
   }
 
-  /** Number of chars needed to represent the given Int value using the same algorithm as `Integer.stringSize` (which
-   * is not public API). This tends to be fastest for small to medium-sized numbers. Manually unrolling
-   * (`if(x >= -9) ... else if(x >= -99) ...`) is faster for very small numbers, a constant-time algorithm like
-   * https://github.com/ramanawithu/fast_int_to_string/blob/7a2d82bb4aea91afab48b741e87460f810141c71/fast_int_to_string.hpp#L47
-   * may be faster for completely random numbers. */
+  /// Number of chars needed to represent the given Int value using the same algorithm as `Integer.stringSize` (which
+  /// is not public API). This tends to be fastest for small to medium-sized numbers. Manually unrolling
+  /// (`if(x >= -9) ... else if(x >= -99) ...`) is faster for very small numbers, a constant-time algorithm like
+  /// https://github.com/ramanawithu/fast_int_to_string/blob/7a2d82bb4aea91afab48b741e87460f810141c71/fast_int_to_string.hpp#L47
+  /// may be faster for completely random numbers.
   static int numChars(int x) {
     int d = 1;
     if(x >= 0) { x = -x; d = 0; }

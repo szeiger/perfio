@@ -11,12 +11,10 @@ import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import static perfio.VectorSupport.*;
 
-/**
- * A vectorized implementation of [[LineTokenizer]].
- *
- * The parser uses explicit SIMD loops with up to 512 bits / 64 lanes per vector (depending on
- * hardware and JVM support).
- */
+/// A vectorized implementation of [[LineTokenizer]].
+///
+/// The parser uses explicit SIMD loops with up to 512 bits / 64 lanes per vector (depending on
+/// hardware and JVM support).
 public class VectorizedLineTokenizer {
   private VectorizedLineTokenizer() {}
 

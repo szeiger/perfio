@@ -95,7 +95,7 @@ public abstract sealed class BufferedOutput implements Closeable, Flushable perm
   CacheRootBufferedOutput cacheRoot = null;
   byte sharing = SHARING_EXCLUSIVE;
 
-  /** Change the byte order of this BufferedOutput. */
+  /// Change the byte order of this BufferedOutput.
   public final BufferedOutput order(ByteOrder order) {
     bigEndian = order == ByteOrder.BIG_ENDIAN;
     return this;
@@ -235,7 +235,7 @@ public abstract sealed class BufferedOutput implements Closeable, Flushable perm
     }
   }
 
-  /** Merge the contents of this block into the next one using this block's buffer. */
+  /// Merge the contents of this block into the next one using this block's buffer.
   final void mergeToRight() {
     var n = next;
     var nlen = n.pos - n.start;
@@ -250,7 +250,7 @@ public abstract sealed class BufferedOutput implements Closeable, Flushable perm
     n.pos = pos + nlen;
   }
 
-  /** Switch a potentially shared block to exclusive after re-allocating its buffer */
+  /// Switch a potentially shared block to exclusive after re-allocating its buffer .
   void unshare() {
     if(sharing == SHARING_RIGHT) {
       sharing = SHARING_EXCLUSIVE;
@@ -276,7 +276,7 @@ public abstract sealed class BufferedOutput implements Closeable, Flushable perm
     unshare();
   }
 
-  /** Insert this block before the given block. */
+  /// Insert this block before the given block.
   void insertBefore(BufferedOutput b) {
     prev = b.prev;
     next = b;
@@ -284,7 +284,7 @@ public abstract sealed class BufferedOutput implements Closeable, Flushable perm
     b.prev = this;
   }
 
-  /** Insert this block and its prefix list before the given block. Must only be called on a root block. */
+  /// Insert this block and its prefix list before the given block. Must only be called on a root block.
   void insertAllBefore(BufferedOutput b) {
     var n = next;
     n.prev = b.prev;
@@ -293,26 +293,26 @@ public abstract sealed class BufferedOutput implements Closeable, Flushable perm
     b.prev = this;
   }
 
-  /** Unlink this block and return it to the cache. */
+  /// Unlink this block and return it to the cache.
   void unlinkAndReturn() {
     prev.next = next;
     next.prev = prev;
     cacheRoot.returnToCache(this);
   }
 
-  /** Unlink this block. */
+  /// Unlink this block.
   void unlinkOnly() {
     prev.next = next;
     next.prev = prev;
   }
 
-  /** Flush and unlink all closed blocks and optionally flush the root block. Must only be called on the root block. */
+  /// Flush and unlink all closed blocks and optionally flush the root block. Must only be called on the root block.
   abstract void flushBlocks(boolean forceFlush) throws IOException;
 
-  /** Force flush to the upstream after flushBlocks. Must only be called on the root block. */
+  /// Force flush to the upstream after flushBlocks. Must only be called on the root block.
   abstract void flushUpstream() throws IOException;
 
-  /** Called at the end of the first close(). */
+  /// Called at the end of the first [#close()].
   void closeUpstream() throws IOException {}
 
   public final void flush() throws IOException {
@@ -343,7 +343,7 @@ public abstract sealed class BufferedOutput implements Closeable, Flushable perm
     }
   }
 
-  /** Reserve a short block (fully allocated) by splitting this block into two shared blocks. */
+  /// Reserve a short block (fully allocated) by splitting this block into two shared blocks.
   private BufferedOutput reserveShort(int length) throws IOException {
     var p = fwd(length);
     var len = p - start;
@@ -356,7 +356,7 @@ public abstract sealed class BufferedOutput implements Closeable, Flushable perm
     return b;
   }
 
-  /** Reserve a long block (flushed on demand) by allocating a new block. Must not be called on a shared block. */
+  /// Reserve a long block (flushed on demand) by allocating a new block. Must not be called on a shared block.
   private BufferedOutput reserveLong(long max) throws IOException {
     var len = pos - start;
     var b = cacheRoot.getExclusiveBlock();
@@ -371,10 +371,10 @@ public abstract sealed class BufferedOutput implements Closeable, Flushable perm
     return b;
   }
 
-  /** Leave a fixed-size gap at the current position that can be filled later after continuing to write
-   * to this BufferedOutput. This BufferedOutput's `totalBytesWritten` is immediately increased by the requested
-   * size. Attempting to write more than the requested amount of data to the returned BufferedOutput or closing
-   * it before writing all of the data throws an IOException. */
+  /// Leave a fixed-size gap at the current position that can be filled later after continuing to write
+  /// to this BufferedOutput. This BufferedOutput's `totalBytesWritten` is immediately increased by the requested
+  /// size. Attempting to write more than the requested amount of data to the returned BufferedOutput or closing
+  /// it before writing all of the data throws an IOException.
   public final BufferedOutput reserve(long length) throws IOException {
     checkState();
     if(fixed) return reserveShort((int)Math.min(length, available()));
@@ -382,9 +382,9 @@ public abstract sealed class BufferedOutput implements Closeable, Flushable perm
     else return reserveLong(length);
   }
 
-  /** Create a new BufferedOutput `b` that gets appended to `this` when closed. If `this` has a limited
-   * size and appending `b` would exceed the limit, an EOFException is thrown when attempting to close `b`.
-   * Attempting to write more than the requested maximum length to `b` results in an IOException. */
+  /// Create a new BufferedOutput `b` that gets appended to `this` when closed. If `this` has a limited
+  /// size and appending `b` would exceed the limit, an EOFException is thrown when attempting to close `b`.
+  /// Attempting to write more than the requested maximum length to `b` results in an IOException.
   public final BufferedOutput defer(long max) throws IOException {
     var b = cacheRoot.getExclusiveBlock();
     b.reinit(b.buf, bigEndian, 0, 0, b.buf.length, SHARING_EXCLUSIVE, max, 0L, true, b, this);
@@ -395,7 +395,7 @@ public abstract sealed class BufferedOutput implements Closeable, Flushable perm
 
   public final BufferedOutput defer() throws IOException { return defer(Long.MAX_VALUE); }
 
-  /** Append a nested root block */
+  /// Append a nested root block.
   void appendNested(BufferedOutput b) throws IOException {
     var btot = b.totalBytesWritten();
     var rem = totalLimit - btot;
@@ -448,7 +448,7 @@ final class NestedBufferedOutput extends BufferedOutput {
     this.cacheRoot = cacheRoot;
   }
 
-  /** Re-initialize this block and return its old buffer. */
+  /// Re-initialize this block and return its old buffer.
   byte[] reinit(byte[] buf, boolean bigEndian, int start, int pos, int lim, byte sharing,
     long totalLimit, long totalFlushed, boolean truncate, BufferedOutput root, BufferedOutput parent) {
     var b = this.buf;
@@ -500,7 +500,7 @@ sealed abstract class CacheRootBufferedOutput extends BufferedOutput permits Flu
     }
   }
 
-  /** Get a cached or new exclusive block. */
+  /// Get a cached or new exclusive block.
   NestedBufferedOutput getExclusiveBlock() {
     if(cachedExclusive == null)
       return new NestedBufferedOutput(new byte[cacheRoot.initialBufferSize], false, cacheRoot);
@@ -511,7 +511,7 @@ sealed abstract class CacheRootBufferedOutput extends BufferedOutput permits Flu
     }
   }
 
-  /** Get a cached or new shared block. */
+  /// Get a cached or new shared block.
   NestedBufferedOutput getSharedBlock() {
     if(cachedShared == null)
       return new NestedBufferedOutput(null, true, cacheRoot);
@@ -579,7 +579,7 @@ final class FlushingBufferedOutput extends CacheRootBufferedOutput {
     } else return false;
   }
 
-  /** Write the buffer to the output. Must only be called on the root block. */
+  /// Write the buffer to the output. Must only be called on the root block.
   private void writeToOutput(byte[] buf, int off, int len) throws IOException {
     out.write(buf, off, len);
   }

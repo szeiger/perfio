@@ -152,8 +152,8 @@ final class DirectBufferedInput extends BufferedInput {
     } else return 0;
   }
 
-  /** Move this buffer to the given absolute position, updating the ByteBuffer and local position if necessary.
-   * If the position is beyond the absolute limit, the buffer is moved to the limit instead. */
+  /// Move this buffer to the given absolute position, updating the ByteBuffer and local position if necessary.
+  /// If the position is beyond the absolute limit, the buffer is moved to the limit instead.
   void reposition(long absPos) {
     absPos = Math.min(absPos, totalReadLimit);
     if(absPos < bbStart || absPos > bbStart + lim) {

@@ -6,8 +6,8 @@ import jdk.incubator.vector.VectorSpecies;
 class VectorSupport {
   private VectorSupport() {}
 
-  /** Do not check! This class cannot even be initialized if the Vector API is not available.
-   * Use BufferUtil.VECTOR_ENABLED instead. */
+  /// Do not check! This class cannot even be initialized if the Vector API is not available.
+  /// Use BufferUtil.VECTOR_ENABLED instead.
   static final boolean __ENABLED;
 
   static final VectorSpecies<Byte> SPECIES;

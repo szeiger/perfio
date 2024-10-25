@@ -13,8 +13,8 @@ import java.nio.file.StandardOpenOption;
 class BufferUtil {
   private BufferUtil() {}
 
-  /** Compute a new buffer size for the given size alignment (and assuming the current size respects
-   *  this alignment, clamped at the maximum aligned value <= Int.MaxValue */
+  /// Compute a new buffer size for the given size alignment (and assuming the current size respects
+  /// this alignment, clamped at the maximum aligned value <= [Integer#MAX_VALUE].
   static int growBuffer(int current, int target, int align) {
     int l = current;
     while(l < target) {
