@@ -242,7 +242,7 @@ class TextOutputBenchmark extends BenchUtil {
     var fbout: FullyBufferedOutput = null
     val bout = if(output == "file") BufferedOutput.ofFile(Paths.get("/dev/null"))
     else {
-      fbout = BufferedOutput.growing(ByteOrder.BIG_ENDIAN, totalLength)
+      fbout = BufferedOutput.growing(totalLength)
       fbout
     }
     val tout = TextOutput.of(bout, cs, System.lineSeparator(), autoFlush)

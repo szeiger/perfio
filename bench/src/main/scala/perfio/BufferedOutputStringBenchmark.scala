@@ -122,7 +122,7 @@ class BufferedOutputStringBenchmark extends BenchUtil {
 
   @Benchmark
   def array_FullyBufferedOutput_growing_preallocated(bh: Blackhole): Unit = {
-    val out = BufferedOutput.growing(ByteOrder.BIG_ENDIAN, totalLength)
+    val out = BufferedOutput.growing(totalLength)
     writeTo(out)
     bh.consume(out.buffer)
     bh.consume(out.length)

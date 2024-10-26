@@ -1,6 +1,7 @@
 package perfio;
 
 import java.io.IOException;
+import java.nio.ByteOrder;
 import java.util.Arrays;
 
 public final class FullyBufferedOutput extends CacheRootBufferedOutput {
@@ -11,6 +12,12 @@ public final class FullyBufferedOutput extends CacheRootBufferedOutput {
 
   private byte[] outbuf = null;
   private int outstart, outpos = 0; //TODO is outstart used correctly?
+
+  @Override
+  public FullyBufferedOutput order(ByteOrder order) {
+    super.order(order);
+    return this;
+  }
 
   void flushBlocks(boolean forceFlush) throws IOException {
     while(next != this) {

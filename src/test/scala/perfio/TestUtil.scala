@@ -61,7 +61,7 @@ class TestData(val bytes: Array[Byte], val name: String, owner: Class[_]) {
 
   def createBufferedOutputToOutputStream(initialBufferSize: Int = 64): (BufferedOutput, () => Unit) = {
     val bout = new ByteArrayOutputStream()
-    val bo = BufferedOutput.of(bout, ByteOrder.BIG_ENDIAN, initialBufferSize)
+    val bo = BufferedOutput.of(bout, initialBufferSize)
     val checker = () => {
       bo.close()
       val a = bout.toByteArray
@@ -70,7 +70,7 @@ class TestData(val bytes: Array[Byte], val name: String, owner: Class[_]) {
     (bo, checker)
   }
   def createGrowingBufferedOutput(initialBufferSize: Int = 64): (BufferedOutput, () => Unit) = {
-    val bo = BufferedOutput.growing(ByteOrder.BIG_ENDIAN, initialBufferSize)
+    val bo = BufferedOutput.growing(initialBufferSize)
     val checker = () => {
       bo.close()
       val a = bo.copyToByteArray
@@ -79,7 +79,7 @@ class TestData(val bytes: Array[Byte], val name: String, owner: Class[_]) {
     (bo, checker)
   }
   def createFixedBufferedOutput(buf: Array[Byte], start: Int = 0, len: Int = -1): (BufferedOutput, () => Unit) = {
-    val bo = BufferedOutput.fixed(buf, start, len)
+    val bo = BufferedOutput.fixed(buf, start, if(len == -1) buf.length-start else len)
     val checker = () => {
       bo.close()
       val checkLen = bo.totalBytesWritten.toInt

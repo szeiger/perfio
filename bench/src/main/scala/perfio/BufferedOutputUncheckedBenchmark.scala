@@ -22,7 +22,7 @@ class BufferedOutputUncheckedBenchmark extends BenchUtil {
 
   @Benchmark
   def simple8(bh: Blackhole): Unit = {
-    val out = BufferedOutput.growing(ByteOrder.BIG_ENDIAN, byteSize)
+    val out = BufferedOutput.growing(byteSize)
     var i = 0
     while(i < count) {
       out.int8(i.toByte)
@@ -42,7 +42,7 @@ class BufferedOutputUncheckedBenchmark extends BenchUtil {
 
   @Benchmark
   def internal8(bh: Blackhole): Unit = {
-    val out = BufferedOutput.growing(ByteOrder.BIG_ENDIAN, byteSize)
+    val out = BufferedOutput.growing(byteSize)
     var i = 0
     while(i < count) {
       val p = out.fwd(8)
@@ -63,7 +63,7 @@ class BufferedOutputUncheckedBenchmark extends BenchUtil {
 
   @Benchmark
   def simple16(bh: Blackhole): Unit = {
-    val out = BufferedOutput.growing(ByteOrder.BIG_ENDIAN, byteSize)
+    val out = BufferedOutput.growing(byteSize)
     var i = 0
     while(i < count) {
       out.int16(i.toShort)
@@ -79,7 +79,7 @@ class BufferedOutputUncheckedBenchmark extends BenchUtil {
 
   @Benchmark
   def internal16(bh: Blackhole): Unit = {
-    val out = BufferedOutput.growing(ByteOrder.BIG_ENDIAN, byteSize)
+    val out = BufferedOutput.growing(byteSize)
     var i = 0
     while(i < count) {
       val p = out.fwd(8)

@@ -13,54 +13,83 @@ import java.util.Objects;
 import static perfio.BufferUtil.*;
 
 
+/// BufferedInput provides buffered streaming writes to an OutputStream or similar data sink.
+///
+/// The API is not thread-safe. Access from multiple threads must be synchronized externally.
+/// The number of bytes written is tracked as a 64-bit signed long value [#totalBytesWritten()].
+/// The behaviour after writing more than [Long#MAX_VALUE] (8 exabytes) is undefined.
+///
+/// A freshly created BufferedInput always uses [ByteOrder#BIG_ENDIAN]. This can be changed with
+/// [#order(ByteOrder)]. Unless specified explicitly, the initial buffer size is 32768.
 public abstract sealed class BufferedOutput implements Closeable, Flushable permits CacheRootBufferedOutput, NestedBufferedOutput {
 
-  public static BufferedOutput of(OutputStream out, ByteOrder byteOrder, int initialBufferSize) {
+  /// Write data to an [OutputStream].
+  ///
+  /// @param out               Stream to write to.
+  /// @param initialBufferSize Initial buffer size. The buffer is expanded later if necessary.
+  public static BufferedOutput of(OutputStream out, int initialBufferSize) {
     var buf = new byte[Math.max(initialBufferSize, MinBufferSize)];
-    return new FlushingBufferedOutput(buf, byteOrder == ByteOrder.BIG_ENDIAN, 0, 0, buf.length, initialBufferSize, false, Long.MAX_VALUE, out);
+    return new FlushingBufferedOutput(buf, true, 0, 0, buf.length, initialBufferSize, false, Long.MAX_VALUE, out);
   }
 
-  public static BufferedOutput of(OutputStream out, ByteOrder byteOrder) { return of(out, byteOrder, DefaultBufferSize); }
+  /// Write data to an [OutputStream] using the default initial buffer size.
+  ///
+  /// @param out               Stream to write to.
+  /// @see #of(OutputStream, int)
+  public static BufferedOutput of(OutputStream out) { return of(out, DefaultBufferSize); }
 
-  public static BufferedOutput of(OutputStream out) { return of(out, ByteOrder.BIG_ENDIAN, DefaultBufferSize); }
-
-  public static FullyBufferedOutput growing(ByteOrder byteOrder, int initialBufferSize) {
+  /// Write data to an internal byte array buffer that can be accessed directly or copies after
+  /// closing the BufferedOutput (similar to [ByteArrayOutputStream]).
+  ///
+  /// @param initialBufferSize Initial buffer size. The buffer is expanded later if necessary.
+  public static FullyBufferedOutput growing(int initialBufferSize) {
     var buf = new byte[Math.max(initialBufferSize, MinBufferSize)];
-    return new FullyBufferedOutput(buf, byteOrder == ByteOrder.BIG_ENDIAN, 0, 0, buf.length, initialBufferSize, false);
+    return new FullyBufferedOutput(buf, true, 0, 0, buf.length, initialBufferSize, false);
   }
 
-  public static FullyBufferedOutput growing(ByteOrder byteOrder) { return growing(byteOrder, DefaultBufferSize); }
+  /// Write data to an internal byte array buffer that can be accessed directly or copies after
+  /// closing the BufferedOutput (similar to [ByteArrayOutputStream]) using the default initial
+  /// buffer size.
+  /// @see #growing(int)
+  public static FullyBufferedOutput growing() { return growing(DefaultBufferSize); }
 
-  public static FullyBufferedOutput growing() { return growing(ByteOrder.BIG_ENDIAN, DefaultBufferSize); }
-
-
-  public static FullyBufferedOutput fixed(byte[] buf, int off, int len, ByteOrder byteOrder, int initialBufferSize) {
+  /// Write data to a given region of an existing byte array. The BufferedOutput is limited to the
+  /// initial size.
+  ///
+  /// @param initialBufferSize Initial buffer size for additional temporary buffers that may be
+  ///                          created when using [#defer(long)], otherwise unused.
+  public static FullyBufferedOutput fixed(byte[] buf, int off, int len, int initialBufferSize) {
     Objects.checkFromIndexSize(off, len, buf.length);
-    return new FullyBufferedOutput(buf, byteOrder == ByteOrder.BIG_ENDIAN, off, off, len+off, initialBufferSize, true);
+    return new FullyBufferedOutput(buf, true, off, off, len+off, initialBufferSize, true);
   }
 
-  public static FullyBufferedOutput fixed(byte[] buf, int start, int len, ByteOrder byteOrder) {
-    var ib = Math.max(DefaultBufferSize, len);
-    return fixed(buf, start, len, byteOrder, ib);
-  }
+  /// Write data to a given byte array. Same as `fixed(buf, 0, buf.length)`.
+  /// @see #fixed(byte[], int, int, int)
+  public static FullyBufferedOutput fixed(byte[] buf) { return fixed(buf, 0, buf.length, DefaultBufferSize); }
 
-  public static FullyBufferedOutput fixed(byte[] buf, ByteOrder byteOrder) { return fixed(buf, 0, buf.length, byteOrder); }
+  /// Write data to a given region of an existing byte array..
+  /// @see #fixed(byte[], int, int, int)
+  public static FullyBufferedOutput fixed(byte[] buf, int start, int len) { return fixed(buf, start, len, DefaultBufferSize); }
 
-  public static FullyBufferedOutput fixed(byte[] buf) { return fixed(buf, 0, buf.length, ByteOrder.BIG_ENDIAN); }
-
-  public static FullyBufferedOutput fixed(byte[] buf, int start, int len) { return fixed(buf, start, len, ByteOrder.BIG_ENDIAN); }
-
-  public static BufferedOutput ofFile(Path path, ByteOrder byteOrder, int initialBufferSize, OpenOption... option) throws IOException {
+  /// Write data to a file.
+  ///
+  /// @param path              File to write.
+  /// @param initialBufferSize Initial buffer size. The buffer is expanded later if necessary.
+  /// @param option            Optional set of OpenOptions. When empty, the default set (`CREATE`,
+  ///                          `TRUNCATE_EXISTING`, `WRITE`) is used.
+  public static BufferedOutput ofFile(Path path, int initialBufferSize, OpenOption... option) throws IOException {
     var out = Files.newOutputStream(path, option);
-    return of(out, byteOrder, initialBufferSize);
+    return of(out, initialBufferSize);
   }
 
-  public static BufferedOutput ofFile(Path path, ByteOrder byteOrder, OpenOption... option) throws IOException {
-    return ofFile(path, byteOrder, DefaultBufferSize);
-  }
-
+  /// Write data to a file.
+  ///
+  /// @param path              File to write.
+  /// @param option            Optional set of OpenOptions. When empty, the default set (`CREATE`,
+  ///                          `TRUNCATE_EXISTING`, `WRITE`) is used.
+  /// @see #ofFile(Path, int, OpenOption...)
   public static BufferedOutput ofFile(Path path, OpenOption... option) throws IOException {
-    return ofFile(path, ByteOrder.BIG_ENDIAN, DefaultBufferSize);
+    return ofFile(path, DefaultBufferSize);
   }
 
   private static final int MinBufferSize = 16;
@@ -99,7 +128,7 @@ public abstract sealed class BufferedOutput implements Closeable, Flushable perm
   byte sharing = SHARING_EXCLUSIVE;
 
   /// Change the byte order of this BufferedOutput.
-  public final BufferedOutput order(ByteOrder order) {
+  public BufferedOutput order(ByteOrder order) {
     bigEndian = order == ByteOrder.BIG_ENDIAN;
     return this;
   }

@@ -4,7 +4,7 @@ import org.openjdk.jmh.annotations._
 import org.openjdk.jmh.infra._
 
 import java.io._
-import java.nio.{ByteBuffer, ByteOrder}
+import java.nio.ByteBuffer
 import java.nio.file.Paths
 import java.util.concurrent.TimeUnit
 
@@ -88,7 +88,7 @@ class BufferedOutputNumBenchmark extends BenchUtil {
 
   @Benchmark
   def array_FullyBufferedOutput_growing_preallocated(bh: Blackhole): Unit = {
-    val out = BufferedOutput.growing(ByteOrder.BIG_ENDIAN, count*13)
+    val out = BufferedOutput.growing(count*13)
     writeTo(out)
     bh.consume(out.buffer)
     bh.consume(out.length)

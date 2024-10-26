@@ -15,95 +15,68 @@ import java.util.Objects;
 /// BufferedInput provides buffered streaming reads from an InputStream or similar data source.
 ///
 /// The API is not thread-safe. Access from multiple threads must be synchronized externally.
-/// The number of bytes read is tracked as a 64-bit signed long value. The behaviour after
-/// reading more than [Long#MAX_VALUE] (8 exabytes) is undefined.
+/// The number of bytes read is tracked as a 64-bit signed long value [#totalBytesRead()]. The
+/// behaviour after reading more than [Long#MAX_VALUE] (8 exabytes) is undefined.
+///
+/// A BufferedInput created from a ByteBuffer defaults to the same byte order as the ByteBuffer,
+/// otherwise [ByteOrder#BIG_ENDIAN]. This can be changed with [#order(ByteOrder)].
 public abstract sealed class BufferedInput implements Closeable permits HeapBufferedInput, DirectBufferedInput {
 
-  /// Read data from an [InputStream] using the default buffer size and byte order.
-  /// Same as `of(in, ByteOrder.BIG_ENDIAN, 32768)`.
+  /// Read data from an [InputStream] using the default buffer size and [ByteOrder#BIG_ENDIAN].
+  /// Same as `of(in, 32768)`.
   ///
   /// @param in         InputStream from which to read data.
-  /// @see #of(InputStream, ByteOrder, int)
-  public static BufferedInput of(InputStream in) { return of(in, ByteOrder.BIG_ENDIAN, 32768); }
+  /// @see #of(InputStream, int)
+  public static BufferedInput of(InputStream in) { return of(in, 32768); }
 
-  /// Read data from an {@link InputStream} using the default buffer size.
-  /// Same as `of(in, order, 32768)`.
-  ///
-  /// @param in         InputStream from which to read data.
-  /// @param order      Byte order used for reading multi-byte values. Default: Big endian.
-  /// @see #of(InputStream, ByteOrder, int)
-  public static BufferedInput of(InputStream in, ByteOrder order) { return of(in, order, 32768); }
-
-  /// Read data from an [InputStream] using the default byte order.
-  /// Same as `of(in, ByteOrder.BIG_ENDIAN, initialBufferSize)`.
+  /// Read data from an [InputStream] using the default [ByteOrder#BIG_ENDIAN].
   ///
   /// @param in                InputStream from which to read data.
   /// @param initialBufferSize Initial size of the buffer in bytes. It is automatically extended if necessary. This also
   ///                          affects the minimum block size to read from the InputStream. BufferedInput tries to read
   ///                          at least half of initialBufferSize at once.
-  /// @see #of(InputStream, ByteOrder, int)
   public static BufferedInput of(InputStream in, int initialBufferSize) {
-    return of(in, ByteOrder.BIG_ENDIAN, initialBufferSize);
-  }
-
-  /// Read data from an [InputStream].
-  ///
-  /// @param in                InputStream from which to read data.
-  /// @param order             Byte order used for reading multi-byte values. Default: Big endian.
-  /// @param initialBufferSize Initial size of the buffer in bytes. It is automatically extended if necessary. This also
-  ///                          affects the minimum block size to read from the InputStream. BufferedInput tries to read
-  ///                          at least half of initialBufferSize at once.
-  public static BufferedInput of(InputStream in, ByteOrder order, int initialBufferSize) {
     var buf = new byte[Math.max(initialBufferSize, MIN_BUFFER_SIZE)];
-    var bb = ByteBuffer.wrap(buf).order(order);
+    var bb = ByteBuffer.wrap(buf).order(ByteOrder.BIG_ENDIAN);
     return new HeapBufferedInput(buf, bb, buf.length, buf.length, Long.MAX_VALUE, in, buf.length/2, null);
   }
 
-  /// Same as `ofArray(buf, 0, buf.length, ByteOrder.BIG_ENDIAN)`.
-  /// @see #ofArray(byte[], int, int, ByteOrder)
-  public static BufferedInput ofArray(byte[] buf) { return ofArray(buf, 0, buf.length, ByteOrder.BIG_ENDIAN); }
+  /// Same as `ofArray(buf, 0, buf.length)`.
+  /// @see #ofArray(byte[], int, int)
+  public static BufferedInput ofArray(byte[] buf) { return ofArray(buf, 0, buf.length); }
 
-  /// Same as `ofArray(buf, 0, buf.length, order)`.
-  /// @see #ofArray(byte[], int, int, ByteOrder)
-  public static BufferedInput ofArray(byte[] buf, ByteOrder order) { return ofArray(buf, 0, buf.length, order); }
-
-  /// Same as `ofArray(buf, off, len, ByteOrder.BIG_ENDIAN)`.
-  /// @see #ofArray(byte[], int, int, ByteOrder)
-  public static BufferedInput ofArray(byte[] buf, int off, int len) { return ofArray(buf, off, len, ByteOrder.BIG_ENDIAN); }
-
-  /// Read data from part of a byte array with the given byte order.
+  /// Read data from part of a byte array using the default [ByteOrder#BIG_ENDIAN].
   ///
   /// @param buf        Array from which to read data.
   /// @param off        Starting point within the array.
-  /// @param len        Length of the data within the array, or -1 to read until the end of the array.
-  /// @param order      Byte order used for reading multi-byte values. Default: Big endian.
-  public static BufferedInput ofArray(byte[] buf, int off, int len, ByteOrder order) {
+  /// @param len        Length of the data within the array.
+  public static BufferedInput ofArray(byte[] buf, int off, int len) {
     Objects.checkFromIndexSize(off, len, buf.length);
-    var bb = ByteBuffer.wrap(buf).order(order).position(off).limit(off+len);
+    var bb = ByteBuffer.wrap(buf).order(ByteOrder.BIG_ENDIAN).position(off).limit(off+len);
     return new HeapBufferedInput(buf, bb, off, off+len, Long.MAX_VALUE, null, 0, null);
   }
 
-  /// Read data from a [MemorySegment]. Use [MemorySegment#asSlice(long,long)] for reading only part of a segment.
+  /// Read data from a [MemorySegment] using the default [ByteOrder#BIG_ENDIAN]. Use
+  /// [MemorySegment#asSlice(long,long)] for reading only part of a segment.
   ///
   /// @param ms         Segment from which to read.
   /// @param closeable  An optional [Closeable] object to close when the BufferedInput is closed, otherwise null.
   ///                   This can be used to deallocate a segment which is not managed by the garbage-collector.
-  /// @param order      Byte order used for reading multi-byte values.
-  public static BufferedInput ofMemorySegment(MemorySegment ms, Closeable closeable, ByteOrder order) {
+  public static BufferedInput ofMemorySegment(MemorySegment ms, Closeable closeable) {
     var len = ms.byteSize();
     return len > MaxDirectBufferSize
-        ? create(ms.asSlice(0, MaxDirectBufferSize), ms, closeable, order)
-        : create(ms, ms, closeable, order);
+        ? create(ms.asSlice(0, MaxDirectBufferSize), ms, closeable)
+        : create(ms, ms, closeable);
   }
 
-  /// Same as `ofMemorySegment(ms, null, ByteOrder.BIG_ENDIAN)`.
-  /// @see #ofMemorySegment(MemorySegment, Closeable, ByteOrder)
-  public static BufferedInput ofMemorySegment(MemorySegment ms) { return ofMemorySegment(ms, null, ByteOrder.BIG_ENDIAN); }
+  /// Same as `ofMemorySegment(ms, null)`.
+  /// @see #ofMemorySegment(MemorySegment, Closeable)
+  public static BufferedInput ofMemorySegment(MemorySegment ms) { return ofMemorySegment(ms, null); }
 
   /// Read data from a [ByteBuffer]. The BufferedInput will start at the current position and end at the current
   /// limit of the ByteBuffer. The initial byte order is also taken from the ByteBuffer. The ByteBuffer's position
   /// may be temporarily modified during initialization so it should not be used concurrently. After this method
-  /// returns the ByteBuffer is treated as read-only and never modified (including its position, limit and byte order).
+  /// returns, the ByteBuffer is treated as read-only and never modified (including its position, limit and byte order).
   public static BufferedInput ofByteBuffer(ByteBuffer bb) {
     if(bb.isDirect()) {
       var p = bb.position();
@@ -118,21 +91,14 @@ public abstract sealed class BufferedInput implements Closeable permits HeapBuff
   /// Read data from a file which is memory-mapped for efficient reading.
   ///
   /// @param file           File to read.
-  /// @param order          Byte order used for reading multi-byte values.
-  public static BufferedInput ofMappedFile(Path file, ByteOrder order) throws IOException {
-    return ofMemorySegment(BufferUtil.mapReadOnlyFile(file), null, order);
-  }
-
-  /// Same as `ofMappedFile(file, ByteOrder.BIG_ENDIAN)`.
-  /// @see #ofMappedFile(Path, ByteOrder)
   public static BufferedInput ofMappedFile(Path file) throws IOException {
-    return ofMappedFile(file, ByteOrder.BIG_ENDIAN);
+    return ofMemorySegment(BufferUtil.mapReadOnlyFile(file), null);
   }
 
   private static byte[][] newLinebuf() { return new byte[][]{ new byte[1024] }; }
 
-  private static DirectBufferedInput create(MemorySegment bbSegment, MemorySegment ms, Closeable closeable, ByteOrder order) {
-    var bb = bbSegment.asByteBuffer().order(order);
+  private static DirectBufferedInput create(MemorySegment bbSegment, MemorySegment ms, Closeable closeable) {
+    var bb = bbSegment.asByteBuffer().order(ByteOrder.BIG_ENDIAN);
     return new DirectBufferedInput(bb, bbSegment, bb.position(), bb.limit(), ms.byteSize(), ms, closeable, null, newLinebuf());
   }
 
