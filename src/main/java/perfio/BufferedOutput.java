@@ -8,6 +8,8 @@ import java.nio.file.Files;
 import java.nio.file.OpenOption;
 import java.nio.file.Path;
 import java.util.Arrays;
+import java.util.Objects;
+
 import static perfio.BufferUtil.*;
 
 
@@ -32,8 +34,9 @@ public abstract sealed class BufferedOutput implements Closeable, Flushable perm
   public static FullyBufferedOutput growing() { return growing(ByteOrder.BIG_ENDIAN, DefaultBufferSize); }
 
 
-  public static FullyBufferedOutput fixed(byte[] buf, int start, int len, ByteOrder byteOrder, int initialBufferSize) {
-    return new FullyBufferedOutput(buf, byteOrder == ByteOrder.BIG_ENDIAN, start, start, len == -1 ? buf.length : len+start, initialBufferSize, true);
+  public static FullyBufferedOutput fixed(byte[] buf, int off, int len, ByteOrder byteOrder, int initialBufferSize) {
+    Objects.checkFromIndexSize(off, len, buf.length);
+    return new FullyBufferedOutput(buf, byteOrder == ByteOrder.BIG_ENDIAN, off, off, len+off, initialBufferSize, true);
   }
 
   public static FullyBufferedOutput fixed(byte[] buf, int start, int len, ByteOrder byteOrder) {
@@ -105,15 +108,20 @@ public abstract sealed class BufferedOutput implements Closeable, Flushable perm
     if(closed) throw new IOException("BufferedOutput has already been closed");
   }
 
-  //TODO inline?
   private int available() { return lim - pos; }
 
   public final long totalBytesWritten() { return totalFlushed + (pos - start); }
 
   int fwd(int count) throws IOException {
-    if(available() < count) {
+    // The goal here is to allow HotSpot to elide range checks in some scenarios (e.g.
+    // `BufferedOutputUncheckedBenchmark`). The condition should be `available() < count`,
+    // i.e. `lim - pos < count` but this does not elide range checks. `pos + count > lim` does,
+    // but it would produce an incorrect result due to signed arithmetic if `pos + count`
+    // overflows. Using the `Integer.compareUnsigned` intrinsic does not elide the range checks.
+    // The double condition does, with no performance impact in the benchmarks.
+    if(pos+count > lim || pos+count < 0) {
       flushAndGrow(count);
-      if(available() < count) throw new EOFException();
+      if(pos+count > lim || pos+count < 0) throw new EOFException();
     }
     var p = pos;
     pos += count;
@@ -121,14 +129,14 @@ public abstract sealed class BufferedOutput implements Closeable, Flushable perm
   }
 
   int tryFwd(int count) throws IOException {
-    if(available() < count) flushAndGrow(count);
+    if(pos+count > lim || pos+count < 0) flushAndGrow(count);
     var p = pos;
     pos += Math.min(count, available());
     return p;
   }
 
-  //TODO remove write() or bytes()?
   public final BufferedOutput write(byte[] a, int off, int len) throws IOException {
+    Objects.checkFromIndexSize(off, len, a.length);
     var p = fwd(len);
     System.arraycopy(a, off, buf, p, len);
     return this;
@@ -182,17 +190,9 @@ public abstract sealed class BufferedOutput implements Closeable, Flushable perm
     return this;
   }
 
-  public final BufferedOutput bytes(byte[] b, int off, int len) throws IOException {
-    var p = fwd(len);
-    System.arraycopy(b, off, buf, p, len);
-    return this;
-  }
-
-  public final BufferedOutput bytes(byte[] b) throws IOException { return bytes(b, 0, b.length); }
-
   public final int string(String s, Charset charset) throws IOException {
     var b = s.getBytes(charset);
-    bytes(b);
+    write(b);
     return b.length;
   }
 

@@ -73,7 +73,10 @@ class BufferUtil {
     var e = false;
     var vlen = 8; // minimum for computing a usable minimum buffer length
     try {
-      e = VectorSupport.__ENABLED;
+      // Just a sanity check. We accept any reasonable size. Even 64-bit vectors (SWAR) are faster than scalar.
+      // Hopefully this will guarantee that the preferred species is actually vectorized (which is not the case
+      // with the experimental preview API at the moment).
+      e = VectorSupport.SPECIES.length() >= 8 && !"true".equals(System.getProperty("perfio.disableVectorized"));
       if(e) vlen = VectorSupport.SPECIES.length();
     } catch(NoClassDefFoundError t) {}
     VECTOR_ENABLED = e;

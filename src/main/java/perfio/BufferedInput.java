@@ -10,6 +10,7 @@ import java.nio.ByteOrder;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
+import java.util.Objects;
 
 /// BufferedInput provides buffered streaming reads from an InputStream or similar data source.
 ///
@@ -77,6 +78,7 @@ public abstract sealed class BufferedInput implements Closeable permits HeapBuff
   /// @param len        Length of the data within the array, or -1 to read until the end of the array.
   /// @param order      Byte order used for reading multi-byte values. Default: Big endian.
   public static BufferedInput ofArray(byte[] buf, int off, int len, ByteOrder order) {
+    Objects.checkFromIndexSize(off, len, buf.length);
     var bb = ByteBuffer.wrap(buf).order(order).position(off).limit(off+len);
     return new HeapBufferedInput(buf, bb, off, off+len, Long.MAX_VALUE, null, 0, null);
   }
