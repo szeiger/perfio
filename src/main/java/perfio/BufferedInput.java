@@ -81,7 +81,7 @@ public abstract sealed class BufferedInput implements Closeable permits HeapBuff
       bb.position(0);
       var ms = MemorySegment.ofBuffer(bb);
       bb.position(p);
-      return new DirectBufferedInput(bb, ms, p, bb.limit(), bb.limit(), ms, null, null, newLinebuf());
+      return new DirectBufferedInput(bb, ms, p, bb.limit(), bb.limit(), ms, null, null, new LineBuffer());
     }
     else return new HeapBufferedInput(bb.array(), bb.position(), bb.limit(), Long.MAX_VALUE, null, 0, null, bb.order() == ByteOrder.BIG_ENDIAN);
   }
@@ -93,11 +93,9 @@ public abstract sealed class BufferedInput implements Closeable permits HeapBuff
     return ofMemorySegment(BufferUtil.mapReadOnlyFile(file), null);
   }
 
-  private static byte[][] newLinebuf() { return new byte[][]{ new byte[1024] }; }
-
   private static DirectBufferedInput create(MemorySegment bbSegment, MemorySegment ms, Closeable closeable) {
     var bb = bbSegment.asByteBuffer().order(ByteOrder.BIG_ENDIAN);
-    return new DirectBufferedInput(bb, bbSegment, bb.position(), bb.limit(), ms.byteSize(), ms, closeable, null, newLinebuf());
+    return new DirectBufferedInput(bb, bbSegment, bb.position(), bb.limit(), ms.byteSize(), ms, closeable, null, new LineBuffer());
   }
 
   private static final int MIN_BUFFER_SIZE = BufferUtil.VECTOR_LENGTH * 2;

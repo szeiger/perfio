@@ -19,7 +19,7 @@ abstract sealed class DirectLineTokenizer extends LineTokenizer implements Close
     bin.closeableView = this;
   }
 
-  private byte[] linebuf = new byte[256];
+  private final LineBuffer linebuf = new LineBuffer();
 
   public BufferedInput end() {
     if(!closed) {
@@ -40,21 +40,15 @@ abstract sealed class DirectLineTokenizer extends LineTokenizer implements Close
 
   abstract String makeString(byte[] buf, int start, int len);
 
-  private byte[] extendBuffer(int len) {
-    var buflen = linebuf.length;
-    while(buflen < len) buflen *= 2;
-    return new byte[buflen];
-  }
-
   String makeString(MemorySegment buf, long start, long llen) {
     return makeStringGeneric(buf, start, llen);
   }
 
   final String makeStringGeneric(MemorySegment buf, long start, long llen) {
     var len = (int)llen;
-    if(linebuf.length < len) linebuf = extendBuffer(len);
-    MemorySegment.copy(buf, ValueLayout.JAVA_BYTE, start, linebuf, 0, len);
-    return makeString(linebuf, 0, len);
+    var b = linebuf.get(len);
+    MemorySegment.copy(buf, ValueLayout.JAVA_BYTE, start, b, 0, len);
+    return makeString(b, 0, len);
   }
 
   final String makeStringLatin1Internal(MemorySegment buf, long start, long llen) {

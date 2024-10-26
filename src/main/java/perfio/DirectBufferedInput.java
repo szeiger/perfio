@@ -13,10 +13,10 @@ import static perfio.BufferUtil.*;
 final class DirectBufferedInput extends BufferedInput {
   MemorySegment bbSegment;
   final MemorySegment ms;
-  private final byte[][] linebuf;
+  private final LineBuffer linebuf;
   private ByteBuffer bb;
 
-  DirectBufferedInput(ByteBuffer bb, MemorySegment bbSegment, int pos, int lim, long totalReadLimit, MemorySegment ms, Closeable closeable, BufferedInput parent, byte[][] linebuf) {
+  DirectBufferedInput(ByteBuffer bb, MemorySegment bbSegment, int pos, int lim, long totalReadLimit, MemorySegment ms, Closeable closeable, BufferedInput parent, LineBuffer linebuf) {
     super(pos, lim, totalReadLimit, closeable, parent, bb.order() == ByteOrder.BIG_ENDIAN);
     this.bbSegment = bbSegment;
     this.ms = ms;
@@ -65,18 +65,8 @@ final class DirectBufferedInput extends BufferedInput {
 
   BufferedInput createEmptyView() { return new DirectBufferedInput(bb, null, 0, 0, 0L, ms, null, this, linebuf); }
 
-  private byte[] extendBuffer(int len) {
-    var buflen = linebuf[0].length;
-    while(buflen < len) buflen *= 2;
-    return new byte[buflen];
-  }
-
   private String makeString(int start, int len, Charset charset) {
-    var lb = linebuf[0];
-    if(lb.length < len) {
-      lb = extendBuffer(len);
-      linebuf[0] = lb;
-    }
+    var lb = linebuf.get(len);
     bb.get(start, lb, 0, len);
     return new String(lb, 0, len, charset);
   }
