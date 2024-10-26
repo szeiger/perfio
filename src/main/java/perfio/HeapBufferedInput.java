@@ -3,7 +3,6 @@ package perfio;
 import java.io.EOFException;
 import java.io.IOException;
 import java.io.InputStream;
-import java.nio.ByteBuffer;
 import java.nio.charset.Charset;
 
 import static perfio.BufferUtil.*;
@@ -13,8 +12,8 @@ final class HeapBufferedInput extends BufferedInput {
   final InputStream in;
   final int minRead;
 
-  HeapBufferedInput(byte[] buf, ByteBuffer bb, int pos, int lim, long totalReadLimit, InputStream in, int minRead, BufferedInput parent) {
-    super(bb, pos, lim, totalReadLimit, in, parent);
+  HeapBufferedInput(byte[] buf, int pos, int lim, long totalReadLimit, InputStream in, int minRead, BufferedInput parent, boolean bigEndian) {
+    super(pos, lim, totalReadLimit, in, parent, bigEndian);
     this.buf = buf;
     this.in = in;
     this.minRead = minRead;
@@ -56,7 +55,6 @@ final class HeapBufferedInput extends BufferedInput {
           var buf2 = new byte[buflen];
           if(a > 0) System.arraycopy(buf, pos, buf2, offset, a);
           buf = buf2;
-          bb = ByteBuffer.wrap(buf).order(bb.order());
         } else if (a > 0 && pos != offset) {
           System.arraycopy(buf, pos, buf, offset, a);
         }
@@ -89,7 +87,7 @@ final class HeapBufferedInput extends BufferedInput {
     }
   }
 
-  BufferedInput createEmptyView() { return new HeapBufferedInput(null, null, 0, 0, 0, in, minRead, this); }
+  BufferedInput createEmptyView() { return new HeapBufferedInput(null, 0, 0, 0, in, minRead, this, bigEndian); }
 
   public byte int8() throws IOException {
     var p = fwd(1);

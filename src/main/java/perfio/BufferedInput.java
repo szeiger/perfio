@@ -37,8 +37,7 @@ public abstract sealed class BufferedInput implements Closeable permits HeapBuff
   ///                          at least half of initialBufferSize at once.
   public static BufferedInput of(InputStream in, int initialBufferSize) {
     var buf = new byte[Math.max(initialBufferSize, MIN_BUFFER_SIZE)];
-    var bb = ByteBuffer.wrap(buf).order(ByteOrder.BIG_ENDIAN);
-    return new HeapBufferedInput(buf, bb, buf.length, buf.length, Long.MAX_VALUE, in, buf.length/2, null);
+    return new HeapBufferedInput(buf, buf.length, buf.length, Long.MAX_VALUE, in, buf.length/2, null, true);
   }
 
   /// Same as `ofArray(buf, 0, buf.length)`.
@@ -52,8 +51,7 @@ public abstract sealed class BufferedInput implements Closeable permits HeapBuff
   /// @param len        Length of the data within the array.
   public static BufferedInput ofArray(byte[] buf, int off, int len) {
     Objects.checkFromIndexSize(off, len, buf.length);
-    var bb = ByteBuffer.wrap(buf).order(ByteOrder.BIG_ENDIAN).position(off).limit(off+len);
-    return new HeapBufferedInput(buf, bb, off, off+len, Long.MAX_VALUE, null, 0, null);
+    return new HeapBufferedInput(buf, off, off+len, Long.MAX_VALUE, null, 0, null, true);
   }
 
   /// Read data from a [MemorySegment] using the default [ByteOrder#BIG_ENDIAN]. Use
@@ -85,7 +83,7 @@ public abstract sealed class BufferedInput implements Closeable permits HeapBuff
       bb.position(p);
       return new DirectBufferedInput(bb, ms, p, bb.limit(), bb.limit(), ms, null, null, newLinebuf());
     }
-    else return new HeapBufferedInput(bb.array(), bb, bb.position(), bb.limit(), Long.MAX_VALUE, null, 0, null);
+    else return new HeapBufferedInput(bb.array(), bb.position(), bb.limit(), Long.MAX_VALUE, null, 0, null, bb.order() == ByteOrder.BIG_ENDIAN);
   }
 
   /// Read data from a file which is memory-mapped for efficient reading.
@@ -112,23 +110,20 @@ public abstract sealed class BufferedInput implements Closeable permits HeapBuff
 
   // ======================================================= non-static parts:
 
-  ByteBuffer bb; // always available
-  int pos; // first used byte in buf/bb
-  int lim; // last used byte + 1 in buf/bb
+  int pos; // first used byte in buffer
+  int lim; // last used byte + 1 in buffer
   long totalReadLimit; // max number of bytes that may be returned
   private final Closeable closeable;
   private final BufferedInput parent;
 
-  BufferedInput(ByteBuffer bb, int pos, int lim, long totalReadLimit, Closeable closeable, BufferedInput parent) {
-    this.bb = bb;
+  BufferedInput(int pos, int lim, long totalReadLimit, Closeable closeable, BufferedInput parent, boolean bigEndian) {
     this.pos = pos;
     this.lim = lim;
     this.totalReadLimit = totalReadLimit;
     this.closeable = closeable;
     this.parent = parent;
-
+    this.bigEndian = bigEndian;
     this.totalBuffered = lim - pos;
-    this.bigEndian = bb != null && bb.order() == ByteOrder.BIG_ENDIAN;
   }
 
   long totalBuffered; // total number of bytes read from input
@@ -146,8 +141,7 @@ public abstract sealed class BufferedInput implements Closeable permits HeapBuff
   abstract void copyBufferFrom(BufferedInput b);
   abstract void prepareAndFillBuffer(int count) throws IOException;
 
-  private void reinitView(ByteBuffer bb, int pos, int lim, long totalReadLimit, boolean skipOnClose, long parentTotalOffset) {
-    this.bb = bb;
+  private void reinitView(int pos, int lim, long totalReadLimit, boolean skipOnClose, long parentTotalOffset, boolean bigEndian) {
     this.pos = pos;
     this.lim = lim;
     this.totalReadLimit = totalReadLimit;
@@ -156,7 +150,7 @@ public abstract sealed class BufferedInput implements Closeable permits HeapBuff
     this.excessRead = 0;
     this.totalBuffered = lim-pos;
     this.parentTotalOffset = parentTotalOffset;
-    bigEndian = bb.order() == ByteOrder.BIG_ENDIAN;
+    this.bigEndian = bigEndian;
     copyBufferFrom(parent);
   }
 
@@ -172,7 +166,6 @@ public abstract sealed class BufferedInput implements Closeable permits HeapBuff
   /// Change the byte order of this BufferedInput.
   /// @return this BufferedInput
   public BufferedInput order(ByteOrder order) {
-    bb.order(order);
     bigEndian = order == ByteOrder.BIG_ENDIAN;
     return this;
   }
@@ -258,7 +251,7 @@ public abstract sealed class BufferedInput implements Closeable permits HeapBuff
       if(activeView != null) activeView.markClosed();
       if(parent != null) {
         if(skipOnClose) skip(Long.MAX_VALUE);
-        parent.closedView(bb, pos, lim + excessRead, totalBuffered + excessRead, detachOnClose);
+        parent.closedView(pos, lim + excessRead, totalBuffered + excessRead, detachOnClose);
       }
       markClosed();
       if(parent == null && closeable != null) closeable.close();
@@ -268,18 +261,16 @@ public abstract sealed class BufferedInput implements Closeable permits HeapBuff
   private void markClosed() {
     pos = lim;
     state = STATE_CLOSED;
-    bb = null;
     clearBuffer();
     if(closeableView != null) closeableView.markClosed();
   }
 
-  private void closedView(ByteBuffer vbb, int vpos, int vlim, long vTotalBuffered, boolean vDetach) {
+  private void closedView(int vpos, int vlim, long vTotalBuffered, boolean vDetach) {
     if(vTotalBuffered == activeViewInitialBuffered) { // view has not advanced the buffer
       pos = vpos;
       totalBuffered += vTotalBuffered;
     } else {
       copyBufferFrom(activeView);
-      bb = vbb;
       pos = vpos;
       lim = vlim;
       totalBuffered += vTotalBuffered;
@@ -321,7 +312,7 @@ public abstract sealed class BufferedInput implements Closeable permits HeapBuff
     if(t < 0) t = totalReadLimit; // overflow due to huge limit
     if(activeView == null) activeView = createEmptyView();
     var vLim = t <= totalBuffered ? (int)(lim - totalBuffered + t) : lim;
-    activeView.reinitView(bb, pos, vLim, t - tbread, skipRemaining, parentTotalOffset + tbread);
+    activeView.reinitView(pos, vLim, t - tbread, skipRemaining, parentTotalOffset + tbread, bigEndian);
     activeViewInitialBuffered = vLim - pos;
     state = STATE_ACTIVE_VIEW;
     totalBuffered -= activeViewInitialBuffered;
@@ -362,7 +353,7 @@ public abstract sealed class BufferedInput implements Closeable permits HeapBuff
   BufferedInput identicalView() throws IOException {
     checkState();
     if(activeView == null) activeView = createEmptyView();
-    activeView.reinitView(bb, pos, lim, totalReadLimit, false, parentTotalOffset);
+    activeView.reinitView(pos, lim, totalReadLimit, false, parentTotalOffset, bigEndian);
     activeViewInitialBuffered = 0;
     state = STATE_ACTIVE_VIEW;
     pos = lim;

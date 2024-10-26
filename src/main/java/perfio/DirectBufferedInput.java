@@ -4,6 +4,7 @@ import java.io.Closeable;
 import java.io.IOException;
 import java.lang.foreign.MemorySegment;
 import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
 import java.nio.charset.Charset;
 import static perfio.BufferUtil.*;
 
@@ -13,23 +14,27 @@ final class DirectBufferedInput extends BufferedInput {
   MemorySegment bbSegment;
   final MemorySegment ms;
   private final byte[][] linebuf;
+  private ByteBuffer bb;
 
   DirectBufferedInput(ByteBuffer bb, MemorySegment bbSegment, int pos, int lim, long totalReadLimit, MemorySegment ms, Closeable closeable, BufferedInput parent, byte[][] linebuf) {
-    super(bb, pos, lim, totalReadLimit, closeable, parent);
+    super(pos, lim, totalReadLimit, closeable, parent, bb.order() == ByteOrder.BIG_ENDIAN);
     this.bbSegment = bbSegment;
     this.ms = ms;
     this.linebuf = linebuf;
+    this.bb = bb;
   }
 
   long bbStart = 0L;
 
   void copyBufferFrom(BufferedInput b) {
     var db = (DirectBufferedInput)b;
+    bb = db.bb;
     bbSegment = db.bbSegment;
     bbStart = db.bbStart;
   }
 
   void clearBuffer() {
+    bb = null;
     bbSegment = null;
   }
 
@@ -58,7 +63,7 @@ final class DirectBufferedInput extends BufferedInput {
     bb.get(p, a, off, len);
   }
 
-  BufferedInput createEmptyView() { return new DirectBufferedInput(null, null, 0, 0, 0L, ms, null, this, linebuf); }
+  BufferedInput createEmptyView() { return new DirectBufferedInput(bb, null, 0, 0, 0L, ms, null, this, linebuf); }
 
   private byte[] extendBuffer(int len) {
     var buflen = linebuf[0].length;
