@@ -13,7 +13,7 @@ perfIO provides buffered streaming I/O abstractions for both binary and text dat
 
 ## How fast is it?
 
-Reading and writing binary data using a sufficiently large buffer is a bit faster than ByteBuffer, but with the full generality of streaming I/O that does not require a fixed buffer size.
+Reading and writing binary data using a sufficiently large buffer is faster than ByteBuffer, but with the full generality of streaming I/O that does not require a fixed buffer size.
 
 ## What makes it fast?
 
@@ -25,11 +25,11 @@ Mostly avoiding things that make the JDK abstractions slow:
 
 - None of the perfIO classes are synchronized or use any locking or memory fences. Streaming I/O is inherently sequential. Multi-threaded use requires synchronization at a higher level anyway, so we do not need to incur any performance penalties from synchronizing in the core abstractions.
 
-- The JDK's Reader and Writer interfaces, as well as the NIO CharsetEncoders and CharsetDecoders are based on char arrays. This was fine at the time they were added, but nowadays the JDK uses a byte-based compact representation for all Strings which are valid Latin-1. In practice, most Strings contain ASCII text, so any char-based design requires multiple conversions between byte arrays and char arrays.
+- The JDK's Reader and Writer interfaces, as well as the NIO CharsetEncoders and CharsetDecoders are based on char arrays. This was fine at the time they were added, but nowadays the JVM uses a byte-based compact representation for all Strings which are valid Latin-1. In practice, most Strings contain ASCII text, so any char-based design requires conversions back and forth between byte arrays and char arrays.
 
   perfIO's TextOutput converts directly from Strings to byte data (writing it directly into a BufferedOutput's byte array) and LineTokenizer does the same when reading. This makes use of the more efficient conversions for the common character sets (UTF-8, Latin-1, ASCII) that are built into the String class, Unfortunately the provided API is not sufficient to avoid double buffering in all cases. perfIO can optionally call internal JDK methods to make some common use cases even faster. 
 
-perfIO also uses both FFM and NIO abstractions where appropriate (depending on performance for the specific use case) and the Vector API (for LineTokenizer).
+perfIO also uses both FFM and NIO abstractions where appropriate (depending on performance for the specific use case) and the Vector incubator API (for LineTokenizer).
 
 Another source of performance is not just making the available abstractions fast, but making fast abstractions easily available:
 
@@ -43,12 +43,12 @@ A top-level `BufferedInput` or `BufferedOutput` object is always instantiated by
 
 The methods for reading and writing multi-byte numeric values require a byte order. All factory methods set it to `BIG_ENDIAN` by default, but it can be changed at any time with the `order` method. This is consistent with `ByteBuffer` but different from the FFM API (which is mostly intended for interacting with native code and consequently uses the native byte order by default).
 
-Since Java does not have unsigned integers, the main methods for reading and writing binary data are the signed ones. The only exception is `uint16` which uses `char`, the only unsigned primitive type. Other `uint` methods are convenience wrappers that use the next-larger signed type.
+Since Java does not have unsigned integers, the main methods for reading and writing binary data are the signed ones. The only exception is `uint16` which uses `char`, the only unsigned primitive type. Other `uint` methods are convenience wrappers that use a larger signed type.
 
 | Method  | Width                  | Java Type (or surrogate) |
 |---------|------------------------|--------------------------|
 | int8    | 8 bits signed          | byte                     |
-| uint8   | 8 bits unsigned        | (short)                  |
+| uint8   | 8 bits unsigned        | (int)                    |
 | int16   | 16 bits signed         | short                    |
 | uint16  | 16 bits unsigned       | char                     |
 | int32   | 32 bits signed         | int                      |
@@ -61,28 +61,30 @@ Both `BufferedInput` and `BufferedOutput` can have nested views, but the semanti
 
 A `BufferedOutput` can be written to out of order. This is important for writing binary formats with length prefixes. It is often inconvenient or inefficient to calculate the length without actually writing the data. If the prefix has a fixed size, you can use `reserve` to insert a nested `BufferedOutput` at the current position which can be filled at a later point. You must write exactly the requested amount of data to it before closing it:
 
-```scala
+```java
   // Write a UTF-8 string with an int32 length prefix
-  val b: BufferedOutput = ...
-  val b2 = b.reserve(4)
-  val pos0 = b.totalBytesWritten
-  b.string(...)
-  val len = (b.totalBytesWritten - pos0).toInt
-  b2.int32(len)
-  b2.close()
+  BufferedOutput b;
+  var b2 = b.reserve(4);
+  val pos0 = b.totalBytesWritten();
+  b.string(...);
+  var len = (int)(b.totalBytesWritten() - pos0);
+  b2.int32(len);
+  b2.close();
 ```
 
 When the length of the prefix is variable, you can use `defer` instead. This method creates a `BufferedOutput` which shares its buffer management with the parent but is only inserted into the parent once it is closed. Note that this reverses the roles of the two buffers compared to `reserve`:
 
-```scala
+```java
   // Write a UTF-8 string with an int32 length prefix
-  val b: BufferedOutput = ...
-  val b2 = b.defer()
-  b2.string(...)
-  b.int32(b2.totalBytesWritten.toInt)
-  b2.close()
+  BufferedOutput b;
+  val b2 = b.defer();
+  b2.string(...);
+  b.int32((int)b2.totalBytesWritten());
+  b2.close();
 ```
 
 Both `BufferedInput` and `BufferedOutput` will reuse views by default. This means that you should not access any view after closing it (unless it was explicitly detached by calling `detach()`) because the object and/or its buffer may have been repurposed. This design makes the repeated use of views for writing small amounts of data very efficient.
 
-A `LineTokenizer` can be obtained by calling `lines` on a `BufferedInput`.
+A `LineTokenizer` can be obtained by calling `lines` on a `BufferedInput` object. It allows you to read a text file line by line. Line tokenization is currently limited to ASCII-compatible encodings, which includes UTF-8 and the ISO-8859 ("Latin") charsets. `LineTokenizer` will use a faster SIMD-based implementation if the Vector API (incubator version as of JDK 22) is available.
+
+A `TextOutput` can be obtained by calling `text` on a `BufferedOutput` object. It allows you to write text data, similar to `java.io.PrintWriter`. Unlike `LineTokenizer` it supports arbitrary character sets, but it is optimized for UTF-8, Latin-1 and ASCII.

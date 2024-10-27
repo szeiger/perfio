@@ -2,6 +2,7 @@ package perfio;
 
 import java.io.Closeable;
 import java.io.IOException;
+import java.nio.charset.Charset;
 
 /// Read text from a [BufferedInput] and split it into lines. If the input ends with a newline, no
 /// additional empty line is returned (same as [java.io.BufferedReader]).
@@ -12,9 +13,8 @@ import java.io.IOException;
 /// [java.io.BufferedInputStream]) of first decoding the entire input to 16-bit chars and then
 /// attempting to compress it back to bytes when creating the Strings.
 ///
-/// With the default settings for `eol` and `preEol` a LineTokenizer will recognize both LF (Unix) and CRLF (Windows)
-/// line endings. Automatic recognition of pure CR line endings (classic MacOS) at the same time is not supported but
-/// can be configured manually with `eol = '\r', preEol = -1`.
+/// A LineTokenizer is created by calling [BufferedInput#lines(Charset, byte, byte)] or one of its
+/// overloads.
 public abstract sealed class LineTokenizer implements Closeable permits HeapLineTokenizer, DirectLineTokenizer {
   final byte eolChar, preEolChar;
 
@@ -41,6 +41,9 @@ public abstract sealed class LineTokenizer implements Closeable permits HeapLine
 
   /// Prevent reuse of this view. This ensures that it stays closed when a new view or LineTokenizer is created from
   /// the parent BufferedInput.
+  ///
+  /// Implementation note: LineTokenizer are not currently reused, but they may create an additional BufferedInput
+  /// view that can be reused.
   public abstract LineTokenizer detach() throws IOException;
 
   void markClosed() {

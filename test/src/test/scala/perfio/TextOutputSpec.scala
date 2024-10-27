@@ -77,7 +77,7 @@ object TextOutputSpec extends Properties {
 
   def check(cs: Charset, eol: String)(f: TextOutput => Unit)(g: PrintWriter => Unit): Result = {
     val bout = BufferedOutput.growing()
-    val tout = TextOutput.of(bout, cs, eol, false)
+    val tout = TextOutput.of(bout, cs, eol)
     f(tout)
     tout.close()
     val buf: Vector[Int] = bout.copyToByteArray.toVector.map(b => b & 0xFF)

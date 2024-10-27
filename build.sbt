@@ -25,17 +25,10 @@ Global / scalaVersion := "2.13.14"
 val hedgehogVersion = "0.10.1"
 
 lazy val main = (project in file("."))
+  .aggregate(LocalProject("bench"), LocalProject("test"))
   .settings(
-    libraryDependencies += "com.github.sbt" % "junit-interface" % "0.13.2" % "test",
-    testOptions += Tests.Argument(TestFrameworks.JUnit, "-a", "-v"),
-    scalacOptions ++= Seq("-feature", "-opt:l:inline", "-opt-inline-from:perfio.*"),
-    libraryDependencies ++= Seq(
-      "qa.hedgehog" %% "hedgehog-core" % hedgehogVersion % "test",
-      "qa.hedgehog" %% "hedgehog-runner" % hedgehogVersion % "test",
-      "qa.hedgehog" %% "hedgehog-sbt" % hedgehogVersion % "test",
-    ),
-    testOptions += Tests.Argument(TestFrameworks.JUnit, "-a", "-v"),
-    testFrameworks += TestFramework("hedgehog.sbt.Framework")
+    crossPaths := false,
+    autoScalaLibrary := false,
   )
 
 lazy val bench = (project in file("bench"))
@@ -48,4 +41,18 @@ lazy val bench = (project in file("bench"))
     ),
     //Jmh / javaOptions ++= Seq("-Xss32M", "--add-modules", "jdk.incubator.vector"),
     //Jmh / JmhPlugin.generateJmhSourcesAndResources / fork := true,
+  )
+
+lazy val test = (project in file("test"))
+  .dependsOn(main)
+  .settings(
+    libraryDependencies += "com.github.sbt" % "junit-interface" % "0.13.2" % "test",
+    testOptions += Tests.Argument(TestFrameworks.JUnit, "-a", "-v"),
+    libraryDependencies ++= Seq(
+      "qa.hedgehog" %% "hedgehog-core" % hedgehogVersion % "test",
+      "qa.hedgehog" %% "hedgehog-runner" % hedgehogVersion % "test",
+      "qa.hedgehog" %% "hedgehog-sbt" % hedgehogVersion % "test",
+    ),
+    testOptions += Tests.Argument(TestFrameworks.JUnit, "-a", "-v"),
+    testFrameworks += TestFramework("hedgehog.sbt.Framework")
   )

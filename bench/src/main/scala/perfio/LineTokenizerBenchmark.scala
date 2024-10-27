@@ -18,7 +18,7 @@ import java.util.concurrent.TimeUnit
 @State(Scope.Benchmark)
 class LineTokenizerBenchmark extends BenchUtil {
   //@Param(Array("UTF-8", "Latin1", "Latin1-internal"))
-  @Param(Array("Latin1", "Latin1-internal"))
+  @Param(Array("Latin1"))
   var charset: String = _
   var cs: Charset = _
 

@@ -15,51 +15,63 @@ import java.nio.charset.CodingErrorAction;
 import java.nio.charset.StandardCharsets;
 
 
-/// TextOutput prints formatted text to a [BufferedOutput]. It generally behaves like [java.io.PrintWriter] except that
-/// it does not swallow IOExceptions. They are thrown immediately like in BufferedOutput/OutputStream/etc. Most methods
-/// return `this` for convenient chaining of operations. Unlike PrintWriter/PrintStream it allows the end-of-line
+/// TextOutput prints formatted text to a [BufferedOutput]. It generally behaves like
+/// [java.io.PrintWriter] except that it does not swallow IOExceptions. They are thrown
+/// immediately like in BufferedOutput/OutputStream/etc. Most methods return `this` for
+/// convenient chaining of operations. Unlike PrintWriter/PrintStream it allows the end-of-line
 /// sequence to be changed from the system default.
 ///
-/// This class is not thread-safe. Unless external synchronization is used, an instance may only be accessed from a
-/// single thread (which must be the same thread that is used for accessing the underlying BufferedOutput).
+/// This class is not thread-safe. Unless external synchronization is used, an instance may only
+/// be accessed from a single thread (which must be the same thread that is used for accessing
+/// the underlying BufferedOutput).
+///
+/// The standard Charsets [StandardCharsets#ISO_8859_1], [StandardCharsets#UTF_8] and
+/// [StandardCharsets#US_ASCII] are specially optimized and much faster than the generic
+/// implementation for other Charsets (which is still significantly faster than
+/// [java.io.PrintWriter] because it can write directly to a BufferedOutput).
 ///
 /// TextOutput does not perform any internal buffering, so you can mix calls to a TextOutput and the underlying
 /// BufferedOutput instance. The only general exception to this is when a surrogate pair is split (i.e. the high and
 /// low surrogate character are written in 2 separate [#print(String)] or [#print(char)] calls), but more esoteric
 /// Charset implementations may contain buffering of their own.
+///
+/// TextOutput supports optional auto-flushing similar to [java.io.PrintWriter]. It is initially
+/// disabled for all newly-created TextOutput objects and can be changed by calling
+/// [#autoFlush(boolean)]. This flushes the BufferedOutput after any of the `println` methods is
+/// called.
+///
+/// A TextOutput is created by calling [BufferedOutput#text(Charset, String)] or one of its
+/// overloads.
 public abstract class TextOutput implements Closeable, Flushable {
 
-  /// Create a TextOutput for a given BufferedOutput.
-  ///
-  /// @param out The underlying BufferedOutput
-  /// @param cs The Charset for encoding text. ASCII-compatible standard Charsets [StandardCharsets#ISO_8859_1],
-  ///           [StandardCharsets#UTF_8], [StandardCharsets#US_ASCII] are specially optimized and much faster than
-  ///           the generic implementation for other Charsets (which is still significantly faster than
-  ///           [java.io.PrintWriter] because it can write directly to a BufferedOutput).
-  ///
-  public static TextOutput of(BufferedOutput out, Charset cs, String eol, boolean autoFlush) {
-    if(cs == StandardCharsets.ISO_8859_1) return new Latin1TextOutput(out, eol.getBytes(cs), autoFlush);
-    else if(cs == StandardCharsets.UTF_8) return new UTF8TextOutput(out, eol.getBytes(cs), autoFlush);
-    else if(cs == StandardCharsets.US_ASCII) return new ASCIITextOutput(out, eol.getBytes(cs), autoFlush);
-    else return new GenericTextOutput(out, cs, eol, autoFlush);
+  static TextOutput of(BufferedOutput out, Charset cs, String eol) {
+    if(cs == StandardCharsets.ISO_8859_1) return new Latin1TextOutput(out, eol.getBytes(cs));
+    else if(cs == StandardCharsets.UTF_8) return new UTF8TextOutput(out, eol.getBytes(cs));
+    else if(cs == StandardCharsets.US_ASCII) return new ASCIITextOutput(out, eol.getBytes(cs));
+    else return new GenericTextOutput(out, cs, eol);
   }
-
-  public static TextOutput of(BufferedOutput out, Charset cs) { return of(out, cs, System.lineSeparator(), false); }
-
-  public static TextOutput of(BufferedOutput out) { return of(out, StandardCharsets.UTF_8, System.lineSeparator(), false); }
 
 
   // ======================================================= non-static parts:
 
   final BufferedOutput out;
   final Charset cs;
-  final boolean autoFlush;
+  private boolean autoFlush = false;
 
-  TextOutput(BufferedOutput out, Charset cs, boolean autoFlush) {
+  TextOutput(BufferedOutput out, Charset cs) {
     this.out = out;
     this.cs = cs;
-    this.autoFlush = autoFlush;
   }
+
+  /// Enable or disable auto-flushing.
+  /// @return this TextOutput, modified
+  public TextOutput autoFlush(boolean autoFlush) {
+    this.autoFlush = autoFlush;
+    return this;
+  }
+
+  /// Check if auto-flushing is enabled.
+  public boolean autoFlush() { return autoFlush; }
 
   final CharBuffer surrogateCharBuf = CharBuffer.allocate(2);
   boolean hasSurrogate = false;
@@ -186,8 +198,8 @@ abstract class ASCIICompatibleTextOutput extends TextOutput {
   private final byte eol0, eol1;
   private final int maxSafeChar;
 
-  ASCIICompatibleTextOutput(BufferedOutput out, Charset cs, byte[] eol, boolean autoFlush) {
-    super(out, cs, autoFlush);
+  ASCIICompatibleTextOutput(BufferedOutput out, Charset cs, byte[] eol) {
+    super(out, cs);
     this.eol = eol;
     this.eolLen = eol.length;
     this.eol0 = eol[0];
@@ -410,8 +422,8 @@ abstract class ASCIICompatibleTextOutput extends TextOutput {
 
 
 class Latin1TextOutput extends ASCIICompatibleTextOutput {
-  Latin1TextOutput(BufferedOutput out, byte[] eol, boolean autoFlush) {
-    super(out, StandardCharsets.ISO_8859_1, eol, autoFlush);
+  Latin1TextOutput(BufferedOutput out, byte[] eol) {
+    super(out, StandardCharsets.ISO_8859_1, eol);
   }
 
   @Override
@@ -440,8 +452,8 @@ class Latin1TextOutput extends ASCIICompatibleTextOutput {
 
 
 class UTF8TextOutput extends ASCIICompatibleTextOutput {
-  UTF8TextOutput(BufferedOutput out, byte[] eol, boolean autoFlush) {
-    super(out, StandardCharsets.UTF_8, eol, autoFlush);
+  UTF8TextOutput(BufferedOutput out, byte[] eol) {
+    super(out, StandardCharsets.UTF_8, eol);
   }
 
   @Override
@@ -474,8 +486,8 @@ class UTF8TextOutput extends ASCIICompatibleTextOutput {
 
 
 class ASCIITextOutput extends ASCIICompatibleTextOutput {
-  ASCIITextOutput(BufferedOutput out, byte[] eol, boolean autoFlush) {
-    super(out, StandardCharsets.US_ASCII, eol, autoFlush);
+  ASCIITextOutput(BufferedOutput out, byte[] eol) {
+    super(out, StandardCharsets.US_ASCII, eol);
   }
 
   @Override
@@ -512,8 +524,8 @@ class GenericTextOutput extends TextOutput {
   private final String eol;
   private final CharsetEncoder enc;
 
-  GenericTextOutput(BufferedOutput out, Charset cs, String eol, boolean autoFlush) {
-    super(out, cs, autoFlush);
+  GenericTextOutput(BufferedOutput out, Charset cs, String eol) {
+    super(out, cs);
     this.eol = eol;
     this.enc = cs.newEncoder().onMalformedInput(CodingErrorAction.REPLACE).onUnmappableCharacter(CodingErrorAction.REPLACE);
   }

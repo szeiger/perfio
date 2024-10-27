@@ -42,6 +42,18 @@ class BufferedOutputNumBenchmark extends BenchUtil {
     out.close()
   }
 
+  private[this] def writeInternalTo(out: BufferedOutput): Unit = {
+    var i = 0
+    while(i < count) {
+      val p = out.fwd(13)
+      out.buf(p) = i.toByte
+      BufferUtil.BA_INT_BIG.set(out.buf, p+1, i+100)
+      BufferUtil.BA_LONG_BIG.set(out.buf, p+5, (i+101).toLong)
+      i += 1
+    }
+    out.close()
+  }
+
   @Benchmark
   def array_DataOutputStream_growing(bh: Blackhole): Unit = {
     val bout = new MyByteArrayOutputStream
@@ -74,6 +86,15 @@ class BufferedOutputNumBenchmark extends BenchUtil {
     val bout = new MyByteArrayOutputStream(count * 13)
     val out = BufferedOutput.of(bout)
     writeTo(out)
+    bh.consume(bout.getSize)
+    bh.consume(bout.getBuffer)
+  }
+
+  @Benchmark
+  def array_FlushingBufferedOutput_internal_fixed(bh: Blackhole): Unit = {
+    val bout = new MyByteArrayOutputStream(count * 13)
+    val out = BufferedOutput.of(bout)
+    writeInternalTo(out)
     bh.consume(bout.getSize)
     bh.consume(bout.getBuffer)
   }

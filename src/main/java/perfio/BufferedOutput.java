@@ -133,12 +133,16 @@ public abstract sealed class BufferedOutput implements Closeable, Flushable perm
     return this;
   }
 
+  /// Return the byte order of this BufferedOutput.
+  public final ByteOrder order() { return bigEndian ? ByteOrder.BIG_ENDIAN : ByteOrder.LITTLE_ENDIAN; }
+
   private void checkState() throws IOException {
     if(closed) throw new IOException("BufferedOutput has already been closed");
   }
 
   private int available() { return lim - pos; }
 
+  /// Return the total number of bytes written to this BufferedOutput.
   public final long totalBytesWritten() { return totalFlushed + (pos - start); }
 
   int fwd(int count) throws IOException {
@@ -164,6 +168,7 @@ public abstract sealed class BufferedOutput implements Closeable, Flushable perm
     return p;
   }
 
+  /// Write the contents of the given array region.
   public final BufferedOutput write(byte[] a, int off, int len) throws IOException {
     Objects.checkFromIndexSize(off, len, a.length);
     var p = fwd(len);
@@ -171,62 +176,86 @@ public abstract sealed class BufferedOutput implements Closeable, Flushable perm
     return this;
   }
 
+  /// Write the contents of the given array.
   public final BufferedOutput write(byte[] a) throws IOException { return write(a, 0, a.length); }
 
+  /// Write a signed 8-bit integer (`byte`).
   public final BufferedOutput int8(byte b) throws IOException {
     var p = fwd(1);
     buf[p] = b;
     return this;
   }
 
+  /// Write the lower 8 bits of the given `int` as an unsigned 8-bit integer.
   public final BufferedOutput uint8(int b) throws IOException { return int8((byte)b); }
 
+  /// Write a signed 16-bit integer (`short`) in the current [#order()].
   public final BufferedOutput int16(short s) throws IOException {
     var p = fwd(2);
     (bigEndian ? BA_SHORT_BIG : BA_SHORT_LITTLE).set(buf, p, s);
     return this;
   }
 
+  /// Write an unsigned 16-bit integer (`char`) in the current [#order()].
   public final BufferedOutput uint16(char c) throws IOException {
     var p = fwd(2);
     (bigEndian ? BA_CHAR_BIG : BA_CHAR_LITTLE).set(buf, p, c);
     return this;
   }
 
+  /// Write a signed 32-bit integer (`int`) in the current [#order()].
   public final BufferedOutput int32(int i) throws IOException {
     var p = fwd(4);
     (bigEndian ? BA_INT_BIG : BA_INT_LITTLE).set(buf, p, i);
     return this;
   }
 
+  /// Write the lower 32 bits of the given `long` as an unsigned 32-bit integer in the current [#order()].
   public final BufferedOutput uint32(long i) throws IOException { return int32((int)i); }
 
+  /// Write a signed 64-bit integer (`long`) in the current [#order()].
   public final BufferedOutput int64(long l) throws IOException {
     var p = fwd(8);
     (bigEndian ? BA_LONG_BIG : BA_LONG_LITTLE).set(buf, p, l);
     return this;
   }
 
+  /// Write a 32-bit IEEE-754 floating point value (`float`) in the current [#order()].
   public final BufferedOutput float32(float f) throws IOException {
     var p = fwd(4);
     (bigEndian ? BA_FLOAT_BIG : BA_FLOAT_LITTLE).set(buf, p, f);
     return this;
   }
 
+  /// Write a 64-bit IEEE-754 floating point value (`double`) in the current [#order()].
   public final BufferedOutput float64(double d) throws IOException {
     var p = fwd(8);
     (bigEndian ? BA_DOUBLE_BIG : BA_DOUBLE_LITTLE).set(buf, p, d);
     return this;
   }
 
+  /// Write a [String] in the given [Charset].
+  ///
+  /// Encoding is performed as a standalone operation with the default replacement characters. It is not possible
+  /// to write surrogate pairs that are split across 2 strings. Use [TextOutput] if you need this feature.
+  ///
+  /// The encoded data is written verbatim without a length prefix or terminator.
   public final int string(String s, Charset charset) throws IOException {
     var b = s.getBytes(charset);
     write(b);
     return b.length;
   }
 
+  /// Write a [String] in UTF-8 encoding.
+  ///
+  /// Note that this is the standard UTF-8 format. It is not compatible with [DataInput] /
+  /// [DataOutput] which use a non-standard variant.
+  ///
+  /// @see #string(String, Charset)
   public final int string(String s) throws IOException { return string(s, StandardCharsets.UTF_8); }
 
+  /// Write a zero-terminated [String] in the given [Charset].
+  /// @see #string(String, Charset)
   public final int zstring(String s, Charset charset) throws IOException {
     var b = s.getBytes(charset);
     var len = b.length;
@@ -236,6 +265,8 @@ public abstract sealed class BufferedOutput implements Closeable, Flushable perm
     return len + 1;
   }
 
+  /// Write a zero-terminated [String] in UTF-8 encoding.
+  /// @see #string(String, Charset)
   public final int zstring(String s) throws IOException { return zstring(s, StandardCharsets.UTF_8); }
 
   private void flushAndGrow(int count) throws IOException {
@@ -344,6 +375,8 @@ public abstract sealed class BufferedOutput implements Closeable, Flushable perm
   /// Called at the end of the first [#close()].
   void closeUpstream() throws IOException {}
 
+  /// Flush the written data as far as possible. Note that not all data may be flushed if there is a previous
+  /// BufferedOutput created with [#reserve(long)] that has not been fully written and closed yet.
   public final void flush() throws IOException {
     checkState();
     if(prev == root) {
@@ -352,6 +385,18 @@ public abstract sealed class BufferedOutput implements Closeable, Flushable perm
     }
   }
 
+  /// Close this BufferedOutput and mark it as closed. Calling [#close()] again has no effect,
+  /// calling most other methods after closing results in an [IOException].
+  ///
+  /// If this is a root BufferedOutput based on an [OutputStream] or similar data sink, any
+  /// outstanding data is flushed to the sink which is then closed as well. In case of a
+  /// [FullyBufferedOutput], the data becomes available for reading once it is closed.
+  ///
+  /// Closing a nested BufferedOutput created with [#reserve(long)] before writing all the
+  /// requested data results in an IOException.
+  ///
+  /// In all cases any nested BufferedOutputs that have not been closed yet are implicitly
+  /// closed when closing this BufferedOutput.
   public final void close() throws IOException {
     if(!closed) {
       if(!truncate) checkUnderflow();
@@ -400,10 +445,14 @@ public abstract sealed class BufferedOutput implements Closeable, Flushable perm
     return b;
   }
 
-  /// Leave a fixed-size gap at the current position that can be filled later after continuing to write
-  /// to this BufferedOutput. This BufferedOutput's `totalBytesWritten` is immediately increased by the requested
-  /// size. Attempting to write more than the requested amount of data to the returned BufferedOutput or closing
-  /// it before writing all of the data throws an IOException.
+  /// Leave a fixed-size gap at the current position that can be filled later after continuing to
+  /// write to this BufferedOutput. `this.totalBytesWritten()` is immediately increased by the
+  /// requested size. Attempting to write more than the requested amount of data to the returned
+  /// BufferedOutput or closing it before writing all of the data throws an IOException.
+  ///
+  /// @param length The number of bytes to skip in this BufferedOutput and return as a new
+  ///               BufferedOutput.
+  /// @return       A new BufferedOutput used to fill the gap.
   public final BufferedOutput reserve(long length) throws IOException {
     checkState();
     if(fixed) return reserveShort((int)Math.min(length, available()));
@@ -411,10 +460,14 @@ public abstract sealed class BufferedOutput implements Closeable, Flushable perm
     else return reserveLong(length);
   }
 
-  /// Create a new BufferedOutput `b` that gets appended to `this` when closed. If `this` has a limited
-  /// size and appending `b` would exceed the limit, an EOFException is thrown when attempting to close `b`.
-  /// Attempting to write more than the requested maximum length to `b` results in an IOException.
+  /// Create a new BufferedOutput `b` that gets appended to `this` when it is closed. If `this` has a limited
+  /// size and appending `b` would exceed the limit, an [EOFException] is thrown when attempting to close `b`.
+  /// Attempting to write more than the requested maximum length to `b` results in an [IOException].
+  ///
+  /// @param max The size limit of the returned BufferedOutput
+  /// @return    A new BufferedOutput
   public final BufferedOutput defer(long max) throws IOException {
+    checkState();
     var b = cacheRoot.getExclusiveBlock();
     b.reinit(b.buf, bigEndian, 0, 0, b.buf.length, SHARING_EXCLUSIVE, max, 0L, true, b, this);
     b.next = b;
@@ -422,6 +475,8 @@ public abstract sealed class BufferedOutput implements Closeable, Flushable perm
     return b;
   }
 
+  /// Same as `defer(Long.MAX_VALUE)`
+  /// @see #defer(long)
   public final BufferedOutput defer() throws IOException { return defer(Long.MAX_VALUE); }
 
   /// Append a nested root block.
@@ -466,6 +521,20 @@ public abstract sealed class BufferedOutput implements Closeable, Flushable perm
       if(b == r) return;
     }
   }
+
+  /// Create a TextOutput for reading text from this BufferedOutput.
+  ///
+  /// @param cs        The Charset for decoding text.
+  /// @param eol       The line separator.
+  public TextOutput text(Charset cs, String eol) { return TextOutput.of(this, cs, eol); }
+
+  /// Same as `text(cs, System.lineSeparator())`
+  /// @see #text(Charset, String)
+  public TextOutput text(Charset cs) { return text(cs, System.lineSeparator()); }
+
+  /// Same as `text(StandardCharsets.UTF_8, System.lineSeparator())`
+  /// @see #text(Charset, String)
+  public TextOutput text() { return text(StandardCharsets.UTF_8, System.lineSeparator()); }
 }
 
 

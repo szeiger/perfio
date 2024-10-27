@@ -241,9 +241,11 @@ public abstract sealed class BufferedInput implements Closeable permits HeapBuff
 
   public abstract double float64() throws IOException;
 
-  /// Close this BufferedInput and any open views based on it. Calling any other method after closing will result in an
-  /// IOException. If this object is a view of another BufferedInput, this operation transfers control back to the
-  /// parent, otherwise it closes the underlying InputStream or other input source.
+  /// Close this BufferedInput and mark it as closed. Calling [#close()] again has no effect,
+  /// calling most other methods after closing results in an [IOException].
+  ///
+  /// If this object is a view of another BufferedInput, this operation transfers control back to
+  /// the parent, otherwise it closes the underlying InputStream or other input source.
   public void close() throws IOException {
     if(state != STATE_CLOSED) {
       if(activeView != null) activeView.markClosed();
@@ -324,9 +326,13 @@ public abstract sealed class BufferedInput implements Closeable permits HeapBuff
 
   /// Create a vectorized or scalar [LineTokenizer] depending on JVM and hardware support.
   ///
-  /// The LineTokenizer is treated like a view, i.e. no other access of this BufferedReader (except closing it) is
-  /// allowed until the LineTokenizer is closed with [#close()] (thus closing this BufferedInput as well)
-  /// or [#end()] (to keep this BufferedInput open for further reading).
+  /// The LineTokenizer is treated like a view, i.e. no other access of this BufferedInput (except closing it) is
+  /// allowed until the LineTokenizer is closed with [LineTokenizer#close()] (thus closing this BufferedInput as well)
+  /// or [LineTokenizer#end()] (to keep this BufferedInput open for further reading).
+  ///
+  /// With the default values for `eol` and `preEol` a LineTokenizer will recognize both LF (Unix) and CRLF (Windows)
+  /// line endings. Automatic recognition of pure CR line endings (classic MacOS) at the same time is not supported but
+  /// can be configured manually by setting `eol` to `'\r'` and `preEol` to `-1`.
   ///
   /// @param charset   Charset for decoding strings. Decoding is applied to individual lines after splitting.
   /// @param eol       End-of-line character.

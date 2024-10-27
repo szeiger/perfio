@@ -245,7 +245,7 @@ class TextOutputBenchmark extends BenchUtil {
       fbout = BufferedOutput.growing(totalLength)
       fbout
     }
-    val tout = TextOutput.of(bout, cs, System.lineSeparator(), autoFlush)
+    val tout = TextOutput.of(bout, cs, System.lineSeparator()).autoFlush(autoFlush)
     f(tout)
     tout.close()
     if(fbout != null) {
@@ -258,27 +258,27 @@ class TextOutputBenchmark extends BenchUtil {
     if(mode == "PrintWriter") runPrintWriter(bh, f)
     else runTextOutput(bh, g)
 
-//  @Benchmark
-//  def println_String(bh: Blackhole): Unit = run(bh)(printlnString)(printlnString)
-//
-//  @Benchmark
-//  def println_null(bh: Blackhole): Unit = run(bh)(printlnNull)(printlnNull)
-//
+  @Benchmark
+  def println_String(bh: Blackhole): Unit = run(bh)(printlnString)(printlnString)
+
+  @Benchmark
+  def println_null(bh: Blackhole): Unit = run(bh)(printlnNull)(printlnNull)
+
   @Benchmark
   def println_Int(bh: Blackhole): Unit = run(bh)(printlnInt)(printlnInt)
-//
-//  @Benchmark
-//  def println_Long(bh: Blackhole): Unit = run(bh)(printlnLong)(printlnLong)
-//
-//  @Benchmark
-//  def println_Boolean(bh: Blackhole): Unit = run(bh)(printlnBoolean)(printlnBoolean)
-//
-//  @Benchmark
-//  def println_Char(bh: Blackhole): Unit = run(bh)(printlnChar)(printlnChar)
-//
-//  @Benchmark
-//  def print_Char(bh: Blackhole): Unit = run(bh)(printChar)(printChar)
-//
-//  @Benchmark
-//  def println_unit(bh: Blackhole): Unit = run(bh)(printlnUnit)(printlnUnit)
+
+  @Benchmark
+  def println_Long(bh: Blackhole): Unit = run(bh)(printlnLong)(printlnLong)
+
+  @Benchmark
+  def println_Boolean(bh: Blackhole): Unit = run(bh)(printlnBoolean)(printlnBoolean)
+
+  @Benchmark
+  def println_Char(bh: Blackhole): Unit = run(bh)(printlnChar)(printlnChar)
+
+  @Benchmark
+  def print_Char(bh: Blackhole): Unit = run(bh)(printChar)(printChar)
+
+  @Benchmark
+  def println_unit(bh: Blackhole): Unit = run(bh)(printlnUnit)(printlnUnit)
 }
