@@ -11,7 +11,7 @@ import scala.collection.mutable
 import scala.jdk.CollectionConverters._
 
 @RunWith(classOf[JUnit4])
-class DefaultLineTokenizerTest {
+abstract class LineTokenizerTest {
 
   @Test def smallAligned1: Unit = check(4096,
     """aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
@@ -79,7 +79,7 @@ class DefaultLineTokenizerTest {
 
   def buildSplit(in: BufferedInput): (mutable.ArrayBuffer[String], LineTokenizer) = {
     var i = 0
-    var t = in.lines()
+    var t = createTokenizer(in)
     val buf = mutable.ArrayBuffer.empty[String]
     while(t.readLine() match {
       case null => false
@@ -88,7 +88,7 @@ class DefaultLineTokenizerTest {
         i += 1
         if(i % 2 == 0) {
           t.end()
-          t = in.lines()
+          t = createTokenizer(in)
         }
         true
     }) ()
@@ -96,7 +96,7 @@ class DefaultLineTokenizerTest {
   }
 
   def buildNormal(in: BufferedInput): (mutable.ArrayBuffer[String], LineTokenizer) = {
-    val t = in.lines()
+    val t = createTokenizer(in)
     val buf = mutable.ArrayBuffer.empty[String]
     while(t.readLine() match {
       case null => false
@@ -104,4 +104,16 @@ class DefaultLineTokenizerTest {
     }) ()
     (buf, t)
   }
+
+  def createTokenizer(in: BufferedInput): LineTokenizer
+}
+
+class VectorizedLineTokenizerTest extends LineTokenizerTest {
+  def createTokenizer(in: BufferedInput): LineTokenizer =
+    VectorizedLineTokenizer.of(in, StandardCharsets.UTF_8, '\n'.toByte, '\r'.toByte)
+}
+
+class ScalarLineTokenizerTest extends LineTokenizerTest {
+  def createTokenizer(in: BufferedInput): LineTokenizer =
+    ScalarLineTokenizer.of(in, StandardCharsets.UTF_8, '\n'.toByte, '\r'.toByte)
 }

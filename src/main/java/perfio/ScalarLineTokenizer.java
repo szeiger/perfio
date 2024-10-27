@@ -51,6 +51,7 @@ abstract non-sealed class HeapScalarLineTokenizer extends HeapLineTokenizer {
   }
 
   public final String readLine() throws IOException {
+    //System.out.println("readLine() pos="+bin.pos+", lim="+bin.lim+"");
     var eol = eolChar;
     var bp = bin.pos;
     var p = bin.pos;
@@ -60,13 +61,19 @@ abstract non-sealed class HeapScalarLineTokenizer extends HeapLineTokenizer {
         p += 1;
         if(b == eol) {
           bin.pos = p;
+          //System.out.println("  emit("+bp+", "+(p-1)+")");
           return emit(bp, p-1);
         }
       }
       var oldav = bin.available();
-      bin.prepareAndFillBuffer(1);
+      //System.out.println("  before fill: pos="+bin.pos+", lim="+bin.lim+", buflen="+bin.buf.length);
+      bin.prepareAndFillBuffer((p-bin.pos)+1);
+      //System.out.println("  after fill: pos="+bin.pos+", lim="+bin.lim+", buflen="+bin.buf.length);
       p -= bp - bin.pos;
-      if(oldav == bin.available()) return rest(p);
+      if(oldav == bin.available()) {
+        //System.out.println("  rest("+p+")");
+        return rest(p);
+      }
       bp = bin.pos;
     }
   }
