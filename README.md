@@ -1,4 +1,4 @@
-perfIO - Fast and Convenient I/O for the JVM
+# perfIO - Fast and Convenient I/O for the JVM
 
 ## Overview
 
@@ -13,7 +13,14 @@ perfIO provides buffered streaming I/O abstractions for both binary and text dat
 
 ## How fast is it?
 
-Reading and writing binary data using a sufficiently large buffer is faster than ByteBuffer, but with the full generality of streaming I/O that does not require a fixed buffer size.
+Reading and writing binary data using a sufficiently large buffer is faster than ByteBuffer, but with the full generality of streaming I/O that does not require a fixed buffer size. Data from the included benchmarks (measured on Temurin OpenJDK 22.0.2 on Linux x68-64) shows typical speed-ups between 3x and 40x in different scenarios compared to standard library abstractions for streaming I/O.
+
+![1.svg](docs/1.svg)
+![2.svg](docs/2.svg)
+![3.svg](docs/3.svg)
+![4.svg](docs/4.svg)
+![5.svg](docs/5.svg)
+![6.svg](docs/6.svg)
 
 ## What makes it fast?
 
