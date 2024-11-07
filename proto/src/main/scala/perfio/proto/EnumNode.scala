@@ -1,6 +1,6 @@
 package perfio.proto
 
-import com.google.protobuf.DescriptorProtos.EnumDescriptorProto
+import perfio.protoapi.DescriptorProtos.EnumDescriptorProto
 import perfio.TextOutput
 
 import java.io.PrintStream

@@ -1,6 +1,6 @@
 package perfio.proto
 
-import com.google.protobuf.compiler.PluginProtos.CodeGeneratorRequest
+import perfio.protoapi.PluginProtos.CodeGeneratorRequest
 
 import java.io.PrintStream
 import scala.collection.mutable.{ArrayBuffer, Buffer}

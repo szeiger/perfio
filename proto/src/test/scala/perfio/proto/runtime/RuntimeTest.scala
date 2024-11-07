@@ -7,8 +7,10 @@ import org.junit.runners.JUnit4
 import perfio.{BufferedInput, BufferedOutput}
 import com.example.google.{Simple => GSimple}
 import com.example.perfio.{Simple => PSimple}
+import com.google.protobuf.{DescriptorProtos => GDescriptorProtos}
+import perfio.protoapi.{DescriptorProtos => PDescriptorProtos}
 
-import java.io.ByteArrayOutputStream
+import java.io.{ByteArrayInputStream, ByteArrayOutputStream, InputStream}
 import java.nio.ByteOrder
 import scala.jdk.CollectionConverters._
 
@@ -85,9 +87,37 @@ class RuntimeTest {
     assertEquals(gs, gs2)
   }
 
+  @Test
+  def testCodeGeneratorRequest(): Unit = {
+    val data3 = Array[Byte](18, 24, 66, 10, -94, 1, 7, 18, 5, 65, 76, 76, 79, 87, 82, 10, 106, 115, 111, 110, 70, 111, 114, 109, 97, 116)
+    //println(GDescriptorProtos.DescriptorProto.parseFrom(new ByteArrayInputStream(data3)))
+    val in = BufferedInput.of(new LimitedInputStream(new ByteArrayInputStream(data3), 5)).order(ByteOrder.LITTLE_ENDIAN)
+    PDescriptorProtos.DescriptorProto.parseFrom(in)
+  }
+
   def toInput(b: com.google.protobuf.GeneratedMessage): BufferedInput = {
     val bout = new ByteArrayOutputStream()
     b.writeTo(bout)
     BufferedInput.ofArray(bout.toByteArray).order(ByteOrder.LITTLE_ENDIAN)
+  }
+
+  def toBytes(b: com.google.protobuf.GeneratedMessage): Array[Byte] = {
+    val bout = new ByteArrayOutputStream()
+    b.writeTo(bout)
+    bout.toByteArray
+  }
+}
+
+class LimitedInputStream(in: InputStream, limit: Int) extends InputStream {
+  var returned = 0L
+  def read(): Int = {
+    val i = in.read()
+    if(i >= 0) returned += 1
+    i
+  }
+  override def read(b: Array[Byte], off: Int, len: Int): Int = {
+    val l = in.read(b, off, len min limit)
+    if(l > 0) returned += l
+    l
   }
 }

@@ -1,4 +1,7 @@
-val PROTOBUF_PATH = "/home/szeiger/protobuf"
+import java.nio.file.{Files, Path}
+import scala.jdk.CollectionConverters._
+
+val PROTOBUF_HOME = sys.env.getOrElse("PROTOBUF_HOME", s"${sys.props("user.home")}/protobuf")
 
 Global / organization := "com.novocode"
 
@@ -22,9 +25,9 @@ javacOptions in Global ++= compileOpts
 
 scalacOptions ++= Seq("-feature")
 
-Test / fork := true
-run / fork := true
-run / connectInput := true
+ThisBuild / Test / fork := true
+ThisBuild / run / fork := true
+ThisBuild / run / connectInput := true
 
 Global / scalaVersion := "2.13.14"
 
@@ -48,8 +51,6 @@ lazy val bench = (project in file("bench"))
     ),
     name := "perfio-bench",
     publish / skip := true,
-    //Jmh / javaOptions ++= Seq("-Xss32M", "--add-modules", "jdk.incubator.vector"),
-    //Jmh / JmhPlugin.generateJmhSourcesAndResources / fork := true,
   )
 
 lazy val test = (project in file("test"))
@@ -68,39 +69,69 @@ lazy val test = (project in file("test"))
     publish / skip := true,
   )
 
-lazy val proto = (project in file("proto"))
+lazy val protoRuntime = (project in file("proto-runtime"))
   .dependsOn(main)
   .settings(
-    libraryDependencies += "com.google.protobuf" % "protobuf-java" % "4.29.0-RC2",
+    name := "perfio-proto-runtime",
+  )
+
+lazy val proto = (project in file("proto"))
+  .dependsOn(protoRuntime)
+  .settings(
+    libraryDependencies += "com.google.protobuf" % "protobuf-java" % "4.29.0-RC2" % "test",
     libraryDependencies += "com.github.sbt" % "junit-interface" % "0.13.2" % "test",
     testOptions += Tests.Argument(TestFrameworks.JUnit, "-a", "-v"),
     name := "perfio-proto",
+    Test / sourceGenerators += Def.task {
+      val srcDir = new File((Test / sourceDirectory).value, "proto")
+      val srcs = srcDir.listFiles(_.getName.endsWith(".proto")).toSet
+      val out = (Test / sourceManaged).value
+      val cp = (Compile / fullClasspathAsJars).value
+      val cachedCompile = FileFunction.cached(streams.value.cacheDirectory / "proto") { (in: Set[File]) =>
+        val pin = in.intersect(srcs)
+        val outs = runProtoc(cp, pin.map(_.getPath), out.toPath, Seq("java", "perfio"), Some("com.example.perfio"), Some(srcDir.getPath)).toSet
+        println("Generated "+outs.mkString(", "))
+        outs
+      }
+      val outs = cachedCompile(srcs ++ cp.iterator.map(_.data).toSet).toSeq.sorted
+      outs
+    }.taskValue,
   )
 
-lazy val protoc = taskKey[Int]("Run protoc with the perfio-proto plugin")
-lazy val bootstrap = taskKey[Int]("Boostrap the perfIO-generated protobuf API")
+lazy val bootstrapProto = taskKey[Unit]("Boostrap the perfIO-generated protobuf API")
 
-def runProtoc(cp: Classpath, srcs: Iterable[String], target: String, mode: String, perfioPackage: Option[String] = None): Int = {
-  val gen = new File("proto/protoc-gen-perfio").getAbsolutePath
-  val protoc = s"$PROTOBUF_PATH/bin/protoc"
-  val pb = new ProcessBuilder(Seq(protoc, s"--plugin=protoc-gen-perfio=$gen", s"--${mode}_out=$target") ++ srcs: _*).inheritIO()
-  pb.environment().put("PERFIO_CLASSPATH", cp.iterator.map(_.data).mkString(sys.props.getOrElse("path.separator", ":")))
-  perfioPackage.foreach { p => pb.environment().put("PERFIO_PACKAGE", p) }
-  pb.start().waitFor()
-}
-
-protoc := {
-  val cp = (proto / Compile / fullClasspath).value
-  val srcs = Seq(s"proto/src/test/proto/simple.proto")
-  runProtoc(cp, srcs, "proto/src/test/java", "java")
-  runProtoc(cp, srcs, "proto/src/test/java", "perfio", Some("com.example.perfio"))
-}
-
-bootstrap := {
+bootstrapProto := {
   val cp = (proto / Compile / fullClasspath).value
   val srcs = Seq(
-    s"$PROTOBUF_PATH/include/google/protobuf/compiler/plugin.proto",
-    s"$PROTOBUF_PATH/include/google/protobuf/descriptor.proto",
+    s"$PROTOBUF_HOME/include/google/protobuf/compiler/plugin.proto",
+    s"$PROTOBUF_HOME/include/google/protobuf/descriptor.proto",
   )
-  runProtoc(cp, srcs, "proto/src/main/java", "perfio", Some("perfio.protoapi"))
+  val target = Path.of("proto/src/main/java")
+  runProtoc(cp, srcs, target, Seq("perfio"), Some("perfio.protoapi"))
+}
+
+def runProtoc(cp: Classpath, srcs: Iterable[String], target: Path, modes: Seq[String], perfioPackage: Option[String] = None, protoPath: Option[String] = None): Seq[File] = {
+  val gen = new File("proto/protoc-gen-perfio").getAbsolutePath
+  val protoc = s"$PROTOBUF_HOME/bin/protoc"
+  if(target.toFile.exists()) IO.delete(target.toFile.listFiles())
+  else Files.createDirectories(target)
+  val temp = Files.createTempDirectory("protoc-out")
+  try {
+    modes.foreach { mode =>
+      val pb = new ProcessBuilder(Seq(protoc, s"--plugin=protoc-gen-perfio=$gen", s"--${mode}_out=$temp") ++ protoPath.map(s => s"--proto_path=$s") ++ srcs: _*).inheritIO()
+      pb.environment().put("PERFIO_CLASSPATH", cp.iterator.map(_.data).mkString(sys.props.getOrElse("path.separator", ":")))
+      perfioPackage.foreach { p => pb.environment().put("PERFIO_PACKAGE", p) }
+      val ret = pb.start().waitFor()
+      if(ret != 0) throw new RuntimeException(s"protoc failed with exit code $ret")
+    }
+    val tempFiles = Files.walk(temp).iterator().asScala.toVector
+    val tempOuts = tempFiles.filter(p => p.toFile.getName.endsWith(".java"))
+    val outs = tempOuts.map { t =>
+      val o = target.resolve(temp.relativize(t))
+      Files.createDirectories(o.getParent)
+      Files.move(t, o)
+      o.toAbsolutePath.toFile
+    }
+    outs
+  } finally IO.delete(temp.toFile)
 }

@@ -1,6 +1,6 @@
 package perfio.proto
 
-import com.google.protobuf.DescriptorProtos.FileDescriptorProto
+import perfio.protoapi.DescriptorProtos.FileDescriptorProto
 import perfio.TextOutput
 
 import java.io.PrintStream

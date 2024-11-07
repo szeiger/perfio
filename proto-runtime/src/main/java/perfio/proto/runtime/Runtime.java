@@ -88,7 +88,7 @@ public class Runtime {
       case I32 -> in.skip(4);
       case I64 -> in.skip(8);
       case LEN -> in.skip(parseVarint(in));
-      case SGROUP, EGROUP -> throw new IOException("TODO"); //TODO
+      case SGROUP, EGROUP -> throw new IOException("TODO "+wireType); //TODO
       default -> throw new IOException("Invalid wire type "+wireType);
     }
   }

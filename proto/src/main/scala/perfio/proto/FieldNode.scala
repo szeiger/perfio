@@ -1,7 +1,7 @@
 package perfio.proto
 
-import com.google.protobuf.DescriptorProtos.FieldDescriptorProto
-import com.google.protobuf.DescriptorProtos.FieldDescriptorProto.{Label, Type}
+import perfio.protoapi.DescriptorProtos.FieldDescriptorProto
+import perfio.protoapi.DescriptorProtos.FieldDescriptorProto.{Label, Type}
 import perfio.TextOutput
 import perfio.proto.runtime.Runtime
 

@@ -1,6 +1,6 @@
 package perfio.proto
 
-import com.google.protobuf.DescriptorProtos.DescriptorProto
+import perfio.protoapi.DescriptorProtos.DescriptorProto
 import perfio.proto.Cardinality.Repeated
 import perfio.proto.runtime.Runtime
 import perfio.{BufferedInput, BufferedOutput, TextOutput}

@@ -1,6 +1,6 @@
 package perfio.proto
 
-import com.google.protobuf.DescriptorProtos.FieldDescriptorProto.Type
+import perfio.protoapi.DescriptorProtos.FieldDescriptorProto.Type
 import perfio.proto.runtime.Runtime
 
 import scala.reflect.ClassTag

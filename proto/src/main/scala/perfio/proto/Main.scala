@@ -1,19 +1,22 @@
 package perfio.proto
 
-import com.google.protobuf.ByteString
-import com.google.protobuf.compiler.PluginProtos
-import perfio.BufferedOutput
+import perfio.protoapi.PluginProtos
+import perfio.{BufferedInput, BufferedOutput}
+
+import scala.jdk.CollectionConverters._
+
+import java.nio.charset.StandardCharsets
 
 object Main extends App {
-  val req = PluginProtos.CodeGeneratorRequest.parseFrom(System.in)
+  val req = PluginProtos.CodeGeneratorRequest.parseFrom(BufferedInput.of(System.in))
   //System.err.println(req)
 
   val root = new RootNode(req)
   root.dump(System.err, "")
   System.err.println()
 
-  val res = PluginProtos.CodeGeneratorResponse.newBuilder()
-  res.setSupportedFeatures(PluginProtos.CodeGeneratorResponse.Feature.FEATURE_PROTO3_OPTIONAL_VALUE)
+  val res = new PluginProtos.CodeGeneratorResponse
+  res.setSupportedFeatures(PluginProtos.CodeGeneratorResponse.Feature.FEATURE_PROTO3_OPTIONAL.number)
 
   root.genFiles.foreach { genFile =>
     val fm = root.fileMap(genFile)
@@ -22,13 +25,26 @@ object Main extends App {
     val to = bo.text()
     fm.emit(to, "")
     bo.close()
-    val fb = res.addFileBuilder()
-    fb.setName(fm.javaOutputFileName)
-    fb.setContentBytes(ByteString.copyFrom(bo.buffer(), 0, bo.length()))
+    res.addFile(
+      new PluginProtos.CodeGeneratorResponse.File()
+        .setName(fm.javaOutputFileName)
+        .setContent(new String(bo.buffer(), 0, bo.length(), StandardCharsets.UTF_8)))
     //System.err.write(bo.buffer(), 0, bo.length())
   }
 
-  res.build().writeTo(System.out)
+  for(f <- res.getFileList.asScala) {
+    System.err.println("**** generated "+f.getName)
+  }
+
+  //val bo = BufferedOutput.of(System.out)
+  //res.writeTo(bo)
+  //bo.flush()
+
+  val bo = BufferedOutput.growing()
+  res.writeTo(bo)
+  bo.close()
+  System.out.write(bo.buffer(), 0, bo.length())
+  System.out.flush()
 
   System.exit(0)
 }
