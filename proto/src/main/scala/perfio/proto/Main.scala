@@ -4,12 +4,16 @@ import perfio.protoapi.PluginProtos
 import perfio.{BufferedInput, BufferedOutput}
 
 import scala.jdk.CollectionConverters._
-
 import java.nio.charset.StandardCharsets
+import java.nio.file.Path
 
 object Main extends App {
   val req = PluginProtos.CodeGeneratorRequest.parseFrom(BufferedInput.of(System.in))
   //System.err.println(req)
+
+  //val b = BufferedOutput.ofFile(Path.of("/tmp/req.bin"))
+  //req.writeTo(b)
+  //b.close()
 
   val root = new RootNode(req)
   root.dump(System.err, "")

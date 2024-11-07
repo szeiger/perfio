@@ -1,5 +1,7 @@
 package perfio.proto
 
+import perfio.BufferedOutput
+import perfio.proto.runtime.Runtime
 import perfio.protoapi.PluginProtos.CodeGeneratorRequest
 
 import java.io.PrintStream
@@ -56,8 +58,16 @@ object Util {
     }
     b.result()
   }
+
   def mkLowerJavaName(s: String): String = {
     val u = mkUpperJavaName(s)
     u.head.toLower + u.drop(1)
+  }
+
+  def encodeVarint(v: Long): Array[Byte] = {
+    val bo = BufferedOutput.growing(10)
+    Runtime.writeVarint(bo, v)
+    bo.close()
+    bo.copyToByteArray()
   }
 }

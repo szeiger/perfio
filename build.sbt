@@ -98,6 +98,16 @@ lazy val proto = (project in file("proto"))
     }.taskValue,
   )
 
+lazy val protoBench = (project in file("proto-bench"))
+  .dependsOn(proto)
+  .enablePlugins(JmhPlugin)
+  .settings(
+    scalacOptions ++= Seq("-feature", "-opt:l:inline"),
+    libraryDependencies += "com.google.protobuf" % "protobuf-java" % "4.29.0-RC2",
+    name := "perfio-proto-bench",
+    publish / skip := true,
+  )
+
 lazy val bootstrapProto = taskKey[Unit]("Boostrap the perfIO-generated protobuf API")
 
 bootstrapProto := {

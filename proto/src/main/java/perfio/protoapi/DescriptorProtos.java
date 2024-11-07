@@ -76,7 +76,7 @@ public final class DescriptorProtos {
     }
 
     public void writeTo(perfio.BufferedOutput out) throws java.io.IOException {
-      { var it = this._file.iterator(); while(it.hasNext()) { var v = it.next(); perfio.proto.runtime.Runtime.writeInt32(out, 10); var out2 = out.defer(); v.writeTo(out2); perfio.proto.runtime.Runtime.writeLen(out, out2.totalBytesWritten()); out2.close(); }}
+      if(this.hasFile()) { var it = this._file.iterator(); while(it.hasNext()) { var v = it.next(); out.int8((byte)10); var out2 = out.defer(); v.writeTo(out2); perfio.proto.runtime.Runtime.writeLen(out, out2.totalBytesWritten()); out2.close(); }}
     }
 
     public boolean equals(java.lang.Object o) {
@@ -229,19 +229,19 @@ public final class DescriptorProtos {
     }
 
     public void writeTo(perfio.BufferedOutput out) throws java.io.IOException {
-      if(this.hasName()) { perfio.proto.runtime.Runtime.writeInt32(out, 10); perfio.proto.runtime.Runtime.writeString(out, this._name); }
-      if(this.hasPackage()) { perfio.proto.runtime.Runtime.writeInt32(out, 18); perfio.proto.runtime.Runtime.writeString(out, this._package); }
-      { var it = this._dependency.iterator(); while(it.hasNext()) { var v = it.next(); perfio.proto.runtime.Runtime.writeInt32(out, 26); perfio.proto.runtime.Runtime.writeString(out, v); }}
-      { var it = this._publicDependency.iterator(); while(it.hasNext()) { var v = it.next(); perfio.proto.runtime.Runtime.writeInt32(out, 80); perfio.proto.runtime.Runtime.writeInt32(out, v); }}
-      { var it = this._weakDependency.iterator(); while(it.hasNext()) { var v = it.next(); perfio.proto.runtime.Runtime.writeInt32(out, 88); perfio.proto.runtime.Runtime.writeInt32(out, v); }}
-      { var it = this._messageType.iterator(); while(it.hasNext()) { var v = it.next(); perfio.proto.runtime.Runtime.writeInt32(out, 34); var out2 = out.defer(); v.writeTo(out2); perfio.proto.runtime.Runtime.writeLen(out, out2.totalBytesWritten()); out2.close(); }}
-      { var it = this._enumType.iterator(); while(it.hasNext()) { var v = it.next(); perfio.proto.runtime.Runtime.writeInt32(out, 42); var out2 = out.defer(); v.writeTo(out2); perfio.proto.runtime.Runtime.writeLen(out, out2.totalBytesWritten()); out2.close(); }}
-      { var it = this._service.iterator(); while(it.hasNext()) { var v = it.next(); perfio.proto.runtime.Runtime.writeInt32(out, 50); var out2 = out.defer(); v.writeTo(out2); perfio.proto.runtime.Runtime.writeLen(out, out2.totalBytesWritten()); out2.close(); }}
-      { var it = this._extension.iterator(); while(it.hasNext()) { var v = it.next(); perfio.proto.runtime.Runtime.writeInt32(out, 58); var out2 = out.defer(); v.writeTo(out2); perfio.proto.runtime.Runtime.writeLen(out, out2.totalBytesWritten()); out2.close(); }}
-      if(this.hasOptions()) { perfio.proto.runtime.Runtime.writeInt32(out, 66); var out2 = out.defer(); this._options.writeTo(out2); perfio.proto.runtime.Runtime.writeLen(out, out2.totalBytesWritten()); out2.close(); }
-      if(this.hasSourceCodeInfo()) { perfio.proto.runtime.Runtime.writeInt32(out, 74); var out2 = out.defer(); this._sourceCodeInfo.writeTo(out2); perfio.proto.runtime.Runtime.writeLen(out, out2.totalBytesWritten()); out2.close(); }
-      if(this.hasSyntax()) { perfio.proto.runtime.Runtime.writeInt32(out, 98); perfio.proto.runtime.Runtime.writeString(out, this._syntax); }
-      if(this.hasEdition()) { perfio.proto.runtime.Runtime.writeInt32(out, 112); perfio.proto.runtime.Runtime.writeInt32(out, this._edition.number); }
+      if(this.hasName()) { out.int8((byte)10); perfio.proto.runtime.Runtime.writeString(out, this._name); }
+      if(this.hasPackage()) { out.int8((byte)18); perfio.proto.runtime.Runtime.writeString(out, this._package); }
+      if(this.hasDependency()) { var it = this._dependency.iterator(); while(it.hasNext()) { var v = it.next(); out.int8((byte)26); perfio.proto.runtime.Runtime.writeString(out, v); }}
+      if(this.hasPublicDependency()) { var it = this._publicDependency.iterator(); while(it.hasNext()) { var v = it.next(); out.int8((byte)80); perfio.proto.runtime.Runtime.writeInt32(out, v); }}
+      if(this.hasWeakDependency()) { var it = this._weakDependency.iterator(); while(it.hasNext()) { var v = it.next(); out.int8((byte)88); perfio.proto.runtime.Runtime.writeInt32(out, v); }}
+      if(this.hasMessageType()) { var it = this._messageType.iterator(); while(it.hasNext()) { var v = it.next(); out.int8((byte)34); var out2 = out.defer(); v.writeTo(out2); perfio.proto.runtime.Runtime.writeLen(out, out2.totalBytesWritten()); out2.close(); }}
+      if(this.hasEnumType()) { var it = this._enumType.iterator(); while(it.hasNext()) { var v = it.next(); out.int8((byte)42); var out2 = out.defer(); v.writeTo(out2); perfio.proto.runtime.Runtime.writeLen(out, out2.totalBytesWritten()); out2.close(); }}
+      if(this.hasService()) { var it = this._service.iterator(); while(it.hasNext()) { var v = it.next(); out.int8((byte)50); var out2 = out.defer(); v.writeTo(out2); perfio.proto.runtime.Runtime.writeLen(out, out2.totalBytesWritten()); out2.close(); }}
+      if(this.hasExtension()) { var it = this._extension.iterator(); while(it.hasNext()) { var v = it.next(); out.int8((byte)58); var out2 = out.defer(); v.writeTo(out2); perfio.proto.runtime.Runtime.writeLen(out, out2.totalBytesWritten()); out2.close(); }}
+      if(this.hasOptions()) { out.int8((byte)66); var out2 = out.defer(); this._options.writeTo(out2); perfio.proto.runtime.Runtime.writeLen(out, out2.totalBytesWritten()); out2.close(); }
+      if(this.hasSourceCodeInfo()) { out.int8((byte)74); var out2 = out.defer(); this._sourceCodeInfo.writeTo(out2); perfio.proto.runtime.Runtime.writeLen(out, out2.totalBytesWritten()); out2.close(); }
+      if(this.hasSyntax()) { out.int8((byte)98); perfio.proto.runtime.Runtime.writeString(out, this._syntax); }
+      if(this.hasEdition()) { out.int8((byte)112); perfio.proto.runtime.Runtime.writeInt32(out, this._edition.number); }
     }
 
     public boolean equals(java.lang.Object o) {
@@ -318,9 +318,9 @@ public final class DescriptorProtos {
       }
 
       public void writeTo(perfio.BufferedOutput out) throws java.io.IOException {
-        if(this.hasStart()) { perfio.proto.runtime.Runtime.writeInt32(out, 8); perfio.proto.runtime.Runtime.writeInt32(out, this._start); }
-        if(this.hasEnd()) { perfio.proto.runtime.Runtime.writeInt32(out, 16); perfio.proto.runtime.Runtime.writeInt32(out, this._end); }
-        if(this.hasOptions()) { perfio.proto.runtime.Runtime.writeInt32(out, 26); var out2 = out.defer(); this._options.writeTo(out2); perfio.proto.runtime.Runtime.writeLen(out, out2.totalBytesWritten()); out2.close(); }
+        if(this.hasStart()) { out.int8((byte)8); perfio.proto.runtime.Runtime.writeInt32(out, this._start); }
+        if(this.hasEnd()) { out.int8((byte)16); perfio.proto.runtime.Runtime.writeInt32(out, this._end); }
+        if(this.hasOptions()) { out.int8((byte)26); var out2 = out.defer(); this._options.writeTo(out2); perfio.proto.runtime.Runtime.writeLen(out, out2.totalBytesWritten()); out2.close(); }
       }
 
       public boolean equals(java.lang.Object o) {
@@ -376,8 +376,8 @@ public final class DescriptorProtos {
       }
 
       public void writeTo(perfio.BufferedOutput out) throws java.io.IOException {
-        if(this.hasStart()) { perfio.proto.runtime.Runtime.writeInt32(out, 8); perfio.proto.runtime.Runtime.writeInt32(out, this._start); }
-        if(this.hasEnd()) { perfio.proto.runtime.Runtime.writeInt32(out, 16); perfio.proto.runtime.Runtime.writeInt32(out, this._end); }
+        if(this.hasStart()) { out.int8((byte)8); perfio.proto.runtime.Runtime.writeInt32(out, this._start); }
+        if(this.hasEnd()) { out.int8((byte)16); perfio.proto.runtime.Runtime.writeInt32(out, this._end); }
       }
 
       public boolean equals(java.lang.Object o) {
@@ -511,16 +511,16 @@ public final class DescriptorProtos {
     }
 
     public void writeTo(perfio.BufferedOutput out) throws java.io.IOException {
-      if(this.hasName()) { perfio.proto.runtime.Runtime.writeInt32(out, 10); perfio.proto.runtime.Runtime.writeString(out, this._name); }
-      { var it = this._field.iterator(); while(it.hasNext()) { var v = it.next(); perfio.proto.runtime.Runtime.writeInt32(out, 18); var out2 = out.defer(); v.writeTo(out2); perfio.proto.runtime.Runtime.writeLen(out, out2.totalBytesWritten()); out2.close(); }}
-      { var it = this._extension.iterator(); while(it.hasNext()) { var v = it.next(); perfio.proto.runtime.Runtime.writeInt32(out, 50); var out2 = out.defer(); v.writeTo(out2); perfio.proto.runtime.Runtime.writeLen(out, out2.totalBytesWritten()); out2.close(); }}
-      { var it = this._nestedType.iterator(); while(it.hasNext()) { var v = it.next(); perfio.proto.runtime.Runtime.writeInt32(out, 26); var out2 = out.defer(); v.writeTo(out2); perfio.proto.runtime.Runtime.writeLen(out, out2.totalBytesWritten()); out2.close(); }}
-      { var it = this._enumType.iterator(); while(it.hasNext()) { var v = it.next(); perfio.proto.runtime.Runtime.writeInt32(out, 34); var out2 = out.defer(); v.writeTo(out2); perfio.proto.runtime.Runtime.writeLen(out, out2.totalBytesWritten()); out2.close(); }}
-      { var it = this._extensionRange.iterator(); while(it.hasNext()) { var v = it.next(); perfio.proto.runtime.Runtime.writeInt32(out, 42); var out2 = out.defer(); v.writeTo(out2); perfio.proto.runtime.Runtime.writeLen(out, out2.totalBytesWritten()); out2.close(); }}
-      { var it = this._oneofDecl.iterator(); while(it.hasNext()) { var v = it.next(); perfio.proto.runtime.Runtime.writeInt32(out, 66); var out2 = out.defer(); v.writeTo(out2); perfio.proto.runtime.Runtime.writeLen(out, out2.totalBytesWritten()); out2.close(); }}
-      if(this.hasOptions()) { perfio.proto.runtime.Runtime.writeInt32(out, 58); var out2 = out.defer(); this._options.writeTo(out2); perfio.proto.runtime.Runtime.writeLen(out, out2.totalBytesWritten()); out2.close(); }
-      { var it = this._reservedRange.iterator(); while(it.hasNext()) { var v = it.next(); perfio.proto.runtime.Runtime.writeInt32(out, 74); var out2 = out.defer(); v.writeTo(out2); perfio.proto.runtime.Runtime.writeLen(out, out2.totalBytesWritten()); out2.close(); }}
-      { var it = this._reservedName.iterator(); while(it.hasNext()) { var v = it.next(); perfio.proto.runtime.Runtime.writeInt32(out, 82); perfio.proto.runtime.Runtime.writeString(out, v); }}
+      if(this.hasName()) { out.int8((byte)10); perfio.proto.runtime.Runtime.writeString(out, this._name); }
+      if(this.hasField()) { var it = this._field.iterator(); while(it.hasNext()) { var v = it.next(); out.int8((byte)18); var out2 = out.defer(); v.writeTo(out2); perfio.proto.runtime.Runtime.writeLen(out, out2.totalBytesWritten()); out2.close(); }}
+      if(this.hasExtension()) { var it = this._extension.iterator(); while(it.hasNext()) { var v = it.next(); out.int8((byte)50); var out2 = out.defer(); v.writeTo(out2); perfio.proto.runtime.Runtime.writeLen(out, out2.totalBytesWritten()); out2.close(); }}
+      if(this.hasNestedType()) { var it = this._nestedType.iterator(); while(it.hasNext()) { var v = it.next(); out.int8((byte)26); var out2 = out.defer(); v.writeTo(out2); perfio.proto.runtime.Runtime.writeLen(out, out2.totalBytesWritten()); out2.close(); }}
+      if(this.hasEnumType()) { var it = this._enumType.iterator(); while(it.hasNext()) { var v = it.next(); out.int8((byte)34); var out2 = out.defer(); v.writeTo(out2); perfio.proto.runtime.Runtime.writeLen(out, out2.totalBytesWritten()); out2.close(); }}
+      if(this.hasExtensionRange()) { var it = this._extensionRange.iterator(); while(it.hasNext()) { var v = it.next(); out.int8((byte)42); var out2 = out.defer(); v.writeTo(out2); perfio.proto.runtime.Runtime.writeLen(out, out2.totalBytesWritten()); out2.close(); }}
+      if(this.hasOneofDecl()) { var it = this._oneofDecl.iterator(); while(it.hasNext()) { var v = it.next(); out.int8((byte)66); var out2 = out.defer(); v.writeTo(out2); perfio.proto.runtime.Runtime.writeLen(out, out2.totalBytesWritten()); out2.close(); }}
+      if(this.hasOptions()) { out.int8((byte)58); var out2 = out.defer(); this._options.writeTo(out2); perfio.proto.runtime.Runtime.writeLen(out, out2.totalBytesWritten()); out2.close(); }
+      if(this.hasReservedRange()) { var it = this._reservedRange.iterator(); while(it.hasNext()) { var v = it.next(); out.int8((byte)74); var out2 = out.defer(); v.writeTo(out2); perfio.proto.runtime.Runtime.writeLen(out, out2.totalBytesWritten()); out2.close(); }}
+      if(this.hasReservedName()) { var it = this._reservedName.iterator(); while(it.hasNext()) { var v = it.next(); out.int8((byte)82); perfio.proto.runtime.Runtime.writeString(out, v); }}
     }
 
     public boolean equals(java.lang.Object o) {
@@ -618,11 +618,11 @@ public final class DescriptorProtos {
       }
 
       public void writeTo(perfio.BufferedOutput out) throws java.io.IOException {
-        if(this.hasNumber()) { perfio.proto.runtime.Runtime.writeInt32(out, 8); perfio.proto.runtime.Runtime.writeInt32(out, this._number); }
-        if(this.hasFullName()) { perfio.proto.runtime.Runtime.writeInt32(out, 18); perfio.proto.runtime.Runtime.writeString(out, this._fullName); }
-        if(this.hasType()) { perfio.proto.runtime.Runtime.writeInt32(out, 26); perfio.proto.runtime.Runtime.writeString(out, this._type); }
-        if(this.hasReserved()) { perfio.proto.runtime.Runtime.writeInt32(out, 40); perfio.proto.runtime.Runtime.writeBoolean(out, this._reserved); }
-        if(this.hasRepeated()) { perfio.proto.runtime.Runtime.writeInt32(out, 48); perfio.proto.runtime.Runtime.writeBoolean(out, this._repeated); }
+        if(this.hasNumber()) { out.int8((byte)8); perfio.proto.runtime.Runtime.writeInt32(out, this._number); }
+        if(this.hasFullName()) { out.int8((byte)18); perfio.proto.runtime.Runtime.writeString(out, this._fullName); }
+        if(this.hasType()) { out.int8((byte)26); perfio.proto.runtime.Runtime.writeString(out, this._type); }
+        if(this.hasReserved()) { out.int8((byte)40); perfio.proto.runtime.Runtime.writeBoolean(out, this._reserved); }
+        if(this.hasRepeated()) { out.int8((byte)48); perfio.proto.runtime.Runtime.writeBoolean(out, this._repeated); }
       }
 
       public boolean equals(java.lang.Object o) {
@@ -699,10 +699,10 @@ public final class DescriptorProtos {
     }
 
     public void writeTo(perfio.BufferedOutput out) throws java.io.IOException {
-      { var it = this._uninterpretedOption.iterator(); while(it.hasNext()) { var v = it.next(); perfio.proto.runtime.Runtime.writeInt32(out, 7994); var out2 = out.defer(); v.writeTo(out2); perfio.proto.runtime.Runtime.writeLen(out, out2.totalBytesWritten()); out2.close(); }}
-      { var it = this._declaration.iterator(); while(it.hasNext()) { var v = it.next(); perfio.proto.runtime.Runtime.writeInt32(out, 18); var out2 = out.defer(); v.writeTo(out2); perfio.proto.runtime.Runtime.writeLen(out, out2.totalBytesWritten()); out2.close(); }}
-      if(this.hasFeatures()) { perfio.proto.runtime.Runtime.writeInt32(out, 402); var out2 = out.defer(); this._features.writeTo(out2); perfio.proto.runtime.Runtime.writeLen(out, out2.totalBytesWritten()); out2.close(); }
-      if(this.hasVerification()) { perfio.proto.runtime.Runtime.writeInt32(out, 24); perfio.proto.runtime.Runtime.writeInt32(out, this._verification.number); }
+      if(this.hasUninterpretedOption()) { var it = this._uninterpretedOption.iterator(); while(it.hasNext()) { var v = it.next(); out.int8((byte)-70); out.int8((byte)62); var out2 = out.defer(); v.writeTo(out2); perfio.proto.runtime.Runtime.writeLen(out, out2.totalBytesWritten()); out2.close(); }}
+      if(this.hasDeclaration()) { var it = this._declaration.iterator(); while(it.hasNext()) { var v = it.next(); out.int8((byte)18); var out2 = out.defer(); v.writeTo(out2); perfio.proto.runtime.Runtime.writeLen(out, out2.totalBytesWritten()); out2.close(); }}
+      if(this.hasFeatures()) { out.int8((byte)-110); out.int8((byte)3); var out2 = out.defer(); this._features.writeTo(out2); perfio.proto.runtime.Runtime.writeLen(out, out2.totalBytesWritten()); out2.close(); }
+      if(this.hasVerification()) { out.int8((byte)24); perfio.proto.runtime.Runtime.writeInt32(out, this._verification.number); }
     }
 
     public boolean equals(java.lang.Object o) {
@@ -879,17 +879,17 @@ public final class DescriptorProtos {
     }
 
     public void writeTo(perfio.BufferedOutput out) throws java.io.IOException {
-      if(this.hasName()) { perfio.proto.runtime.Runtime.writeInt32(out, 10); perfio.proto.runtime.Runtime.writeString(out, this._name); }
-      if(this.hasNumber()) { perfio.proto.runtime.Runtime.writeInt32(out, 24); perfio.proto.runtime.Runtime.writeInt32(out, this._number); }
-      if(this.hasLabel()) { perfio.proto.runtime.Runtime.writeInt32(out, 32); perfio.proto.runtime.Runtime.writeInt32(out, this._label.number); }
-      if(this.hasType()) { perfio.proto.runtime.Runtime.writeInt32(out, 40); perfio.proto.runtime.Runtime.writeInt32(out, this._type.number); }
-      if(this.hasTypeName()) { perfio.proto.runtime.Runtime.writeInt32(out, 50); perfio.proto.runtime.Runtime.writeString(out, this._typeName); }
-      if(this.hasExtendee()) { perfio.proto.runtime.Runtime.writeInt32(out, 18); perfio.proto.runtime.Runtime.writeString(out, this._extendee); }
-      if(this.hasDefaultValue()) { perfio.proto.runtime.Runtime.writeInt32(out, 58); perfio.proto.runtime.Runtime.writeString(out, this._defaultValue); }
-      if(this.hasOneofIndex()) { perfio.proto.runtime.Runtime.writeInt32(out, 72); perfio.proto.runtime.Runtime.writeInt32(out, this._oneofIndex); }
-      if(this.hasJsonName()) { perfio.proto.runtime.Runtime.writeInt32(out, 82); perfio.proto.runtime.Runtime.writeString(out, this._jsonName); }
-      if(this.hasOptions()) { perfio.proto.runtime.Runtime.writeInt32(out, 66); var out2 = out.defer(); this._options.writeTo(out2); perfio.proto.runtime.Runtime.writeLen(out, out2.totalBytesWritten()); out2.close(); }
-      if(this.hasProto3Optional()) { perfio.proto.runtime.Runtime.writeInt32(out, 136); perfio.proto.runtime.Runtime.writeBoolean(out, this._proto3Optional); }
+      if(this.hasName()) { out.int8((byte)10); perfio.proto.runtime.Runtime.writeString(out, this._name); }
+      if(this.hasNumber()) { out.int8((byte)24); perfio.proto.runtime.Runtime.writeInt32(out, this._number); }
+      if(this.hasLabel()) { out.int8((byte)32); perfio.proto.runtime.Runtime.writeInt32(out, this._label.number); }
+      if(this.hasType()) { out.int8((byte)40); perfio.proto.runtime.Runtime.writeInt32(out, this._type.number); }
+      if(this.hasTypeName()) { out.int8((byte)50); perfio.proto.runtime.Runtime.writeString(out, this._typeName); }
+      if(this.hasExtendee()) { out.int8((byte)18); perfio.proto.runtime.Runtime.writeString(out, this._extendee); }
+      if(this.hasDefaultValue()) { out.int8((byte)58); perfio.proto.runtime.Runtime.writeString(out, this._defaultValue); }
+      if(this.hasOneofIndex()) { out.int8((byte)72); perfio.proto.runtime.Runtime.writeInt32(out, this._oneofIndex); }
+      if(this.hasJsonName()) { out.int8((byte)82); perfio.proto.runtime.Runtime.writeString(out, this._jsonName); }
+      if(this.hasOptions()) { out.int8((byte)66); var out2 = out.defer(); this._options.writeTo(out2); perfio.proto.runtime.Runtime.writeLen(out, out2.totalBytesWritten()); out2.close(); }
+      if(this.hasProto3Optional()) { out.int8((byte)-120); out.int8((byte)1); perfio.proto.runtime.Runtime.writeBoolean(out, this._proto3Optional); }
     }
 
     public boolean equals(java.lang.Object o) {
@@ -954,8 +954,8 @@ public final class DescriptorProtos {
     }
 
     public void writeTo(perfio.BufferedOutput out) throws java.io.IOException {
-      if(this.hasName()) { perfio.proto.runtime.Runtime.writeInt32(out, 10); perfio.proto.runtime.Runtime.writeString(out, this._name); }
-      if(this.hasOptions()) { perfio.proto.runtime.Runtime.writeInt32(out, 18); var out2 = out.defer(); this._options.writeTo(out2); perfio.proto.runtime.Runtime.writeLen(out, out2.totalBytesWritten()); out2.close(); }
+      if(this.hasName()) { out.int8((byte)10); perfio.proto.runtime.Runtime.writeString(out, this._name); }
+      if(this.hasOptions()) { out.int8((byte)18); var out2 = out.defer(); this._options.writeTo(out2); perfio.proto.runtime.Runtime.writeLen(out, out2.totalBytesWritten()); out2.close(); }
     }
 
     public boolean equals(java.lang.Object o) {
@@ -1012,8 +1012,8 @@ public final class DescriptorProtos {
       }
 
       public void writeTo(perfio.BufferedOutput out) throws java.io.IOException {
-        if(this.hasStart()) { perfio.proto.runtime.Runtime.writeInt32(out, 8); perfio.proto.runtime.Runtime.writeInt32(out, this._start); }
-        if(this.hasEnd()) { perfio.proto.runtime.Runtime.writeInt32(out, 16); perfio.proto.runtime.Runtime.writeInt32(out, this._end); }
+        if(this.hasStart()) { out.int8((byte)8); perfio.proto.runtime.Runtime.writeInt32(out, this._start); }
+        if(this.hasEnd()) { out.int8((byte)16); perfio.proto.runtime.Runtime.writeInt32(out, this._end); }
       }
 
       public boolean equals(java.lang.Object o) {
@@ -1097,11 +1097,11 @@ public final class DescriptorProtos {
     }
 
     public void writeTo(perfio.BufferedOutput out) throws java.io.IOException {
-      if(this.hasName()) { perfio.proto.runtime.Runtime.writeInt32(out, 10); perfio.proto.runtime.Runtime.writeString(out, this._name); }
-      { var it = this._value.iterator(); while(it.hasNext()) { var v = it.next(); perfio.proto.runtime.Runtime.writeInt32(out, 18); var out2 = out.defer(); v.writeTo(out2); perfio.proto.runtime.Runtime.writeLen(out, out2.totalBytesWritten()); out2.close(); }}
-      if(this.hasOptions()) { perfio.proto.runtime.Runtime.writeInt32(out, 26); var out2 = out.defer(); this._options.writeTo(out2); perfio.proto.runtime.Runtime.writeLen(out, out2.totalBytesWritten()); out2.close(); }
-      { var it = this._reservedRange.iterator(); while(it.hasNext()) { var v = it.next(); perfio.proto.runtime.Runtime.writeInt32(out, 34); var out2 = out.defer(); v.writeTo(out2); perfio.proto.runtime.Runtime.writeLen(out, out2.totalBytesWritten()); out2.close(); }}
-      { var it = this._reservedName.iterator(); while(it.hasNext()) { var v = it.next(); perfio.proto.runtime.Runtime.writeInt32(out, 42); perfio.proto.runtime.Runtime.writeString(out, v); }}
+      if(this.hasName()) { out.int8((byte)10); perfio.proto.runtime.Runtime.writeString(out, this._name); }
+      if(this.hasValue()) { var it = this._value.iterator(); while(it.hasNext()) { var v = it.next(); out.int8((byte)18); var out2 = out.defer(); v.writeTo(out2); perfio.proto.runtime.Runtime.writeLen(out, out2.totalBytesWritten()); out2.close(); }}
+      if(this.hasOptions()) { out.int8((byte)26); var out2 = out.defer(); this._options.writeTo(out2); perfio.proto.runtime.Runtime.writeLen(out, out2.totalBytesWritten()); out2.close(); }
+      if(this.hasReservedRange()) { var it = this._reservedRange.iterator(); while(it.hasNext()) { var v = it.next(); out.int8((byte)34); var out2 = out.defer(); v.writeTo(out2); perfio.proto.runtime.Runtime.writeLen(out, out2.totalBytesWritten()); out2.close(); }}
+      if(this.hasReservedName()) { var it = this._reservedName.iterator(); while(it.hasNext()) { var v = it.next(); out.int8((byte)42); perfio.proto.runtime.Runtime.writeString(out, v); }}
     }
 
     public boolean equals(java.lang.Object o) {
@@ -1167,9 +1167,9 @@ public final class DescriptorProtos {
     }
 
     public void writeTo(perfio.BufferedOutput out) throws java.io.IOException {
-      if(this.hasName()) { perfio.proto.runtime.Runtime.writeInt32(out, 10); perfio.proto.runtime.Runtime.writeString(out, this._name); }
-      if(this.hasNumber()) { perfio.proto.runtime.Runtime.writeInt32(out, 16); perfio.proto.runtime.Runtime.writeInt32(out, this._number); }
-      if(this.hasOptions()) { perfio.proto.runtime.Runtime.writeInt32(out, 26); var out2 = out.defer(); this._options.writeTo(out2); perfio.proto.runtime.Runtime.writeLen(out, out2.totalBytesWritten()); out2.close(); }
+      if(this.hasName()) { out.int8((byte)10); perfio.proto.runtime.Runtime.writeString(out, this._name); }
+      if(this.hasNumber()) { out.int8((byte)16); perfio.proto.runtime.Runtime.writeInt32(out, this._number); }
+      if(this.hasOptions()) { out.int8((byte)26); var out2 = out.defer(); this._options.writeTo(out2); perfio.proto.runtime.Runtime.writeLen(out, out2.totalBytesWritten()); out2.close(); }
     }
 
     public boolean equals(java.lang.Object o) {
@@ -1236,9 +1236,9 @@ public final class DescriptorProtos {
     }
 
     public void writeTo(perfio.BufferedOutput out) throws java.io.IOException {
-      if(this.hasName()) { perfio.proto.runtime.Runtime.writeInt32(out, 10); perfio.proto.runtime.Runtime.writeString(out, this._name); }
-      { var it = this._method.iterator(); while(it.hasNext()) { var v = it.next(); perfio.proto.runtime.Runtime.writeInt32(out, 18); var out2 = out.defer(); v.writeTo(out2); perfio.proto.runtime.Runtime.writeLen(out, out2.totalBytesWritten()); out2.close(); }}
-      if(this.hasOptions()) { perfio.proto.runtime.Runtime.writeInt32(out, 26); var out2 = out.defer(); this._options.writeTo(out2); perfio.proto.runtime.Runtime.writeLen(out, out2.totalBytesWritten()); out2.close(); }
+      if(this.hasName()) { out.int8((byte)10); perfio.proto.runtime.Runtime.writeString(out, this._name); }
+      if(this.hasMethod()) { var it = this._method.iterator(); while(it.hasNext()) { var v = it.next(); out.int8((byte)18); var out2 = out.defer(); v.writeTo(out2); perfio.proto.runtime.Runtime.writeLen(out, out2.totalBytesWritten()); out2.close(); }}
+      if(this.hasOptions()) { out.int8((byte)26); var out2 = out.defer(); this._options.writeTo(out2); perfio.proto.runtime.Runtime.writeLen(out, out2.totalBytesWritten()); out2.close(); }
     }
 
     public boolean equals(java.lang.Object o) {
@@ -1321,12 +1321,12 @@ public final class DescriptorProtos {
     }
 
     public void writeTo(perfio.BufferedOutput out) throws java.io.IOException {
-      if(this.hasName()) { perfio.proto.runtime.Runtime.writeInt32(out, 10); perfio.proto.runtime.Runtime.writeString(out, this._name); }
-      if(this.hasInputType()) { perfio.proto.runtime.Runtime.writeInt32(out, 18); perfio.proto.runtime.Runtime.writeString(out, this._inputType); }
-      if(this.hasOutputType()) { perfio.proto.runtime.Runtime.writeInt32(out, 26); perfio.proto.runtime.Runtime.writeString(out, this._outputType); }
-      if(this.hasOptions()) { perfio.proto.runtime.Runtime.writeInt32(out, 34); var out2 = out.defer(); this._options.writeTo(out2); perfio.proto.runtime.Runtime.writeLen(out, out2.totalBytesWritten()); out2.close(); }
-      if(this.hasClientStreaming()) { perfio.proto.runtime.Runtime.writeInt32(out, 40); perfio.proto.runtime.Runtime.writeBoolean(out, this._clientStreaming); }
-      if(this.hasServerStreaming()) { perfio.proto.runtime.Runtime.writeInt32(out, 48); perfio.proto.runtime.Runtime.writeBoolean(out, this._serverStreaming); }
+      if(this.hasName()) { out.int8((byte)10); perfio.proto.runtime.Runtime.writeString(out, this._name); }
+      if(this.hasInputType()) { out.int8((byte)18); perfio.proto.runtime.Runtime.writeString(out, this._inputType); }
+      if(this.hasOutputType()) { out.int8((byte)26); perfio.proto.runtime.Runtime.writeString(out, this._outputType); }
+      if(this.hasOptions()) { out.int8((byte)34); var out2 = out.defer(); this._options.writeTo(out2); perfio.proto.runtime.Runtime.writeLen(out, out2.totalBytesWritten()); out2.close(); }
+      if(this.hasClientStreaming()) { out.int8((byte)40); perfio.proto.runtime.Runtime.writeBoolean(out, this._clientStreaming); }
+      if(this.hasServerStreaming()) { out.int8((byte)48); perfio.proto.runtime.Runtime.writeBoolean(out, this._serverStreaming); }
     }
 
     public boolean equals(java.lang.Object o) {
@@ -1528,27 +1528,27 @@ public final class DescriptorProtos {
     }
 
     public void writeTo(perfio.BufferedOutput out) throws java.io.IOException {
-      if(this.hasJavaPackage()) { perfio.proto.runtime.Runtime.writeInt32(out, 10); perfio.proto.runtime.Runtime.writeString(out, this._javaPackage); }
-      if(this.hasJavaOuterClassname()) { perfio.proto.runtime.Runtime.writeInt32(out, 66); perfio.proto.runtime.Runtime.writeString(out, this._javaOuterClassname); }
-      if(this.hasJavaMultipleFiles()) { perfio.proto.runtime.Runtime.writeInt32(out, 80); perfio.proto.runtime.Runtime.writeBoolean(out, this._javaMultipleFiles); }
-      if(this.hasJavaGenerateEqualsAndHash()) { perfio.proto.runtime.Runtime.writeInt32(out, 160); perfio.proto.runtime.Runtime.writeBoolean(out, this._javaGenerateEqualsAndHash); }
-      if(this.hasJavaStringCheckUtf8()) { perfio.proto.runtime.Runtime.writeInt32(out, 216); perfio.proto.runtime.Runtime.writeBoolean(out, this._javaStringCheckUtf8); }
-      if(this.hasOptimizeFor()) { perfio.proto.runtime.Runtime.writeInt32(out, 72); perfio.proto.runtime.Runtime.writeInt32(out, this._optimizeFor.number); }
-      if(this.hasGoPackage()) { perfio.proto.runtime.Runtime.writeInt32(out, 90); perfio.proto.runtime.Runtime.writeString(out, this._goPackage); }
-      if(this.hasCcGenericServices()) { perfio.proto.runtime.Runtime.writeInt32(out, 128); perfio.proto.runtime.Runtime.writeBoolean(out, this._ccGenericServices); }
-      if(this.hasJavaGenericServices()) { perfio.proto.runtime.Runtime.writeInt32(out, 136); perfio.proto.runtime.Runtime.writeBoolean(out, this._javaGenericServices); }
-      if(this.hasPyGenericServices()) { perfio.proto.runtime.Runtime.writeInt32(out, 144); perfio.proto.runtime.Runtime.writeBoolean(out, this._pyGenericServices); }
-      if(this.hasDeprecated()) { perfio.proto.runtime.Runtime.writeInt32(out, 184); perfio.proto.runtime.Runtime.writeBoolean(out, this._deprecated); }
-      if(this.hasCcEnableArenas()) { perfio.proto.runtime.Runtime.writeInt32(out, 248); perfio.proto.runtime.Runtime.writeBoolean(out, this._ccEnableArenas); }
-      if(this.hasObjcClassPrefix()) { perfio.proto.runtime.Runtime.writeInt32(out, 290); perfio.proto.runtime.Runtime.writeString(out, this._objcClassPrefix); }
-      if(this.hasCsharpNamespace()) { perfio.proto.runtime.Runtime.writeInt32(out, 298); perfio.proto.runtime.Runtime.writeString(out, this._csharpNamespace); }
-      if(this.hasSwiftPrefix()) { perfio.proto.runtime.Runtime.writeInt32(out, 314); perfio.proto.runtime.Runtime.writeString(out, this._swiftPrefix); }
-      if(this.hasPhpClassPrefix()) { perfio.proto.runtime.Runtime.writeInt32(out, 322); perfio.proto.runtime.Runtime.writeString(out, this._phpClassPrefix); }
-      if(this.hasPhpNamespace()) { perfio.proto.runtime.Runtime.writeInt32(out, 330); perfio.proto.runtime.Runtime.writeString(out, this._phpNamespace); }
-      if(this.hasPhpMetadataNamespace()) { perfio.proto.runtime.Runtime.writeInt32(out, 354); perfio.proto.runtime.Runtime.writeString(out, this._phpMetadataNamespace); }
-      if(this.hasRubyPackage()) { perfio.proto.runtime.Runtime.writeInt32(out, 362); perfio.proto.runtime.Runtime.writeString(out, this._rubyPackage); }
-      if(this.hasFeatures()) { perfio.proto.runtime.Runtime.writeInt32(out, 402); var out2 = out.defer(); this._features.writeTo(out2); perfio.proto.runtime.Runtime.writeLen(out, out2.totalBytesWritten()); out2.close(); }
-      { var it = this._uninterpretedOption.iterator(); while(it.hasNext()) { var v = it.next(); perfio.proto.runtime.Runtime.writeInt32(out, 7994); var out2 = out.defer(); v.writeTo(out2); perfio.proto.runtime.Runtime.writeLen(out, out2.totalBytesWritten()); out2.close(); }}
+      if(this.hasJavaPackage()) { out.int8((byte)10); perfio.proto.runtime.Runtime.writeString(out, this._javaPackage); }
+      if(this.hasJavaOuterClassname()) { out.int8((byte)66); perfio.proto.runtime.Runtime.writeString(out, this._javaOuterClassname); }
+      if(this.hasJavaMultipleFiles()) { out.int8((byte)80); perfio.proto.runtime.Runtime.writeBoolean(out, this._javaMultipleFiles); }
+      if(this.hasJavaGenerateEqualsAndHash()) { out.int8((byte)-96); out.int8((byte)1); perfio.proto.runtime.Runtime.writeBoolean(out, this._javaGenerateEqualsAndHash); }
+      if(this.hasJavaStringCheckUtf8()) { out.int8((byte)-40); out.int8((byte)1); perfio.proto.runtime.Runtime.writeBoolean(out, this._javaStringCheckUtf8); }
+      if(this.hasOptimizeFor()) { out.int8((byte)72); perfio.proto.runtime.Runtime.writeInt32(out, this._optimizeFor.number); }
+      if(this.hasGoPackage()) { out.int8((byte)90); perfio.proto.runtime.Runtime.writeString(out, this._goPackage); }
+      if(this.hasCcGenericServices()) { out.int8((byte)-128); out.int8((byte)1); perfio.proto.runtime.Runtime.writeBoolean(out, this._ccGenericServices); }
+      if(this.hasJavaGenericServices()) { out.int8((byte)-120); out.int8((byte)1); perfio.proto.runtime.Runtime.writeBoolean(out, this._javaGenericServices); }
+      if(this.hasPyGenericServices()) { out.int8((byte)-112); out.int8((byte)1); perfio.proto.runtime.Runtime.writeBoolean(out, this._pyGenericServices); }
+      if(this.hasDeprecated()) { out.int8((byte)-72); out.int8((byte)1); perfio.proto.runtime.Runtime.writeBoolean(out, this._deprecated); }
+      if(this.hasCcEnableArenas()) { out.int8((byte)-8); out.int8((byte)1); perfio.proto.runtime.Runtime.writeBoolean(out, this._ccEnableArenas); }
+      if(this.hasObjcClassPrefix()) { out.int8((byte)-94); out.int8((byte)2); perfio.proto.runtime.Runtime.writeString(out, this._objcClassPrefix); }
+      if(this.hasCsharpNamespace()) { out.int8((byte)-86); out.int8((byte)2); perfio.proto.runtime.Runtime.writeString(out, this._csharpNamespace); }
+      if(this.hasSwiftPrefix()) { out.int8((byte)-70); out.int8((byte)2); perfio.proto.runtime.Runtime.writeString(out, this._swiftPrefix); }
+      if(this.hasPhpClassPrefix()) { out.int8((byte)-62); out.int8((byte)2); perfio.proto.runtime.Runtime.writeString(out, this._phpClassPrefix); }
+      if(this.hasPhpNamespace()) { out.int8((byte)-54); out.int8((byte)2); perfio.proto.runtime.Runtime.writeString(out, this._phpNamespace); }
+      if(this.hasPhpMetadataNamespace()) { out.int8((byte)-30); out.int8((byte)2); perfio.proto.runtime.Runtime.writeString(out, this._phpMetadataNamespace); }
+      if(this.hasRubyPackage()) { out.int8((byte)-22); out.int8((byte)2); perfio.proto.runtime.Runtime.writeString(out, this._rubyPackage); }
+      if(this.hasFeatures()) { out.int8((byte)-110); out.int8((byte)3); var out2 = out.defer(); this._features.writeTo(out2); perfio.proto.runtime.Runtime.writeLen(out, out2.totalBytesWritten()); out2.close(); }
+      if(this.hasUninterpretedOption()) { var it = this._uninterpretedOption.iterator(); while(it.hasNext()) { var v = it.next(); out.int8((byte)-70); out.int8((byte)62); var out2 = out.defer(); v.writeTo(out2); perfio.proto.runtime.Runtime.writeLen(out, out2.totalBytesWritten()); out2.close(); }}
     }
 
     public boolean equals(java.lang.Object o) {
@@ -1662,13 +1662,13 @@ public final class DescriptorProtos {
     }
 
     public void writeTo(perfio.BufferedOutput out) throws java.io.IOException {
-      if(this.hasMessageSetWireFormat()) { perfio.proto.runtime.Runtime.writeInt32(out, 8); perfio.proto.runtime.Runtime.writeBoolean(out, this._messageSetWireFormat); }
-      if(this.hasNoStandardDescriptorAccessor()) { perfio.proto.runtime.Runtime.writeInt32(out, 16); perfio.proto.runtime.Runtime.writeBoolean(out, this._noStandardDescriptorAccessor); }
-      if(this.hasDeprecated()) { perfio.proto.runtime.Runtime.writeInt32(out, 24); perfio.proto.runtime.Runtime.writeBoolean(out, this._deprecated); }
-      if(this.hasMapEntry()) { perfio.proto.runtime.Runtime.writeInt32(out, 56); perfio.proto.runtime.Runtime.writeBoolean(out, this._mapEntry); }
-      if(this.hasDeprecatedLegacyJsonFieldConflicts()) { perfio.proto.runtime.Runtime.writeInt32(out, 88); perfio.proto.runtime.Runtime.writeBoolean(out, this._deprecatedLegacyJsonFieldConflicts); }
-      if(this.hasFeatures()) { perfio.proto.runtime.Runtime.writeInt32(out, 98); var out2 = out.defer(); this._features.writeTo(out2); perfio.proto.runtime.Runtime.writeLen(out, out2.totalBytesWritten()); out2.close(); }
-      { var it = this._uninterpretedOption.iterator(); while(it.hasNext()) { var v = it.next(); perfio.proto.runtime.Runtime.writeInt32(out, 7994); var out2 = out.defer(); v.writeTo(out2); perfio.proto.runtime.Runtime.writeLen(out, out2.totalBytesWritten()); out2.close(); }}
+      if(this.hasMessageSetWireFormat()) { out.int8((byte)8); perfio.proto.runtime.Runtime.writeBoolean(out, this._messageSetWireFormat); }
+      if(this.hasNoStandardDescriptorAccessor()) { out.int8((byte)16); perfio.proto.runtime.Runtime.writeBoolean(out, this._noStandardDescriptorAccessor); }
+      if(this.hasDeprecated()) { out.int8((byte)24); perfio.proto.runtime.Runtime.writeBoolean(out, this._deprecated); }
+      if(this.hasMapEntry()) { out.int8((byte)56); perfio.proto.runtime.Runtime.writeBoolean(out, this._mapEntry); }
+      if(this.hasDeprecatedLegacyJsonFieldConflicts()) { out.int8((byte)88); perfio.proto.runtime.Runtime.writeBoolean(out, this._deprecatedLegacyJsonFieldConflicts); }
+      if(this.hasFeatures()) { out.int8((byte)98); var out2 = out.defer(); this._features.writeTo(out2); perfio.proto.runtime.Runtime.writeLen(out, out2.totalBytesWritten()); out2.close(); }
+      if(this.hasUninterpretedOption()) { var it = this._uninterpretedOption.iterator(); while(it.hasNext()) { var v = it.next(); out.int8((byte)-70); out.int8((byte)62); var out2 = out.defer(); v.writeTo(out2); perfio.proto.runtime.Runtime.writeLen(out, out2.totalBytesWritten()); out2.close(); }}
     }
 
     public boolean equals(java.lang.Object o) {
@@ -1806,8 +1806,8 @@ public final class DescriptorProtos {
       }
 
       public void writeTo(perfio.BufferedOutput out) throws java.io.IOException {
-        if(this.hasEdition()) { perfio.proto.runtime.Runtime.writeInt32(out, 24); perfio.proto.runtime.Runtime.writeInt32(out, this._edition.number); }
-        if(this.hasValue()) { perfio.proto.runtime.Runtime.writeInt32(out, 18); perfio.proto.runtime.Runtime.writeString(out, this._value); }
+        if(this.hasEdition()) { out.int8((byte)24); perfio.proto.runtime.Runtime.writeInt32(out, this._edition.number); }
+        if(this.hasValue()) { out.int8((byte)18); perfio.proto.runtime.Runtime.writeString(out, this._value); }
       }
 
       public boolean equals(java.lang.Object o) {
@@ -1872,10 +1872,10 @@ public final class DescriptorProtos {
       }
 
       public void writeTo(perfio.BufferedOutput out) throws java.io.IOException {
-        if(this.hasEditionIntroduced()) { perfio.proto.runtime.Runtime.writeInt32(out, 8); perfio.proto.runtime.Runtime.writeInt32(out, this._editionIntroduced.number); }
-        if(this.hasEditionDeprecated()) { perfio.proto.runtime.Runtime.writeInt32(out, 16); perfio.proto.runtime.Runtime.writeInt32(out, this._editionDeprecated.number); }
-        if(this.hasDeprecationWarning()) { perfio.proto.runtime.Runtime.writeInt32(out, 26); perfio.proto.runtime.Runtime.writeString(out, this._deprecationWarning); }
-        if(this.hasEditionRemoved()) { perfio.proto.runtime.Runtime.writeInt32(out, 32); perfio.proto.runtime.Runtime.writeInt32(out, this._editionRemoved.number); }
+        if(this.hasEditionIntroduced()) { out.int8((byte)8); perfio.proto.runtime.Runtime.writeInt32(out, this._editionIntroduced.number); }
+        if(this.hasEditionDeprecated()) { out.int8((byte)16); perfio.proto.runtime.Runtime.writeInt32(out, this._editionDeprecated.number); }
+        if(this.hasDeprecationWarning()) { out.int8((byte)26); perfio.proto.runtime.Runtime.writeString(out, this._deprecationWarning); }
+        if(this.hasEditionRemoved()) { out.int8((byte)32); perfio.proto.runtime.Runtime.writeInt32(out, this._editionRemoved.number); }
       }
 
       public boolean equals(java.lang.Object o) {
@@ -2024,20 +2024,20 @@ public final class DescriptorProtos {
     }
 
     public void writeTo(perfio.BufferedOutput out) throws java.io.IOException {
-      if(this.hasCtype()) { perfio.proto.runtime.Runtime.writeInt32(out, 8); perfio.proto.runtime.Runtime.writeInt32(out, this._ctype.number); }
-      if(this.hasPacked()) { perfio.proto.runtime.Runtime.writeInt32(out, 16); perfio.proto.runtime.Runtime.writeBoolean(out, this._packed); }
-      if(this.hasJstype()) { perfio.proto.runtime.Runtime.writeInt32(out, 48); perfio.proto.runtime.Runtime.writeInt32(out, this._jstype.number); }
-      if(this.hasLazy()) { perfio.proto.runtime.Runtime.writeInt32(out, 40); perfio.proto.runtime.Runtime.writeBoolean(out, this._lazy); }
-      if(this.hasUnverifiedLazy()) { perfio.proto.runtime.Runtime.writeInt32(out, 120); perfio.proto.runtime.Runtime.writeBoolean(out, this._unverifiedLazy); }
-      if(this.hasDeprecated()) { perfio.proto.runtime.Runtime.writeInt32(out, 24); perfio.proto.runtime.Runtime.writeBoolean(out, this._deprecated); }
-      if(this.hasWeak()) { perfio.proto.runtime.Runtime.writeInt32(out, 80); perfio.proto.runtime.Runtime.writeBoolean(out, this._weak); }
-      if(this.hasDebugRedact()) { perfio.proto.runtime.Runtime.writeInt32(out, 128); perfio.proto.runtime.Runtime.writeBoolean(out, this._debugRedact); }
-      if(this.hasRetention()) { perfio.proto.runtime.Runtime.writeInt32(out, 136); perfio.proto.runtime.Runtime.writeInt32(out, this._retention.number); }
-      { var it = this._targets.iterator(); while(it.hasNext()) { var v = it.next(); perfio.proto.runtime.Runtime.writeInt32(out, 152); perfio.proto.runtime.Runtime.writeInt32(out, v.number); }}
-      { var it = this._editionDefaults.iterator(); while(it.hasNext()) { var v = it.next(); perfio.proto.runtime.Runtime.writeInt32(out, 162); var out2 = out.defer(); v.writeTo(out2); perfio.proto.runtime.Runtime.writeLen(out, out2.totalBytesWritten()); out2.close(); }}
-      if(this.hasFeatures()) { perfio.proto.runtime.Runtime.writeInt32(out, 170); var out2 = out.defer(); this._features.writeTo(out2); perfio.proto.runtime.Runtime.writeLen(out, out2.totalBytesWritten()); out2.close(); }
-      if(this.hasFeatureSupport()) { perfio.proto.runtime.Runtime.writeInt32(out, 178); var out2 = out.defer(); this._featureSupport.writeTo(out2); perfio.proto.runtime.Runtime.writeLen(out, out2.totalBytesWritten()); out2.close(); }
-      { var it = this._uninterpretedOption.iterator(); while(it.hasNext()) { var v = it.next(); perfio.proto.runtime.Runtime.writeInt32(out, 7994); var out2 = out.defer(); v.writeTo(out2); perfio.proto.runtime.Runtime.writeLen(out, out2.totalBytesWritten()); out2.close(); }}
+      if(this.hasCtype()) { out.int8((byte)8); perfio.proto.runtime.Runtime.writeInt32(out, this._ctype.number); }
+      if(this.hasPacked()) { out.int8((byte)16); perfio.proto.runtime.Runtime.writeBoolean(out, this._packed); }
+      if(this.hasJstype()) { out.int8((byte)48); perfio.proto.runtime.Runtime.writeInt32(out, this._jstype.number); }
+      if(this.hasLazy()) { out.int8((byte)40); perfio.proto.runtime.Runtime.writeBoolean(out, this._lazy); }
+      if(this.hasUnverifiedLazy()) { out.int8((byte)120); perfio.proto.runtime.Runtime.writeBoolean(out, this._unverifiedLazy); }
+      if(this.hasDeprecated()) { out.int8((byte)24); perfio.proto.runtime.Runtime.writeBoolean(out, this._deprecated); }
+      if(this.hasWeak()) { out.int8((byte)80); perfio.proto.runtime.Runtime.writeBoolean(out, this._weak); }
+      if(this.hasDebugRedact()) { out.int8((byte)-128); out.int8((byte)1); perfio.proto.runtime.Runtime.writeBoolean(out, this._debugRedact); }
+      if(this.hasRetention()) { out.int8((byte)-120); out.int8((byte)1); perfio.proto.runtime.Runtime.writeInt32(out, this._retention.number); }
+      if(this.hasTargets()) { var it = this._targets.iterator(); while(it.hasNext()) { var v = it.next(); out.int8((byte)-104); out.int8((byte)1); perfio.proto.runtime.Runtime.writeInt32(out, v.number); }}
+      if(this.hasEditionDefaults()) { var it = this._editionDefaults.iterator(); while(it.hasNext()) { var v = it.next(); out.int8((byte)-94); out.int8((byte)1); var out2 = out.defer(); v.writeTo(out2); perfio.proto.runtime.Runtime.writeLen(out, out2.totalBytesWritten()); out2.close(); }}
+      if(this.hasFeatures()) { out.int8((byte)-86); out.int8((byte)1); var out2 = out.defer(); this._features.writeTo(out2); perfio.proto.runtime.Runtime.writeLen(out, out2.totalBytesWritten()); out2.close(); }
+      if(this.hasFeatureSupport()) { out.int8((byte)-78); out.int8((byte)1); var out2 = out.defer(); this._featureSupport.writeTo(out2); perfio.proto.runtime.Runtime.writeLen(out, out2.totalBytesWritten()); out2.close(); }
+      if(this.hasUninterpretedOption()) { var it = this._uninterpretedOption.iterator(); while(it.hasNext()) { var v = it.next(); out.int8((byte)-70); out.int8((byte)62); var out2 = out.defer(); v.writeTo(out2); perfio.proto.runtime.Runtime.writeLen(out, out2.totalBytesWritten()); out2.close(); }}
     }
 
     public boolean equals(java.lang.Object o) {
@@ -2109,8 +2109,8 @@ public final class DescriptorProtos {
     }
 
     public void writeTo(perfio.BufferedOutput out) throws java.io.IOException {
-      if(this.hasFeatures()) { perfio.proto.runtime.Runtime.writeInt32(out, 10); var out2 = out.defer(); this._features.writeTo(out2); perfio.proto.runtime.Runtime.writeLen(out, out2.totalBytesWritten()); out2.close(); }
-      { var it = this._uninterpretedOption.iterator(); while(it.hasNext()) { var v = it.next(); perfio.proto.runtime.Runtime.writeInt32(out, 7994); var out2 = out.defer(); v.writeTo(out2); perfio.proto.runtime.Runtime.writeLen(out, out2.totalBytesWritten()); out2.close(); }}
+      if(this.hasFeatures()) { out.int8((byte)10); var out2 = out.defer(); this._features.writeTo(out2); perfio.proto.runtime.Runtime.writeLen(out, out2.totalBytesWritten()); out2.close(); }
+      if(this.hasUninterpretedOption()) { var it = this._uninterpretedOption.iterator(); while(it.hasNext()) { var v = it.next(); out.int8((byte)-70); out.int8((byte)62); var out2 = out.defer(); v.writeTo(out2); perfio.proto.runtime.Runtime.writeLen(out, out2.totalBytesWritten()); out2.close(); }}
     }
 
     public boolean equals(java.lang.Object o) {
@@ -2191,11 +2191,11 @@ public final class DescriptorProtos {
     }
 
     public void writeTo(perfio.BufferedOutput out) throws java.io.IOException {
-      if(this.hasAllowAlias()) { perfio.proto.runtime.Runtime.writeInt32(out, 16); perfio.proto.runtime.Runtime.writeBoolean(out, this._allowAlias); }
-      if(this.hasDeprecated()) { perfio.proto.runtime.Runtime.writeInt32(out, 24); perfio.proto.runtime.Runtime.writeBoolean(out, this._deprecated); }
-      if(this.hasDeprecatedLegacyJsonFieldConflicts()) { perfio.proto.runtime.Runtime.writeInt32(out, 48); perfio.proto.runtime.Runtime.writeBoolean(out, this._deprecatedLegacyJsonFieldConflicts); }
-      if(this.hasFeatures()) { perfio.proto.runtime.Runtime.writeInt32(out, 58); var out2 = out.defer(); this._features.writeTo(out2); perfio.proto.runtime.Runtime.writeLen(out, out2.totalBytesWritten()); out2.close(); }
-      { var it = this._uninterpretedOption.iterator(); while(it.hasNext()) { var v = it.next(); perfio.proto.runtime.Runtime.writeInt32(out, 7994); var out2 = out.defer(); v.writeTo(out2); perfio.proto.runtime.Runtime.writeLen(out, out2.totalBytesWritten()); out2.close(); }}
+      if(this.hasAllowAlias()) { out.int8((byte)16); perfio.proto.runtime.Runtime.writeBoolean(out, this._allowAlias); }
+      if(this.hasDeprecated()) { out.int8((byte)24); perfio.proto.runtime.Runtime.writeBoolean(out, this._deprecated); }
+      if(this.hasDeprecatedLegacyJsonFieldConflicts()) { out.int8((byte)48); perfio.proto.runtime.Runtime.writeBoolean(out, this._deprecatedLegacyJsonFieldConflicts); }
+      if(this.hasFeatures()) { out.int8((byte)58); var out2 = out.defer(); this._features.writeTo(out2); perfio.proto.runtime.Runtime.writeLen(out, out2.totalBytesWritten()); out2.close(); }
+      if(this.hasUninterpretedOption()) { var it = this._uninterpretedOption.iterator(); while(it.hasNext()) { var v = it.next(); out.int8((byte)-70); out.int8((byte)62); var out2 = out.defer(); v.writeTo(out2); perfio.proto.runtime.Runtime.writeLen(out, out2.totalBytesWritten()); out2.close(); }}
     }
 
     public boolean equals(java.lang.Object o) {
@@ -2281,11 +2281,11 @@ public final class DescriptorProtos {
     }
 
     public void writeTo(perfio.BufferedOutput out) throws java.io.IOException {
-      if(this.hasDeprecated()) { perfio.proto.runtime.Runtime.writeInt32(out, 8); perfio.proto.runtime.Runtime.writeBoolean(out, this._deprecated); }
-      if(this.hasFeatures()) { perfio.proto.runtime.Runtime.writeInt32(out, 18); var out2 = out.defer(); this._features.writeTo(out2); perfio.proto.runtime.Runtime.writeLen(out, out2.totalBytesWritten()); out2.close(); }
-      if(this.hasDebugRedact()) { perfio.proto.runtime.Runtime.writeInt32(out, 24); perfio.proto.runtime.Runtime.writeBoolean(out, this._debugRedact); }
-      if(this.hasFeatureSupport()) { perfio.proto.runtime.Runtime.writeInt32(out, 34); var out2 = out.defer(); this._featureSupport.writeTo(out2); perfio.proto.runtime.Runtime.writeLen(out, out2.totalBytesWritten()); out2.close(); }
-      { var it = this._uninterpretedOption.iterator(); while(it.hasNext()) { var v = it.next(); perfio.proto.runtime.Runtime.writeInt32(out, 7994); var out2 = out.defer(); v.writeTo(out2); perfio.proto.runtime.Runtime.writeLen(out, out2.totalBytesWritten()); out2.close(); }}
+      if(this.hasDeprecated()) { out.int8((byte)8); perfio.proto.runtime.Runtime.writeBoolean(out, this._deprecated); }
+      if(this.hasFeatures()) { out.int8((byte)18); var out2 = out.defer(); this._features.writeTo(out2); perfio.proto.runtime.Runtime.writeLen(out, out2.totalBytesWritten()); out2.close(); }
+      if(this.hasDebugRedact()) { out.int8((byte)24); perfio.proto.runtime.Runtime.writeBoolean(out, this._debugRedact); }
+      if(this.hasFeatureSupport()) { out.int8((byte)34); var out2 = out.defer(); this._featureSupport.writeTo(out2); perfio.proto.runtime.Runtime.writeLen(out, out2.totalBytesWritten()); out2.close(); }
+      if(this.hasUninterpretedOption()) { var it = this._uninterpretedOption.iterator(); while(it.hasNext()) { var v = it.next(); out.int8((byte)-70); out.int8((byte)62); var out2 = out.defer(); v.writeTo(out2); perfio.proto.runtime.Runtime.writeLen(out, out2.totalBytesWritten()); out2.close(); }}
     }
 
     public boolean equals(java.lang.Object o) {
@@ -2355,9 +2355,9 @@ public final class DescriptorProtos {
     }
 
     public void writeTo(perfio.BufferedOutput out) throws java.io.IOException {
-      if(this.hasFeatures()) { perfio.proto.runtime.Runtime.writeInt32(out, 274); var out2 = out.defer(); this._features.writeTo(out2); perfio.proto.runtime.Runtime.writeLen(out, out2.totalBytesWritten()); out2.close(); }
-      if(this.hasDeprecated()) { perfio.proto.runtime.Runtime.writeInt32(out, 264); perfio.proto.runtime.Runtime.writeBoolean(out, this._deprecated); }
-      { var it = this._uninterpretedOption.iterator(); while(it.hasNext()) { var v = it.next(); perfio.proto.runtime.Runtime.writeInt32(out, 7994); var out2 = out.defer(); v.writeTo(out2); perfio.proto.runtime.Runtime.writeLen(out, out2.totalBytesWritten()); out2.close(); }}
+      if(this.hasFeatures()) { out.int8((byte)-110); out.int8((byte)2); var out2 = out.defer(); this._features.writeTo(out2); perfio.proto.runtime.Runtime.writeLen(out, out2.totalBytesWritten()); out2.close(); }
+      if(this.hasDeprecated()) { out.int8((byte)-120); out.int8((byte)2); perfio.proto.runtime.Runtime.writeBoolean(out, this._deprecated); }
+      if(this.hasUninterpretedOption()) { var it = this._uninterpretedOption.iterator(); while(it.hasNext()) { var v = it.next(); out.int8((byte)-70); out.int8((byte)62); var out2 = out.defer(); v.writeTo(out2); perfio.proto.runtime.Runtime.writeLen(out, out2.totalBytesWritten()); out2.close(); }}
     }
 
     public boolean equals(java.lang.Object o) {
@@ -2447,10 +2447,10 @@ public final class DescriptorProtos {
     }
 
     public void writeTo(perfio.BufferedOutput out) throws java.io.IOException {
-      if(this.hasDeprecated()) { perfio.proto.runtime.Runtime.writeInt32(out, 264); perfio.proto.runtime.Runtime.writeBoolean(out, this._deprecated); }
-      if(this.hasIdempotencyLevel()) { perfio.proto.runtime.Runtime.writeInt32(out, 272); perfio.proto.runtime.Runtime.writeInt32(out, this._idempotencyLevel.number); }
-      if(this.hasFeatures()) { perfio.proto.runtime.Runtime.writeInt32(out, 282); var out2 = out.defer(); this._features.writeTo(out2); perfio.proto.runtime.Runtime.writeLen(out, out2.totalBytesWritten()); out2.close(); }
-      { var it = this._uninterpretedOption.iterator(); while(it.hasNext()) { var v = it.next(); perfio.proto.runtime.Runtime.writeInt32(out, 7994); var out2 = out.defer(); v.writeTo(out2); perfio.proto.runtime.Runtime.writeLen(out, out2.totalBytesWritten()); out2.close(); }}
+      if(this.hasDeprecated()) { out.int8((byte)-120); out.int8((byte)2); perfio.proto.runtime.Runtime.writeBoolean(out, this._deprecated); }
+      if(this.hasIdempotencyLevel()) { out.int8((byte)-112); out.int8((byte)2); perfio.proto.runtime.Runtime.writeInt32(out, this._idempotencyLevel.number); }
+      if(this.hasFeatures()) { out.int8((byte)-102); out.int8((byte)2); var out2 = out.defer(); this._features.writeTo(out2); perfio.proto.runtime.Runtime.writeLen(out, out2.totalBytesWritten()); out2.close(); }
+      if(this.hasUninterpretedOption()) { var it = this._uninterpretedOption.iterator(); while(it.hasNext()) { var v = it.next(); out.int8((byte)-70); out.int8((byte)62); var out2 = out.defer(); v.writeTo(out2); perfio.proto.runtime.Runtime.writeLen(out, out2.totalBytesWritten()); out2.close(); }}
     }
 
     public boolean equals(java.lang.Object o) {
@@ -2506,8 +2506,8 @@ public final class DescriptorProtos {
       }
 
       public void writeTo(perfio.BufferedOutput out) throws java.io.IOException {
-        if(this.hasNamePart()) { perfio.proto.runtime.Runtime.writeInt32(out, 10); perfio.proto.runtime.Runtime.writeString(out, this._namePart); }
-        if(this.hasIsExtension()) { perfio.proto.runtime.Runtime.writeInt32(out, 16); perfio.proto.runtime.Runtime.writeBoolean(out, this._isExtension); }
+        if(this.hasNamePart()) { out.int8((byte)10); perfio.proto.runtime.Runtime.writeString(out, this._namePart); }
+        if(this.hasIsExtension()) { out.int8((byte)16); perfio.proto.runtime.Runtime.writeBoolean(out, this._isExtension); }
       }
 
       public boolean equals(java.lang.Object o) {
@@ -2594,13 +2594,13 @@ public final class DescriptorProtos {
     }
 
     public void writeTo(perfio.BufferedOutput out) throws java.io.IOException {
-      { var it = this._name.iterator(); while(it.hasNext()) { var v = it.next(); perfio.proto.runtime.Runtime.writeInt32(out, 18); var out2 = out.defer(); v.writeTo(out2); perfio.proto.runtime.Runtime.writeLen(out, out2.totalBytesWritten()); out2.close(); }}
-      if(this.hasIdentifierValue()) { perfio.proto.runtime.Runtime.writeInt32(out, 26); perfio.proto.runtime.Runtime.writeString(out, this._identifierValue); }
-      if(this.hasPositiveIntValue()) { perfio.proto.runtime.Runtime.writeInt32(out, 32); perfio.proto.runtime.Runtime.writeInt64(out, this._positiveIntValue); }
-      if(this.hasNegativeIntValue()) { perfio.proto.runtime.Runtime.writeInt32(out, 40); perfio.proto.runtime.Runtime.writeInt64(out, this._negativeIntValue); }
-      if(this.hasDoubleValue()) { perfio.proto.runtime.Runtime.writeInt32(out, 49); perfio.proto.runtime.Runtime.writeDouble(out, this._doubleValue); }
-      if(this.hasStringValue()) { perfio.proto.runtime.Runtime.writeInt32(out, 58); perfio.proto.runtime.Runtime.writeBytes(out, this._stringValue); }
-      if(this.hasAggregateValue()) { perfio.proto.runtime.Runtime.writeInt32(out, 66); perfio.proto.runtime.Runtime.writeString(out, this._aggregateValue); }
+      if(this.hasName()) { var it = this._name.iterator(); while(it.hasNext()) { var v = it.next(); out.int8((byte)18); var out2 = out.defer(); v.writeTo(out2); perfio.proto.runtime.Runtime.writeLen(out, out2.totalBytesWritten()); out2.close(); }}
+      if(this.hasIdentifierValue()) { out.int8((byte)26); perfio.proto.runtime.Runtime.writeString(out, this._identifierValue); }
+      if(this.hasPositiveIntValue()) { out.int8((byte)32); perfio.proto.runtime.Runtime.writeInt64(out, this._positiveIntValue); }
+      if(this.hasNegativeIntValue()) { out.int8((byte)40); perfio.proto.runtime.Runtime.writeInt64(out, this._negativeIntValue); }
+      if(this.hasDoubleValue()) { out.int8((byte)49); perfio.proto.runtime.Runtime.writeDouble(out, this._doubleValue); }
+      if(this.hasStringValue()) { out.int8((byte)58); perfio.proto.runtime.Runtime.writeBytes(out, this._stringValue); }
+      if(this.hasAggregateValue()) { out.int8((byte)66); perfio.proto.runtime.Runtime.writeString(out, this._aggregateValue); }
     }
 
     public boolean equals(java.lang.Object o) {
@@ -2780,12 +2780,12 @@ public final class DescriptorProtos {
     }
 
     public void writeTo(perfio.BufferedOutput out) throws java.io.IOException {
-      if(this.hasFieldPresence()) { perfio.proto.runtime.Runtime.writeInt32(out, 8); perfio.proto.runtime.Runtime.writeInt32(out, this._fieldPresence.number); }
-      if(this.hasEnumType()) { perfio.proto.runtime.Runtime.writeInt32(out, 16); perfio.proto.runtime.Runtime.writeInt32(out, this._enumType.number); }
-      if(this.hasRepeatedFieldEncoding()) { perfio.proto.runtime.Runtime.writeInt32(out, 24); perfio.proto.runtime.Runtime.writeInt32(out, this._repeatedFieldEncoding.number); }
-      if(this.hasUtf8Validation()) { perfio.proto.runtime.Runtime.writeInt32(out, 32); perfio.proto.runtime.Runtime.writeInt32(out, this._utf8Validation.number); }
-      if(this.hasMessageEncoding()) { perfio.proto.runtime.Runtime.writeInt32(out, 40); perfio.proto.runtime.Runtime.writeInt32(out, this._messageEncoding.number); }
-      if(this.hasJsonFormat()) { perfio.proto.runtime.Runtime.writeInt32(out, 48); perfio.proto.runtime.Runtime.writeInt32(out, this._jsonFormat.number); }
+      if(this.hasFieldPresence()) { out.int8((byte)8); perfio.proto.runtime.Runtime.writeInt32(out, this._fieldPresence.number); }
+      if(this.hasEnumType()) { out.int8((byte)16); perfio.proto.runtime.Runtime.writeInt32(out, this._enumType.number); }
+      if(this.hasRepeatedFieldEncoding()) { out.int8((byte)24); perfio.proto.runtime.Runtime.writeInt32(out, this._repeatedFieldEncoding.number); }
+      if(this.hasUtf8Validation()) { out.int8((byte)32); perfio.proto.runtime.Runtime.writeInt32(out, this._utf8Validation.number); }
+      if(this.hasMessageEncoding()) { out.int8((byte)40); perfio.proto.runtime.Runtime.writeInt32(out, this._messageEncoding.number); }
+      if(this.hasJsonFormat()) { out.int8((byte)48); perfio.proto.runtime.Runtime.writeInt32(out, this._jsonFormat.number); }
     }
 
     public boolean equals(java.lang.Object o) {
@@ -2856,9 +2856,9 @@ public final class DescriptorProtos {
       }
 
       public void writeTo(perfio.BufferedOutput out) throws java.io.IOException {
-        if(this.hasEdition()) { perfio.proto.runtime.Runtime.writeInt32(out, 24); perfio.proto.runtime.Runtime.writeInt32(out, this._edition.number); }
-        if(this.hasOverridableFeatures()) { perfio.proto.runtime.Runtime.writeInt32(out, 34); var out2 = out.defer(); this._overridableFeatures.writeTo(out2); perfio.proto.runtime.Runtime.writeLen(out, out2.totalBytesWritten()); out2.close(); }
-        if(this.hasFixedFeatures()) { perfio.proto.runtime.Runtime.writeInt32(out, 42); var out2 = out.defer(); this._fixedFeatures.writeTo(out2); perfio.proto.runtime.Runtime.writeLen(out, out2.totalBytesWritten()); out2.close(); }
+        if(this.hasEdition()) { out.int8((byte)24); perfio.proto.runtime.Runtime.writeInt32(out, this._edition.number); }
+        if(this.hasOverridableFeatures()) { out.int8((byte)34); var out2 = out.defer(); this._overridableFeatures.writeTo(out2); perfio.proto.runtime.Runtime.writeLen(out, out2.totalBytesWritten()); out2.close(); }
+        if(this.hasFixedFeatures()) { out.int8((byte)42); var out2 = out.defer(); this._fixedFeatures.writeTo(out2); perfio.proto.runtime.Runtime.writeLen(out, out2.totalBytesWritten()); out2.close(); }
       }
 
       public boolean equals(java.lang.Object o) {
@@ -2920,9 +2920,9 @@ public final class DescriptorProtos {
     }
 
     public void writeTo(perfio.BufferedOutput out) throws java.io.IOException {
-      { var it = this._defaults.iterator(); while(it.hasNext()) { var v = it.next(); perfio.proto.runtime.Runtime.writeInt32(out, 10); var out2 = out.defer(); v.writeTo(out2); perfio.proto.runtime.Runtime.writeLen(out, out2.totalBytesWritten()); out2.close(); }}
-      if(this.hasMinimumEdition()) { perfio.proto.runtime.Runtime.writeInt32(out, 32); perfio.proto.runtime.Runtime.writeInt32(out, this._minimumEdition.number); }
-      if(this.hasMaximumEdition()) { perfio.proto.runtime.Runtime.writeInt32(out, 40); perfio.proto.runtime.Runtime.writeInt32(out, this._maximumEdition.number); }
+      if(this.hasDefaults()) { var it = this._defaults.iterator(); while(it.hasNext()) { var v = it.next(); out.int8((byte)10); var out2 = out.defer(); v.writeTo(out2); perfio.proto.runtime.Runtime.writeLen(out, out2.totalBytesWritten()); out2.close(); }}
+      if(this.hasMinimumEdition()) { out.int8((byte)32); perfio.proto.runtime.Runtime.writeInt32(out, this._minimumEdition.number); }
+      if(this.hasMaximumEdition()) { out.int8((byte)40); perfio.proto.runtime.Runtime.writeInt32(out, this._maximumEdition.number); }
     }
 
     public boolean equals(java.lang.Object o) {
@@ -3010,11 +3010,25 @@ public final class DescriptorProtos {
       }
 
       public void writeTo(perfio.BufferedOutput out) throws java.io.IOException {
-        { var it = this._path.iterator(); while(it.hasNext()) { var v = it.next(); perfio.proto.runtime.Runtime.writeInt32(out, 8); perfio.proto.runtime.Runtime.writeInt32(out, v); }}
-        { var it = this._span.iterator(); while(it.hasNext()) { var v = it.next(); perfio.proto.runtime.Runtime.writeInt32(out, 16); perfio.proto.runtime.Runtime.writeInt32(out, v); }}
-        if(this.hasLeadingComments()) { perfio.proto.runtime.Runtime.writeInt32(out, 26); perfio.proto.runtime.Runtime.writeString(out, this._leadingComments); }
-        if(this.hasTrailingComments()) { perfio.proto.runtime.Runtime.writeInt32(out, 34); perfio.proto.runtime.Runtime.writeString(out, this._trailingComments); }
-        { var it = this._leadingDetachedComments.iterator(); while(it.hasNext()) { var v = it.next(); perfio.proto.runtime.Runtime.writeInt32(out, 50); perfio.proto.runtime.Runtime.writeString(out, v); }}
+        if(this.hasPath()) {
+          var it = this._path.iterator();
+          out.int8((byte)10);
+          var out2 = out.defer();
+          while(it.hasNext()) { var v = it.next(); perfio.proto.runtime.Runtime.writeInt32(out2, v); }
+          perfio.proto.runtime.Runtime.writeVarint(out, out2.totalBytesWritten());
+          out2.close();
+        }
+        if(this.hasSpan()) {
+          var it = this._span.iterator();
+          out.int8((byte)18);
+          var out2 = out.defer();
+          while(it.hasNext()) { var v = it.next(); perfio.proto.runtime.Runtime.writeInt32(out2, v); }
+          perfio.proto.runtime.Runtime.writeVarint(out, out2.totalBytesWritten());
+          out2.close();
+        }
+        if(this.hasLeadingComments()) { out.int8((byte)26); perfio.proto.runtime.Runtime.writeString(out, this._leadingComments); }
+        if(this.hasTrailingComments()) { out.int8((byte)34); perfio.proto.runtime.Runtime.writeString(out, this._trailingComments); }
+        if(this.hasLeadingDetachedComments()) { var it = this._leadingDetachedComments.iterator(); while(it.hasNext()) { var v = it.next(); out.int8((byte)50); perfio.proto.runtime.Runtime.writeString(out, v); }}
       }
 
       public boolean equals(java.lang.Object o) {
@@ -3064,7 +3078,7 @@ public final class DescriptorProtos {
     }
 
     public void writeTo(perfio.BufferedOutput out) throws java.io.IOException {
-      { var it = this._location.iterator(); while(it.hasNext()) { var v = it.next(); perfio.proto.runtime.Runtime.writeInt32(out, 10); var out2 = out.defer(); v.writeTo(out2); perfio.proto.runtime.Runtime.writeLen(out, out2.totalBytesWritten()); out2.close(); }}
+      if(this.hasLocation()) { var it = this._location.iterator(); while(it.hasNext()) { var v = it.next(); out.int8((byte)10); var out2 = out.defer(); v.writeTo(out2); perfio.proto.runtime.Runtime.writeLen(out, out2.totalBytesWritten()); out2.close(); }}
     }
 
     public boolean equals(java.lang.Object o) {
@@ -3158,11 +3172,18 @@ public final class DescriptorProtos {
       }
 
       public void writeTo(perfio.BufferedOutput out) throws java.io.IOException {
-        { var it = this._path.iterator(); while(it.hasNext()) { var v = it.next(); perfio.proto.runtime.Runtime.writeInt32(out, 8); perfio.proto.runtime.Runtime.writeInt32(out, v); }}
-        if(this.hasSourceFile()) { perfio.proto.runtime.Runtime.writeInt32(out, 18); perfio.proto.runtime.Runtime.writeString(out, this._sourceFile); }
-        if(this.hasBegin()) { perfio.proto.runtime.Runtime.writeInt32(out, 24); perfio.proto.runtime.Runtime.writeInt32(out, this._begin); }
-        if(this.hasEnd()) { perfio.proto.runtime.Runtime.writeInt32(out, 32); perfio.proto.runtime.Runtime.writeInt32(out, this._end); }
-        if(this.hasSemantic()) { perfio.proto.runtime.Runtime.writeInt32(out, 40); perfio.proto.runtime.Runtime.writeInt32(out, this._semantic.number); }
+        if(this.hasPath()) {
+          var it = this._path.iterator();
+          out.int8((byte)10);
+          var out2 = out.defer();
+          while(it.hasNext()) { var v = it.next(); perfio.proto.runtime.Runtime.writeInt32(out2, v); }
+          perfio.proto.runtime.Runtime.writeVarint(out, out2.totalBytesWritten());
+          out2.close();
+        }
+        if(this.hasSourceFile()) { out.int8((byte)18); perfio.proto.runtime.Runtime.writeString(out, this._sourceFile); }
+        if(this.hasBegin()) { out.int8((byte)24); perfio.proto.runtime.Runtime.writeInt32(out, this._begin); }
+        if(this.hasEnd()) { out.int8((byte)32); perfio.proto.runtime.Runtime.writeInt32(out, this._end); }
+        if(this.hasSemantic()) { out.int8((byte)40); perfio.proto.runtime.Runtime.writeInt32(out, this._semantic.number); }
       }
 
       public boolean equals(java.lang.Object o) {
@@ -3212,7 +3233,7 @@ public final class DescriptorProtos {
     }
 
     public void writeTo(perfio.BufferedOutput out) throws java.io.IOException {
-      { var it = this._annotation.iterator(); while(it.hasNext()) { var v = it.next(); perfio.proto.runtime.Runtime.writeInt32(out, 10); var out2 = out.defer(); v.writeTo(out2); perfio.proto.runtime.Runtime.writeLen(out, out2.totalBytesWritten()); out2.close(); }}
+      if(this.hasAnnotation()) { var it = this._annotation.iterator(); while(it.hasNext()) { var v = it.next(); out.int8((byte)10); var out2 = out.defer(); v.writeTo(out2); perfio.proto.runtime.Runtime.writeLen(out, out2.totalBytesWritten()); out2.close(); }}
     }
 
     public boolean equals(java.lang.Object o) {

@@ -60,10 +60,10 @@ public final class PluginProtos {
     }
 
     public void writeTo(perfio.BufferedOutput out) throws java.io.IOException {
-      if(this.hasMajor()) { perfio.proto.runtime.Runtime.writeInt32(out, 8); perfio.proto.runtime.Runtime.writeInt32(out, this._major); }
-      if(this.hasMinor()) { perfio.proto.runtime.Runtime.writeInt32(out, 16); perfio.proto.runtime.Runtime.writeInt32(out, this._minor); }
-      if(this.hasPatch()) { perfio.proto.runtime.Runtime.writeInt32(out, 24); perfio.proto.runtime.Runtime.writeInt32(out, this._patch); }
-      if(this.hasSuffix()) { perfio.proto.runtime.Runtime.writeInt32(out, 34); perfio.proto.runtime.Runtime.writeString(out, this._suffix); }
+      if(this.hasMajor()) { out.int8((byte)8); perfio.proto.runtime.Runtime.writeInt32(out, this._major); }
+      if(this.hasMinor()) { out.int8((byte)16); perfio.proto.runtime.Runtime.writeInt32(out, this._minor); }
+      if(this.hasPatch()) { out.int8((byte)24); perfio.proto.runtime.Runtime.writeInt32(out, this._patch); }
+      if(this.hasSuffix()) { out.int8((byte)34); perfio.proto.runtime.Runtime.writeString(out, this._suffix); }
     }
 
     public boolean equals(java.lang.Object o) {
@@ -151,11 +151,11 @@ public final class PluginProtos {
     }
 
     public void writeTo(perfio.BufferedOutput out) throws java.io.IOException {
-      { var it = this._fileToGenerate.iterator(); while(it.hasNext()) { var v = it.next(); perfio.proto.runtime.Runtime.writeInt32(out, 10); perfio.proto.runtime.Runtime.writeString(out, v); }}
-      if(this.hasParameter()) { perfio.proto.runtime.Runtime.writeInt32(out, 18); perfio.proto.runtime.Runtime.writeString(out, this._parameter); }
-      { var it = this._protoFile.iterator(); while(it.hasNext()) { var v = it.next(); perfio.proto.runtime.Runtime.writeInt32(out, 122); var out2 = out.defer(); v.writeTo(out2); perfio.proto.runtime.Runtime.writeLen(out, out2.totalBytesWritten()); out2.close(); }}
-      { var it = this._sourceFileDescriptors.iterator(); while(it.hasNext()) { var v = it.next(); perfio.proto.runtime.Runtime.writeInt32(out, 138); var out2 = out.defer(); v.writeTo(out2); perfio.proto.runtime.Runtime.writeLen(out, out2.totalBytesWritten()); out2.close(); }}
-      if(this.hasCompilerVersion()) { perfio.proto.runtime.Runtime.writeInt32(out, 26); var out2 = out.defer(); this._compilerVersion.writeTo(out2); perfio.proto.runtime.Runtime.writeLen(out, out2.totalBytesWritten()); out2.close(); }
+      if(this.hasFileToGenerate()) { var it = this._fileToGenerate.iterator(); while(it.hasNext()) { var v = it.next(); out.int8((byte)10); perfio.proto.runtime.Runtime.writeString(out, v); }}
+      if(this.hasParameter()) { out.int8((byte)18); perfio.proto.runtime.Runtime.writeString(out, this._parameter); }
+      if(this.hasProtoFile()) { var it = this._protoFile.iterator(); while(it.hasNext()) { var v = it.next(); out.int8((byte)122); var out2 = out.defer(); v.writeTo(out2); perfio.proto.runtime.Runtime.writeLen(out, out2.totalBytesWritten()); out2.close(); }}
+      if(this.hasSourceFileDescriptors()) { var it = this._sourceFileDescriptors.iterator(); while(it.hasNext()) { var v = it.next(); out.int8((byte)-118); out.int8((byte)1); var out2 = out.defer(); v.writeTo(out2); perfio.proto.runtime.Runtime.writeLen(out, out2.totalBytesWritten()); out2.close(); }}
+      if(this.hasCompilerVersion()) { out.int8((byte)26); var out2 = out.defer(); this._compilerVersion.writeTo(out2); perfio.proto.runtime.Runtime.writeLen(out, out2.totalBytesWritten()); out2.close(); }
     }
 
     public boolean equals(java.lang.Object o) {
@@ -244,10 +244,10 @@ public final class PluginProtos {
       }
 
       public void writeTo(perfio.BufferedOutput out) throws java.io.IOException {
-        if(this.hasName()) { perfio.proto.runtime.Runtime.writeInt32(out, 10); perfio.proto.runtime.Runtime.writeString(out, this._name); }
-        if(this.hasInsertionPoint()) { perfio.proto.runtime.Runtime.writeInt32(out, 18); perfio.proto.runtime.Runtime.writeString(out, this._insertionPoint); }
-        if(this.hasContent()) { perfio.proto.runtime.Runtime.writeInt32(out, 122); perfio.proto.runtime.Runtime.writeString(out, this._content); }
-        if(this.hasGeneratedCodeInfo()) { perfio.proto.runtime.Runtime.writeInt32(out, 130); var out2 = out.defer(); this._generatedCodeInfo.writeTo(out2); perfio.proto.runtime.Runtime.writeLen(out, out2.totalBytesWritten()); out2.close(); }
+        if(this.hasName()) { out.int8((byte)10); perfio.proto.runtime.Runtime.writeString(out, this._name); }
+        if(this.hasInsertionPoint()) { out.int8((byte)18); perfio.proto.runtime.Runtime.writeString(out, this._insertionPoint); }
+        if(this.hasContent()) { out.int8((byte)122); perfio.proto.runtime.Runtime.writeString(out, this._content); }
+        if(this.hasGeneratedCodeInfo()) { out.int8((byte)-126); out.int8((byte)1); var out2 = out.defer(); this._generatedCodeInfo.writeTo(out2); perfio.proto.runtime.Runtime.writeLen(out, out2.totalBytesWritten()); out2.close(); }
       }
 
       public boolean equals(java.lang.Object o) {
@@ -325,11 +325,11 @@ public final class PluginProtos {
     }
 
     public void writeTo(perfio.BufferedOutput out) throws java.io.IOException {
-      if(this.hasError()) { perfio.proto.runtime.Runtime.writeInt32(out, 10); perfio.proto.runtime.Runtime.writeString(out, this._error); }
-      if(this.hasSupportedFeatures()) { perfio.proto.runtime.Runtime.writeInt32(out, 16); perfio.proto.runtime.Runtime.writeInt64(out, this._supportedFeatures); }
-      if(this.hasMinimumEdition()) { perfio.proto.runtime.Runtime.writeInt32(out, 24); perfio.proto.runtime.Runtime.writeInt32(out, this._minimumEdition); }
-      if(this.hasMaximumEdition()) { perfio.proto.runtime.Runtime.writeInt32(out, 32); perfio.proto.runtime.Runtime.writeInt32(out, this._maximumEdition); }
-      { var it = this._file.iterator(); while(it.hasNext()) { var v = it.next(); perfio.proto.runtime.Runtime.writeInt32(out, 122); var out2 = out.defer(); v.writeTo(out2); perfio.proto.runtime.Runtime.writeLen(out, out2.totalBytesWritten()); out2.close(); }}
+      if(this.hasError()) { out.int8((byte)10); perfio.proto.runtime.Runtime.writeString(out, this._error); }
+      if(this.hasSupportedFeatures()) { out.int8((byte)16); perfio.proto.runtime.Runtime.writeInt64(out, this._supportedFeatures); }
+      if(this.hasMinimumEdition()) { out.int8((byte)24); perfio.proto.runtime.Runtime.writeInt32(out, this._minimumEdition); }
+      if(this.hasMaximumEdition()) { out.int8((byte)32); perfio.proto.runtime.Runtime.writeInt32(out, this._maximumEdition); }
+      if(this.hasFile()) { var it = this._file.iterator(); while(it.hasNext()) { var v = it.next(); out.int8((byte)122); var out2 = out.defer(); v.writeTo(out2); perfio.proto.runtime.Runtime.writeLen(out, out2.totalBytesWritten()); out2.close(); }}
     }
 
     public boolean equals(java.lang.Object o) {

@@ -105,14 +105,26 @@ class MessageNode(val desc: DescriptorProto, val parent: ParentNode) extends Par
     to.println(s"${prefix}public void writeTo(${classOf[BufferedOutput].getName} out) throws java.io.IOException {")
     for(f <- fields) {
       val tag = (f.number << 3) | f.tpe.wireType
-      if(f.cardinality == Cardinality.Repeated) {
-        to.println(s"${prefix}  { var it = this.${f.javaFieldName}.iterator(); while(it.hasNext()) { var v = it.next(); $p.writeInt32(out, $tag); ${f.javaWriteStatements(p, "out", "v")} }}")
+      if(f.packed) {
+        to.println(s"${prefix}  if(this.${f.javaHazzer}()) {")
+        to.println(s"${prefix}    var it = this.${f.javaFieldName}.iterator();")
+        to.println(s"${prefix}    ${writeVarint(f.number << 3 | Runtime.LEN, "out")};")
+        to.println(s"${prefix}    var out2 = out.defer();")
+        to.println(s"${prefix}    while(it.hasNext()) { var v = it.next(); ${f.javaWriteStatements(p, "out2", "v")} }")
+        to.println(s"${prefix}    $p.writeVarint(out, out2.totalBytesWritten());")
+        to.println(s"${prefix}    out2.close();")
+        to.println(s"${prefix}  }")
+      } else if(f.cardinality == Cardinality.Repeated) {
+        to.println(s"${prefix}  if(this.${f.javaHazzer}()) { var it = this.${f.javaFieldName}.iterator(); while(it.hasNext()) { var v = it.next(); ${writeVarint(tag, "out")}; ${f.javaWriteStatements(p, "out", "v")} }}")
       } else {
-        to.println(s"${prefix}  if(this.${f.javaHazzer}()) { $p.writeInt32(out, $tag); ${f.javaWriteStatements(p, "out", s"this.${f.javaFieldName}")} }")
+        to.println(s"${prefix}  if(this.${f.javaHazzer}()) { ${writeVarint(tag, "out")}; ${f.javaWriteStatements(p, "out", s"this.${f.javaFieldName}")} }")
       }
     }
     to.println(s"${prefix}}")
   }
+
+  private[this] def writeVarint(v: Long, bo: String): String =
+    Util.encodeVarint(v).map { i => s"$bo.int8((byte)$i)" }.mkString("; ")
 
   private[this] def emitEquals(to: TextOutput, prefix: String): Unit = {
     to.println(s"${prefix}public boolean equals(java.lang.Object o) {")
