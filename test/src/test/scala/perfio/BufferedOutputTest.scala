@@ -29,6 +29,13 @@ class BufferedOutputTest(_name: String, create: TestData => (BufferedOutput, () 
     }
   }
 
+  lazy val nestedViewTestData = createTestData("nesdView") { dout =>
+    dout.writeByte(1)
+    dout.writeByte(2)
+    dout.writeByte(3)
+    dout.writeByte(4)
+  }
+
   lazy val stringTestData = createTestData("string") { dout =>
     for(i <- 0 until count) {
       val s = "abcdefghijklmnopqrstuvwxyz"
@@ -140,6 +147,79 @@ class BufferedOutputTest(_name: String, create: TestData => (BufferedOutput, () 
   @Test def fixedOffset(): Unit = testFixed(25, 0)
   @Test def fixedLimit(): Unit = testFixed(0, 25)
   @Test def fixedBoth(): Unit = testFixed(139, 17)
+
+  @Test
+  def testNestedView(): Unit = {
+    val (out1, checker) = create(nestedViewTestData)
+
+    def show(b: BufferedOutput): Unit =
+      println(s"    ${b.hashCode()}: buf=${b.buf.hashCode()} ${b.buf.slice(0, b.pos).mkString("[",",","]")} sharing=${b.sharing}")
+    def showAll(b: BufferedOutput): Unit = {
+      var n = b.next
+      while(true) {
+        show(n)
+        if(n eq b) return
+        n = n.next
+      }
+    }
+
+    //println("a out1:")
+    //showAll(out1)
+
+    out1.uint8(1)
+
+    //println("b out1:")
+    //showAll(out1)
+
+    val out2 = out1.defer()
+    //println("c out1:")
+    //showAll(out1)
+    //println("  out2:")
+    //showAll(out2)
+
+    out2.uint8(3)
+
+    //println("d out1:")
+    //showAll(out1)
+    //println("  out2:")
+    //showAll(out2)
+
+    val out3 = out2.defer()
+    //println("e out1:")
+    //showAll(out1)
+    //println("  out2:")
+    //showAll(out2)
+    //println("  out3:")
+    //showAll(out3)
+
+    out3.uint8(4)
+    //println("f out1:")
+    //showAll(out1)
+    //println("  out2:")
+    //showAll(out2)
+    //println("  out3:")
+    //showAll(out3)
+
+    out3.close()
+    //println("g out1:")
+    //showAll(out1)
+    //println("  out2:")
+    //showAll(out2)
+
+    out1.uint8(2)
+    //println("h out1:")
+    //showAll(out1)
+    //println("  out2:")
+    //showAll(out2)
+
+    out2.close()
+    //println("i out1:")
+    //showAll(out1)
+
+    out1.close()
+
+    checker()
+  }
 }
 
 object BufferedOutputTest {

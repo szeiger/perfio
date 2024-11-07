@@ -139,6 +139,10 @@ public abstract sealed class BufferedInput implements Closeable permits HeapBuff
   abstract void copyBufferFrom(BufferedInput b);
   abstract void prepareAndFillBuffer(int count) throws IOException;
 
+  String show() {
+    return "pos="+pos+", lim="+lim+", totalReadLim="+totalReadLimit+", totalBuf="+totalBuffered+", excessRead="+excessRead+", parentTotalOff="+parentTotalOffset;
+  }
+
   private void reinitView(int pos, int lim, long totalReadLimit, boolean skipOnClose, long parentTotalOffset, boolean bigEndian) {
     this.pos = pos;
     this.lim = lim;
@@ -277,6 +281,7 @@ public abstract sealed class BufferedInput implements Closeable permits HeapBuff
       if(totalBuffered >= totalReadLimit) {
         excessRead = (int)(totalBuffered-totalReadLimit);
         lim -= excessRead;
+        totalBuffered -= excessRead;
       }
     }
     if(vDetach) activeView = null;

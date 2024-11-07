@@ -505,20 +505,23 @@ public abstract sealed class BufferedOutput implements Closeable, Flushable perm
       b.lim = tmppos;
       b.closed = true;
       b.sharing = tmpsharing;
-      b.insertAllBefore(this);
-      if(b.prev == this) flushBlocks(false);
+      var bp = b.prev;
+      bp.insertAllBefore(this);
+      if(bp.prev == this) flushBlocks(false);
     }
   }
 
   private void appendNestedToFixed(BufferedOutput r) throws IOException {
-    for(var b = r.next; true; b = b.next) {
+    for(var b = r.next; true;) {
       var blen = b.pos - b.start;
       if(blen > 0) {
         var p = fwd(blen);
         System.arraycopy(b.buf, b.start, buf, p, blen);
       }
+      var bn = b.next;
       cacheRoot.returnToCache(b);
       if(b == r) return;
+      b = bn;
     }
   }
 

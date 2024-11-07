@@ -2,7 +2,7 @@ package perfio
 
 import org.junit.Assert
 
-import java.io.{ByteArrayInputStream, ByteArrayOutputStream, DataInputStream, DataOutputStream, File, FileOutputStream}
+import java.io.{ByteArrayInputStream, ByteArrayOutputStream, DataInputStream, DataOutputStream, File, FileOutputStream, InputStream}
 import java.lang.foreign.{Arena, MemorySegment, ValueLayout}
 import java.nio.{ByteBuffer, ByteOrder}
 import scala.reflect.ClassTag
@@ -51,8 +51,11 @@ class TestData(val bytes: Array[Byte], val name: String, owner: Class[_]) {
 
   def createDataInput() = new DataInputStream(new ByteArrayInputStream(bytes))
 
-  def createBufferedInputFromByteArrayInputStream(initialBufferSize: Int = 64): BufferedInput =
-    BufferedInput.of(new ByteArrayInputStream(bytes), initialBufferSize)
+  def createBufferedInputFromByteArrayInputStream(initialBufferSize: Int = 64, limit: Int = -1): BufferedInput = {
+    var in: InputStream = new ByteArrayInputStream(bytes)
+    if(limit > 0) in = new LimitedInputStream(in, limit)
+    BufferedInput.of(in, initialBufferSize)
+  }
   def createBufferedInputFromMappedFile(maxDirectBufferSize: Int = 128): BufferedInput = {
     BufferedInput.MaxDirectBufferSize = maxDirectBufferSize // ensure that we test rebuffering
     BufferedInput.ofMappedFile(getFile().toPath)
@@ -89,4 +92,9 @@ class TestData(val bytes: Array[Byte], val name: String, owner: Class[_]) {
     }
     (bo, checker)
   }
+}
+
+class LimitedInputStream(in: InputStream, limit: Int) extends InputStream {
+  def read(): Int = in.read()
+  override def read(b: Array[Byte], off: Int, len: Int): Int = in.read(b, off, len min limit)
 }

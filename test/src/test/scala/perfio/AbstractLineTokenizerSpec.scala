@@ -3,7 +3,7 @@ package perfio
 import hedgehog._
 import hedgehog.runner._
 
-import java.io.{ByteArrayInputStream, IOException, InputStream}
+import java.io.{ByteArrayInputStream, IOException}
 import java.lang.foreign.MemorySegment
 import java.nio.charset.{Charset, StandardCharsets}
 import java.util.Arrays
@@ -82,11 +82,6 @@ abstract class SimpleLineTokenizerSpec[T] extends AbstractLineTokenizerSpec[T] {
     for {
       s <- Gen.string(Gen.element1('a', '\n'), Range.linear(min, max)).forAll
     } yield run(s, createBI(s, cs, params), cs, split)
-}
-
-class LimitedInputStream(in: InputStream, limit: Int) extends InputStream {
-  def read(): Int = in.read()
-  override def read(b: Array[Byte], off: Int, len: Int): Int = in.read(b, off, len min limit)
 }
 
 object HeapScalarLineTokenizerSpec extends SimpleLineTokenizerSpec[Int] {

@@ -5,6 +5,7 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.junit.runners.JUnit4
 
+import java.io.ByteArrayInputStream
 import java.nio.ByteOrder
 
 abstract class AbstractBufferedInputTest extends TestUtil {
@@ -165,6 +166,11 @@ class BufferedInputFromInputStreamTest extends AbstractBufferedInputTest {
 }
 
 @RunWith(classOf[JUnit4])
+class BufferedInputFromLimitedInputStreamTest extends AbstractBufferedInputTest {
+  def createBufferedInput(td: TestData): BufferedInput = td.createBufferedInputFromByteArrayInputStream(limit = 1)
+}
+
+@RunWith(classOf[JUnit4])
 class BufferedInputFromMappedFileTest extends AbstractBufferedInputTest {
   def createBufferedInput(td: TestData): BufferedInput = td.createBufferedInputFromMappedFile()
 }
@@ -172,4 +178,65 @@ class BufferedInputFromMappedFileTest extends AbstractBufferedInputTest {
 @RunWith(classOf[JUnit4])
 class BufferedInputFromArrayTest extends AbstractBufferedInputTest {
   def createBufferedInput(td: TestData): BufferedInput = td.createBufferedInputFromArray()
+}
+
+@RunWith(classOf[JUnit4])
+class MiscBufferedInputTest {
+  @Test
+  def testCodeGeneratorRequestRaw(): Unit = {
+    val data3 = Array[Byte](1, 2, 3, 4)
+
+    def read(in: BufferedInput): Unit = {
+      println(s"in: ${in.show}")
+
+      println("in2 = in.delimitedView(4)")
+      val in2 = in.delimitedView(4L)
+      println(s"in: ${in.show}")
+      println(s"in2: ${in2.show}")
+
+      println("reading 2 bytes")
+      assertEquals(1, in2.int8())
+      assertEquals(2, in2.int8())
+      println(s"in2: ${in2.show}")
+
+      println("in3 = in2.delimitedView(1)")
+      val in3 = in2.delimitedView(1L)
+      println(s"in2: ${in2.show}")
+      println(s"in3: ${in3.show}")
+
+      println("in4 = in3.delimitedView(1)")
+      val in4 = in3.delimitedView(1L)
+      println(s"in3: ${in3.show}")
+      println(s"in4: ${in4.show}")
+
+      println("reading 1 byte")
+      assertEquals(3, in4.int8())
+      println(s"in4: ${in4.show}")
+
+      assert(!in4.hasMore)
+      println(s"in4: ${in4.show}")
+
+      println("in4.close")
+      in4.close()
+      println(s"in3: ${in3.show}")
+      assert(!in3.hasMore)
+      println(s"in3: ${in3.show}")
+
+      println("in3.close")
+      in3.close()
+      println(s"in2: ${in2.show}")
+
+      assertEquals(4, in2.int8())
+
+      assert(!in2.hasMore)
+      in2.close()
+      assert(!in.hasMore)
+      in.close()
+    }
+
+    println("========== unlimited")
+    read(BufferedInput.of(new ByteArrayInputStream(data3)))
+    println("========== limited")
+    read(BufferedInput.of(new LimitedInputStream(new ByteArrayInputStream(data3), 2)))
+  }
 }
