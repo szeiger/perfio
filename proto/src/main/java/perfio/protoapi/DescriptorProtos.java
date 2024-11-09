@@ -44,12 +44,12 @@ public final class DescriptorProtos {
   public static final class FileDescriptorSet {
 
     private java.util.List<perfio.protoapi.DescriptorProtos.FileDescriptorProto> _file = java.util.List.of();
+    private void _file_initMut() {
+      if((java.util.List)this._file == java.util.List.of()) this.setFileList(new java.util.ArrayList<>());
+    }
+    public void addFile(perfio.protoapi.DescriptorProtos.FileDescriptorProto value) { _file_initMut(); this._file.add(value); }
     public java.util.List<perfio.protoapi.DescriptorProtos.FileDescriptorProto> getFileList() { return _file; }
     public void setFileList(java.util.List<perfio.protoapi.DescriptorProtos.FileDescriptorProto> value) { this._file = value; }
-    public void addFile(perfio.protoapi.DescriptorProtos.FileDescriptorProto value) {
-      if(this._file == null || (java.util.List)this._file == java.util.List.of()) this.setFileList(new java.util.ArrayList<>());
-      this._file.add(value);
-    }
     public boolean hasFile() { return !_file.isEmpty(); }
 
     public static perfio.protoapi.DescriptorProtos.FileDescriptorSet parseFrom(perfio.BufferedInput in) throws java.io.IOException {
@@ -103,66 +103,66 @@ public final class DescriptorProtos {
     public boolean hasPackage() { return (this.flags0 & 2) != 0; }
 
     private java.util.List<java.lang.String> _dependency = java.util.List.of();
+    private void _dependency_initMut() {
+      if((java.util.List)this._dependency == java.util.List.of()) this.setDependencyList(new java.util.ArrayList<>());
+    }
+    public void addDependency(java.lang.String value) { _dependency_initMut(); this._dependency.add(value); }
     public java.util.List<java.lang.String> getDependencyList() { return _dependency; }
     public void setDependencyList(java.util.List<java.lang.String> value) { this._dependency = value; }
-    public void addDependency(java.lang.String value) {
-      if(this._dependency == null || (java.util.List)this._dependency == java.util.List.of()) this.setDependencyList(new java.util.ArrayList<>());
-      this._dependency.add(value);
-    }
     public boolean hasDependency() { return !_dependency.isEmpty(); }
 
-    private java.util.List<java.lang.Integer> _publicDependency = java.util.List.of();
-    public java.util.List<java.lang.Integer> getPublicDependencyList() { return _publicDependency; }
-    public void setPublicDependencyList(java.util.List<java.lang.Integer> value) { this._publicDependency = value; }
-    public void addPublicDependency(int value) {
-      if(this._publicDependency == null || (java.util.List)this._publicDependency == java.util.List.of()) this.setPublicDependencyList(new java.util.ArrayList<>());
-      this._publicDependency.add(value);
+    private perfio.proto.runtime.IntList _publicDependency = perfio.proto.runtime.IntList.EMPTY;
+    private void _publicDependency_initMut() {
+      if(this._publicDependency == perfio.proto.runtime.IntList.EMPTY) this.setPublicDependencyList(new perfio.proto.runtime.IntList());
     }
+    public void addPublicDependency(int value) { _publicDependency_initMut(); this._publicDependency.add(value); }
+    public perfio.proto.runtime.IntList getPublicDependencyList() { return _publicDependency; }
+    public void setPublicDependencyList(perfio.proto.runtime.IntList value) { this._publicDependency = value; }
     public boolean hasPublicDependency() { return !_publicDependency.isEmpty(); }
 
-    private java.util.List<java.lang.Integer> _weakDependency = java.util.List.of();
-    public java.util.List<java.lang.Integer> getWeakDependencyList() { return _weakDependency; }
-    public void setWeakDependencyList(java.util.List<java.lang.Integer> value) { this._weakDependency = value; }
-    public void addWeakDependency(int value) {
-      if(this._weakDependency == null || (java.util.List)this._weakDependency == java.util.List.of()) this.setWeakDependencyList(new java.util.ArrayList<>());
-      this._weakDependency.add(value);
+    private perfio.proto.runtime.IntList _weakDependency = perfio.proto.runtime.IntList.EMPTY;
+    private void _weakDependency_initMut() {
+      if(this._weakDependency == perfio.proto.runtime.IntList.EMPTY) this.setWeakDependencyList(new perfio.proto.runtime.IntList());
     }
+    public void addWeakDependency(int value) { _weakDependency_initMut(); this._weakDependency.add(value); }
+    public perfio.proto.runtime.IntList getWeakDependencyList() { return _weakDependency; }
+    public void setWeakDependencyList(perfio.proto.runtime.IntList value) { this._weakDependency = value; }
     public boolean hasWeakDependency() { return !_weakDependency.isEmpty(); }
 
     private java.util.List<perfio.protoapi.DescriptorProtos.DescriptorProto> _messageType = java.util.List.of();
+    private void _messageType_initMut() {
+      if((java.util.List)this._messageType == java.util.List.of()) this.setMessageTypeList(new java.util.ArrayList<>());
+    }
+    public void addMessageType(perfio.protoapi.DescriptorProtos.DescriptorProto value) { _messageType_initMut(); this._messageType.add(value); }
     public java.util.List<perfio.protoapi.DescriptorProtos.DescriptorProto> getMessageTypeList() { return _messageType; }
     public void setMessageTypeList(java.util.List<perfio.protoapi.DescriptorProtos.DescriptorProto> value) { this._messageType = value; }
-    public void addMessageType(perfio.protoapi.DescriptorProtos.DescriptorProto value) {
-      if(this._messageType == null || (java.util.List)this._messageType == java.util.List.of()) this.setMessageTypeList(new java.util.ArrayList<>());
-      this._messageType.add(value);
-    }
     public boolean hasMessageType() { return !_messageType.isEmpty(); }
 
     private java.util.List<perfio.protoapi.DescriptorProtos.EnumDescriptorProto> _enumType = java.util.List.of();
+    private void _enumType_initMut() {
+      if((java.util.List)this._enumType == java.util.List.of()) this.setEnumTypeList(new java.util.ArrayList<>());
+    }
+    public void addEnumType(perfio.protoapi.DescriptorProtos.EnumDescriptorProto value) { _enumType_initMut(); this._enumType.add(value); }
     public java.util.List<perfio.protoapi.DescriptorProtos.EnumDescriptorProto> getEnumTypeList() { return _enumType; }
     public void setEnumTypeList(java.util.List<perfio.protoapi.DescriptorProtos.EnumDescriptorProto> value) { this._enumType = value; }
-    public void addEnumType(perfio.protoapi.DescriptorProtos.EnumDescriptorProto value) {
-      if(this._enumType == null || (java.util.List)this._enumType == java.util.List.of()) this.setEnumTypeList(new java.util.ArrayList<>());
-      this._enumType.add(value);
-    }
     public boolean hasEnumType() { return !_enumType.isEmpty(); }
 
     private java.util.List<perfio.protoapi.DescriptorProtos.ServiceDescriptorProto> _service = java.util.List.of();
+    private void _service_initMut() {
+      if((java.util.List)this._service == java.util.List.of()) this.setServiceList(new java.util.ArrayList<>());
+    }
+    public void addService(perfio.protoapi.DescriptorProtos.ServiceDescriptorProto value) { _service_initMut(); this._service.add(value); }
     public java.util.List<perfio.protoapi.DescriptorProtos.ServiceDescriptorProto> getServiceList() { return _service; }
     public void setServiceList(java.util.List<perfio.protoapi.DescriptorProtos.ServiceDescriptorProto> value) { this._service = value; }
-    public void addService(perfio.protoapi.DescriptorProtos.ServiceDescriptorProto value) {
-      if(this._service == null || (java.util.List)this._service == java.util.List.of()) this.setServiceList(new java.util.ArrayList<>());
-      this._service.add(value);
-    }
     public boolean hasService() { return !_service.isEmpty(); }
 
     private java.util.List<perfio.protoapi.DescriptorProtos.FieldDescriptorProto> _extension = java.util.List.of();
+    private void _extension_initMut() {
+      if((java.util.List)this._extension == java.util.List.of()) this.setExtensionList(new java.util.ArrayList<>());
+    }
+    public void addExtension(perfio.protoapi.DescriptorProtos.FieldDescriptorProto value) { _extension_initMut(); this._extension.add(value); }
     public java.util.List<perfio.protoapi.DescriptorProtos.FieldDescriptorProto> getExtensionList() { return _extension; }
     public void setExtensionList(java.util.List<perfio.protoapi.DescriptorProtos.FieldDescriptorProto> value) { this._extension = value; }
-    public void addExtension(perfio.protoapi.DescriptorProtos.FieldDescriptorProto value) {
-      if(this._extension == null || (java.util.List)this._extension == java.util.List.of()) this.setExtensionList(new java.util.ArrayList<>());
-      this._extension.add(value);
-    }
     public boolean hasExtension() { return !_extension.isEmpty(); }
 
     private perfio.protoapi.DescriptorProtos.FileOptions _options;
@@ -399,57 +399,57 @@ public final class DescriptorProtos {
     public boolean hasName() { return (this.flags0 & 1) != 0; }
 
     private java.util.List<perfio.protoapi.DescriptorProtos.FieldDescriptorProto> _field = java.util.List.of();
+    private void _field_initMut() {
+      if((java.util.List)this._field == java.util.List.of()) this.setFieldList(new java.util.ArrayList<>());
+    }
+    public void addField(perfio.protoapi.DescriptorProtos.FieldDescriptorProto value) { _field_initMut(); this._field.add(value); }
     public java.util.List<perfio.protoapi.DescriptorProtos.FieldDescriptorProto> getFieldList() { return _field; }
     public void setFieldList(java.util.List<perfio.protoapi.DescriptorProtos.FieldDescriptorProto> value) { this._field = value; }
-    public void addField(perfio.protoapi.DescriptorProtos.FieldDescriptorProto value) {
-      if(this._field == null || (java.util.List)this._field == java.util.List.of()) this.setFieldList(new java.util.ArrayList<>());
-      this._field.add(value);
-    }
     public boolean hasField() { return !_field.isEmpty(); }
 
     private java.util.List<perfio.protoapi.DescriptorProtos.FieldDescriptorProto> _extension = java.util.List.of();
+    private void _extension_initMut() {
+      if((java.util.List)this._extension == java.util.List.of()) this.setExtensionList(new java.util.ArrayList<>());
+    }
+    public void addExtension(perfio.protoapi.DescriptorProtos.FieldDescriptorProto value) { _extension_initMut(); this._extension.add(value); }
     public java.util.List<perfio.protoapi.DescriptorProtos.FieldDescriptorProto> getExtensionList() { return _extension; }
     public void setExtensionList(java.util.List<perfio.protoapi.DescriptorProtos.FieldDescriptorProto> value) { this._extension = value; }
-    public void addExtension(perfio.protoapi.DescriptorProtos.FieldDescriptorProto value) {
-      if(this._extension == null || (java.util.List)this._extension == java.util.List.of()) this.setExtensionList(new java.util.ArrayList<>());
-      this._extension.add(value);
-    }
     public boolean hasExtension() { return !_extension.isEmpty(); }
 
     private java.util.List<perfio.protoapi.DescriptorProtos.DescriptorProto> _nestedType = java.util.List.of();
+    private void _nestedType_initMut() {
+      if((java.util.List)this._nestedType == java.util.List.of()) this.setNestedTypeList(new java.util.ArrayList<>());
+    }
+    public void addNestedType(perfio.protoapi.DescriptorProtos.DescriptorProto value) { _nestedType_initMut(); this._nestedType.add(value); }
     public java.util.List<perfio.protoapi.DescriptorProtos.DescriptorProto> getNestedTypeList() { return _nestedType; }
     public void setNestedTypeList(java.util.List<perfio.protoapi.DescriptorProtos.DescriptorProto> value) { this._nestedType = value; }
-    public void addNestedType(perfio.protoapi.DescriptorProtos.DescriptorProto value) {
-      if(this._nestedType == null || (java.util.List)this._nestedType == java.util.List.of()) this.setNestedTypeList(new java.util.ArrayList<>());
-      this._nestedType.add(value);
-    }
     public boolean hasNestedType() { return !_nestedType.isEmpty(); }
 
     private java.util.List<perfio.protoapi.DescriptorProtos.EnumDescriptorProto> _enumType = java.util.List.of();
+    private void _enumType_initMut() {
+      if((java.util.List)this._enumType == java.util.List.of()) this.setEnumTypeList(new java.util.ArrayList<>());
+    }
+    public void addEnumType(perfio.protoapi.DescriptorProtos.EnumDescriptorProto value) { _enumType_initMut(); this._enumType.add(value); }
     public java.util.List<perfio.protoapi.DescriptorProtos.EnumDescriptorProto> getEnumTypeList() { return _enumType; }
     public void setEnumTypeList(java.util.List<perfio.protoapi.DescriptorProtos.EnumDescriptorProto> value) { this._enumType = value; }
-    public void addEnumType(perfio.protoapi.DescriptorProtos.EnumDescriptorProto value) {
-      if(this._enumType == null || (java.util.List)this._enumType == java.util.List.of()) this.setEnumTypeList(new java.util.ArrayList<>());
-      this._enumType.add(value);
-    }
     public boolean hasEnumType() { return !_enumType.isEmpty(); }
 
     private java.util.List<perfio.protoapi.DescriptorProtos.DescriptorProto.ExtensionRange> _extensionRange = java.util.List.of();
+    private void _extensionRange_initMut() {
+      if((java.util.List)this._extensionRange == java.util.List.of()) this.setExtensionRangeList(new java.util.ArrayList<>());
+    }
+    public void addExtensionRange(perfio.protoapi.DescriptorProtos.DescriptorProto.ExtensionRange value) { _extensionRange_initMut(); this._extensionRange.add(value); }
     public java.util.List<perfio.protoapi.DescriptorProtos.DescriptorProto.ExtensionRange> getExtensionRangeList() { return _extensionRange; }
     public void setExtensionRangeList(java.util.List<perfio.protoapi.DescriptorProtos.DescriptorProto.ExtensionRange> value) { this._extensionRange = value; }
-    public void addExtensionRange(perfio.protoapi.DescriptorProtos.DescriptorProto.ExtensionRange value) {
-      if(this._extensionRange == null || (java.util.List)this._extensionRange == java.util.List.of()) this.setExtensionRangeList(new java.util.ArrayList<>());
-      this._extensionRange.add(value);
-    }
     public boolean hasExtensionRange() { return !_extensionRange.isEmpty(); }
 
     private java.util.List<perfio.protoapi.DescriptorProtos.OneofDescriptorProto> _oneofDecl = java.util.List.of();
+    private void _oneofDecl_initMut() {
+      if((java.util.List)this._oneofDecl == java.util.List.of()) this.setOneofDeclList(new java.util.ArrayList<>());
+    }
+    public void addOneofDecl(perfio.protoapi.DescriptorProtos.OneofDescriptorProto value) { _oneofDecl_initMut(); this._oneofDecl.add(value); }
     public java.util.List<perfio.protoapi.DescriptorProtos.OneofDescriptorProto> getOneofDeclList() { return _oneofDecl; }
     public void setOneofDeclList(java.util.List<perfio.protoapi.DescriptorProtos.OneofDescriptorProto> value) { this._oneofDecl = value; }
-    public void addOneofDecl(perfio.protoapi.DescriptorProtos.OneofDescriptorProto value) {
-      if(this._oneofDecl == null || (java.util.List)this._oneofDecl == java.util.List.of()) this.setOneofDeclList(new java.util.ArrayList<>());
-      this._oneofDecl.add(value);
-    }
     public boolean hasOneofDecl() { return !_oneofDecl.isEmpty(); }
 
     private perfio.protoapi.DescriptorProtos.MessageOptions _options;
@@ -461,21 +461,21 @@ public final class DescriptorProtos {
     public boolean hasOptions() { return (this.flags0 & 2) != 0; }
 
     private java.util.List<perfio.protoapi.DescriptorProtos.DescriptorProto.ReservedRange> _reservedRange = java.util.List.of();
+    private void _reservedRange_initMut() {
+      if((java.util.List)this._reservedRange == java.util.List.of()) this.setReservedRangeList(new java.util.ArrayList<>());
+    }
+    public void addReservedRange(perfio.protoapi.DescriptorProtos.DescriptorProto.ReservedRange value) { _reservedRange_initMut(); this._reservedRange.add(value); }
     public java.util.List<perfio.protoapi.DescriptorProtos.DescriptorProto.ReservedRange> getReservedRangeList() { return _reservedRange; }
     public void setReservedRangeList(java.util.List<perfio.protoapi.DescriptorProtos.DescriptorProto.ReservedRange> value) { this._reservedRange = value; }
-    public void addReservedRange(perfio.protoapi.DescriptorProtos.DescriptorProto.ReservedRange value) {
-      if(this._reservedRange == null || (java.util.List)this._reservedRange == java.util.List.of()) this.setReservedRangeList(new java.util.ArrayList<>());
-      this._reservedRange.add(value);
-    }
     public boolean hasReservedRange() { return !_reservedRange.isEmpty(); }
 
     private java.util.List<java.lang.String> _reservedName = java.util.List.of();
+    private void _reservedName_initMut() {
+      if((java.util.List)this._reservedName == java.util.List.of()) this.setReservedNameList(new java.util.ArrayList<>());
+    }
+    public void addReservedName(java.lang.String value) { _reservedName_initMut(); this._reservedName.add(value); }
     public java.util.List<java.lang.String> getReservedNameList() { return _reservedName; }
     public void setReservedNameList(java.util.List<java.lang.String> value) { this._reservedName = value; }
-    public void addReservedName(java.lang.String value) {
-      if(this._reservedName == null || (java.util.List)this._reservedName == java.util.List.of()) this.setReservedNameList(new java.util.ArrayList<>());
-      this._reservedName.add(value);
-    }
     public boolean hasReservedName() { return !_reservedName.isEmpty(); }
 
     public static perfio.protoapi.DescriptorProtos.DescriptorProto parseFrom(perfio.BufferedInput in) throws java.io.IOException {
@@ -642,21 +642,21 @@ public final class DescriptorProtos {
     private int flags0;
 
     private java.util.List<perfio.protoapi.DescriptorProtos.UninterpretedOption> _uninterpretedOption = java.util.List.of();
+    private void _uninterpretedOption_initMut() {
+      if((java.util.List)this._uninterpretedOption == java.util.List.of()) this.setUninterpretedOptionList(new java.util.ArrayList<>());
+    }
+    public void addUninterpretedOption(perfio.protoapi.DescriptorProtos.UninterpretedOption value) { _uninterpretedOption_initMut(); this._uninterpretedOption.add(value); }
     public java.util.List<perfio.protoapi.DescriptorProtos.UninterpretedOption> getUninterpretedOptionList() { return _uninterpretedOption; }
     public void setUninterpretedOptionList(java.util.List<perfio.protoapi.DescriptorProtos.UninterpretedOption> value) { this._uninterpretedOption = value; }
-    public void addUninterpretedOption(perfio.protoapi.DescriptorProtos.UninterpretedOption value) {
-      if(this._uninterpretedOption == null || (java.util.List)this._uninterpretedOption == java.util.List.of()) this.setUninterpretedOptionList(new java.util.ArrayList<>());
-      this._uninterpretedOption.add(value);
-    }
     public boolean hasUninterpretedOption() { return !_uninterpretedOption.isEmpty(); }
 
     private java.util.List<perfio.protoapi.DescriptorProtos.ExtensionRangeOptions.Declaration> _declaration = java.util.List.of();
+    private void _declaration_initMut() {
+      if((java.util.List)this._declaration == java.util.List.of()) this.setDeclarationList(new java.util.ArrayList<>());
+    }
+    public void addDeclaration(perfio.protoapi.DescriptorProtos.ExtensionRangeOptions.Declaration value) { _declaration_initMut(); this._declaration.add(value); }
     public java.util.List<perfio.protoapi.DescriptorProtos.ExtensionRangeOptions.Declaration> getDeclarationList() { return _declaration; }
     public void setDeclarationList(java.util.List<perfio.protoapi.DescriptorProtos.ExtensionRangeOptions.Declaration> value) { this._declaration = value; }
-    public void addDeclaration(perfio.protoapi.DescriptorProtos.ExtensionRangeOptions.Declaration value) {
-      if(this._declaration == null || (java.util.List)this._declaration == java.util.List.of()) this.setDeclarationList(new java.util.ArrayList<>());
-      this._declaration.add(value);
-    }
     public boolean hasDeclaration() { return !_declaration.isEmpty(); }
 
     private perfio.protoapi.DescriptorProtos.FeatureSet _features;
@@ -1035,12 +1035,12 @@ public final class DescriptorProtos {
     public boolean hasName() { return (this.flags0 & 1) != 0; }
 
     private java.util.List<perfio.protoapi.DescriptorProtos.EnumValueDescriptorProto> _value = java.util.List.of();
+    private void _value_initMut() {
+      if((java.util.List)this._value == java.util.List.of()) this.setValueList(new java.util.ArrayList<>());
+    }
+    public void addValue(perfio.protoapi.DescriptorProtos.EnumValueDescriptorProto value) { _value_initMut(); this._value.add(value); }
     public java.util.List<perfio.protoapi.DescriptorProtos.EnumValueDescriptorProto> getValueList() { return _value; }
     public void setValueList(java.util.List<perfio.protoapi.DescriptorProtos.EnumValueDescriptorProto> value) { this._value = value; }
-    public void addValue(perfio.protoapi.DescriptorProtos.EnumValueDescriptorProto value) {
-      if(this._value == null || (java.util.List)this._value == java.util.List.of()) this.setValueList(new java.util.ArrayList<>());
-      this._value.add(value);
-    }
     public boolean hasValue() { return !_value.isEmpty(); }
 
     private perfio.protoapi.DescriptorProtos.EnumOptions _options;
@@ -1052,21 +1052,21 @@ public final class DescriptorProtos {
     public boolean hasOptions() { return (this.flags0 & 2) != 0; }
 
     private java.util.List<perfio.protoapi.DescriptorProtos.EnumDescriptorProto.EnumReservedRange> _reservedRange = java.util.List.of();
+    private void _reservedRange_initMut() {
+      if((java.util.List)this._reservedRange == java.util.List.of()) this.setReservedRangeList(new java.util.ArrayList<>());
+    }
+    public void addReservedRange(perfio.protoapi.DescriptorProtos.EnumDescriptorProto.EnumReservedRange value) { _reservedRange_initMut(); this._reservedRange.add(value); }
     public java.util.List<perfio.protoapi.DescriptorProtos.EnumDescriptorProto.EnumReservedRange> getReservedRangeList() { return _reservedRange; }
     public void setReservedRangeList(java.util.List<perfio.protoapi.DescriptorProtos.EnumDescriptorProto.EnumReservedRange> value) { this._reservedRange = value; }
-    public void addReservedRange(perfio.protoapi.DescriptorProtos.EnumDescriptorProto.EnumReservedRange value) {
-      if(this._reservedRange == null || (java.util.List)this._reservedRange == java.util.List.of()) this.setReservedRangeList(new java.util.ArrayList<>());
-      this._reservedRange.add(value);
-    }
     public boolean hasReservedRange() { return !_reservedRange.isEmpty(); }
 
     private java.util.List<java.lang.String> _reservedName = java.util.List.of();
+    private void _reservedName_initMut() {
+      if((java.util.List)this._reservedName == java.util.List.of()) this.setReservedNameList(new java.util.ArrayList<>());
+    }
+    public void addReservedName(java.lang.String value) { _reservedName_initMut(); this._reservedName.add(value); }
     public java.util.List<java.lang.String> getReservedNameList() { return _reservedName; }
     public void setReservedNameList(java.util.List<java.lang.String> value) { this._reservedName = value; }
-    public void addReservedName(java.lang.String value) {
-      if(this._reservedName == null || (java.util.List)this._reservedName == java.util.List.of()) this.setReservedNameList(new java.util.ArrayList<>());
-      this._reservedName.add(value);
-    }
     public boolean hasReservedName() { return !_reservedName.isEmpty(); }
 
     public static perfio.protoapi.DescriptorProtos.EnumDescriptorProto parseFrom(perfio.BufferedInput in) throws java.io.IOException {
@@ -1194,12 +1194,12 @@ public final class DescriptorProtos {
     public boolean hasName() { return (this.flags0 & 1) != 0; }
 
     private java.util.List<perfio.protoapi.DescriptorProtos.MethodDescriptorProto> _method = java.util.List.of();
+    private void _method_initMut() {
+      if((java.util.List)this._method == java.util.List.of()) this.setMethodList(new java.util.ArrayList<>());
+    }
+    public void addMethod(perfio.protoapi.DescriptorProtos.MethodDescriptorProto value) { _method_initMut(); this._method.add(value); }
     public java.util.List<perfio.protoapi.DescriptorProtos.MethodDescriptorProto> getMethodList() { return _method; }
     public void setMethodList(java.util.List<perfio.protoapi.DescriptorProtos.MethodDescriptorProto> value) { this._method = value; }
-    public void addMethod(perfio.protoapi.DescriptorProtos.MethodDescriptorProto value) {
-      if(this._method == null || (java.util.List)this._method == java.util.List.of()) this.setMethodList(new java.util.ArrayList<>());
-      this._method.add(value);
-    }
     public boolean hasMethod() { return !_method.isEmpty(); }
 
     private perfio.protoapi.DescriptorProtos.ServiceOptions _options;
@@ -1468,12 +1468,12 @@ public final class DescriptorProtos {
     public boolean hasFeatures() { return (this.flags0 & 524288) != 0; }
 
     private java.util.List<perfio.protoapi.DescriptorProtos.UninterpretedOption> _uninterpretedOption = java.util.List.of();
+    private void _uninterpretedOption_initMut() {
+      if((java.util.List)this._uninterpretedOption == java.util.List.of()) this.setUninterpretedOptionList(new java.util.ArrayList<>());
+    }
+    public void addUninterpretedOption(perfio.protoapi.DescriptorProtos.UninterpretedOption value) { _uninterpretedOption_initMut(); this._uninterpretedOption.add(value); }
     public java.util.List<perfio.protoapi.DescriptorProtos.UninterpretedOption> getUninterpretedOptionList() { return _uninterpretedOption; }
     public void setUninterpretedOptionList(java.util.List<perfio.protoapi.DescriptorProtos.UninterpretedOption> value) { this._uninterpretedOption = value; }
-    public void addUninterpretedOption(perfio.protoapi.DescriptorProtos.UninterpretedOption value) {
-      if(this._uninterpretedOption == null || (java.util.List)this._uninterpretedOption == java.util.List.of()) this.setUninterpretedOptionList(new java.util.ArrayList<>());
-      this._uninterpretedOption.add(value);
-    }
     public boolean hasUninterpretedOption() { return !_uninterpretedOption.isEmpty(); }
 
     public static perfio.protoapi.DescriptorProtos.FileOptions parseFrom(perfio.BufferedInput in) throws java.io.IOException {
@@ -1619,12 +1619,12 @@ public final class DescriptorProtos {
     public boolean hasFeatures() { return (this.flags0 & 32) != 0; }
 
     private java.util.List<perfio.protoapi.DescriptorProtos.UninterpretedOption> _uninterpretedOption = java.util.List.of();
+    private void _uninterpretedOption_initMut() {
+      if((java.util.List)this._uninterpretedOption == java.util.List.of()) this.setUninterpretedOptionList(new java.util.ArrayList<>());
+    }
+    public void addUninterpretedOption(perfio.protoapi.DescriptorProtos.UninterpretedOption value) { _uninterpretedOption_initMut(); this._uninterpretedOption.add(value); }
     public java.util.List<perfio.protoapi.DescriptorProtos.UninterpretedOption> getUninterpretedOptionList() { return _uninterpretedOption; }
     public void setUninterpretedOptionList(java.util.List<perfio.protoapi.DescriptorProtos.UninterpretedOption> value) { this._uninterpretedOption = value; }
-    public void addUninterpretedOption(perfio.protoapi.DescriptorProtos.UninterpretedOption value) {
-      if(this._uninterpretedOption == null || (java.util.List)this._uninterpretedOption == java.util.List.of()) this.setUninterpretedOptionList(new java.util.ArrayList<>());
-      this._uninterpretedOption.add(value);
-    }
     public boolean hasUninterpretedOption() { return !_uninterpretedOption.isEmpty(); }
 
     public static perfio.protoapi.DescriptorProtos.MessageOptions parseFrom(perfio.BufferedInput in) throws java.io.IOException {
@@ -1939,21 +1939,21 @@ public final class DescriptorProtos {
     public boolean hasRetention() { return (this.flags0 & 256) != 0; }
 
     private java.util.List<perfio.protoapi.DescriptorProtos.FieldOptions.OptionTargetType> _targets = java.util.List.of();
+    private void _targets_initMut() {
+      if((java.util.List)this._targets == java.util.List.of()) this.setTargetsList(new java.util.ArrayList<>());
+    }
+    public void addTargets(perfio.protoapi.DescriptorProtos.FieldOptions.OptionTargetType value) { _targets_initMut(); this._targets.add(value); }
     public java.util.List<perfio.protoapi.DescriptorProtos.FieldOptions.OptionTargetType> getTargetsList() { return _targets; }
     public void setTargetsList(java.util.List<perfio.protoapi.DescriptorProtos.FieldOptions.OptionTargetType> value) { this._targets = value; }
-    public void addTargets(perfio.protoapi.DescriptorProtos.FieldOptions.OptionTargetType value) {
-      if(this._targets == null || (java.util.List)this._targets == java.util.List.of()) this.setTargetsList(new java.util.ArrayList<>());
-      this._targets.add(value);
-    }
     public boolean hasTargets() { return !_targets.isEmpty(); }
 
     private java.util.List<perfio.protoapi.DescriptorProtos.FieldOptions.EditionDefault> _editionDefaults = java.util.List.of();
+    private void _editionDefaults_initMut() {
+      if((java.util.List)this._editionDefaults == java.util.List.of()) this.setEditionDefaultsList(new java.util.ArrayList<>());
+    }
+    public void addEditionDefaults(perfio.protoapi.DescriptorProtos.FieldOptions.EditionDefault value) { _editionDefaults_initMut(); this._editionDefaults.add(value); }
     public java.util.List<perfio.protoapi.DescriptorProtos.FieldOptions.EditionDefault> getEditionDefaultsList() { return _editionDefaults; }
     public void setEditionDefaultsList(java.util.List<perfio.protoapi.DescriptorProtos.FieldOptions.EditionDefault> value) { this._editionDefaults = value; }
-    public void addEditionDefaults(perfio.protoapi.DescriptorProtos.FieldOptions.EditionDefault value) {
-      if(this._editionDefaults == null || (java.util.List)this._editionDefaults == java.util.List.of()) this.setEditionDefaultsList(new java.util.ArrayList<>());
-      this._editionDefaults.add(value);
-    }
     public boolean hasEditionDefaults() { return !_editionDefaults.isEmpty(); }
 
     private perfio.protoapi.DescriptorProtos.FeatureSet _features;
@@ -1973,12 +1973,12 @@ public final class DescriptorProtos {
     public boolean hasFeatureSupport() { return (this.flags0 & 1024) != 0; }
 
     private java.util.List<perfio.protoapi.DescriptorProtos.UninterpretedOption> _uninterpretedOption = java.util.List.of();
+    private void _uninterpretedOption_initMut() {
+      if((java.util.List)this._uninterpretedOption == java.util.List.of()) this.setUninterpretedOptionList(new java.util.ArrayList<>());
+    }
+    public void addUninterpretedOption(perfio.protoapi.DescriptorProtos.UninterpretedOption value) { _uninterpretedOption_initMut(); this._uninterpretedOption.add(value); }
     public java.util.List<perfio.protoapi.DescriptorProtos.UninterpretedOption> getUninterpretedOptionList() { return _uninterpretedOption; }
     public void setUninterpretedOptionList(java.util.List<perfio.protoapi.DescriptorProtos.UninterpretedOption> value) { this._uninterpretedOption = value; }
-    public void addUninterpretedOption(perfio.protoapi.DescriptorProtos.UninterpretedOption value) {
-      if(this._uninterpretedOption == null || (java.util.List)this._uninterpretedOption == java.util.List.of()) this.setUninterpretedOptionList(new java.util.ArrayList<>());
-      this._uninterpretedOption.add(value);
-    }
     public boolean hasUninterpretedOption() { return !_uninterpretedOption.isEmpty(); }
 
     public static perfio.protoapi.DescriptorProtos.FieldOptions parseFrom(perfio.BufferedInput in) throws java.io.IOException {
@@ -2076,12 +2076,12 @@ public final class DescriptorProtos {
     public boolean hasFeatures() { return (this.flags0 & 1) != 0; }
 
     private java.util.List<perfio.protoapi.DescriptorProtos.UninterpretedOption> _uninterpretedOption = java.util.List.of();
+    private void _uninterpretedOption_initMut() {
+      if((java.util.List)this._uninterpretedOption == java.util.List.of()) this.setUninterpretedOptionList(new java.util.ArrayList<>());
+    }
+    public void addUninterpretedOption(perfio.protoapi.DescriptorProtos.UninterpretedOption value) { _uninterpretedOption_initMut(); this._uninterpretedOption.add(value); }
     public java.util.List<perfio.protoapi.DescriptorProtos.UninterpretedOption> getUninterpretedOptionList() { return _uninterpretedOption; }
     public void setUninterpretedOptionList(java.util.List<perfio.protoapi.DescriptorProtos.UninterpretedOption> value) { this._uninterpretedOption = value; }
-    public void addUninterpretedOption(perfio.protoapi.DescriptorProtos.UninterpretedOption value) {
-      if(this._uninterpretedOption == null || (java.util.List)this._uninterpretedOption == java.util.List.of()) this.setUninterpretedOptionList(new java.util.ArrayList<>());
-      this._uninterpretedOption.add(value);
-    }
     public boolean hasUninterpretedOption() { return !_uninterpretedOption.isEmpty(); }
 
     public static perfio.protoapi.DescriptorProtos.OneofOptions parseFrom(perfio.BufferedInput in) throws java.io.IOException {
@@ -2152,12 +2152,12 @@ public final class DescriptorProtos {
     public boolean hasFeatures() { return (this.flags0 & 8) != 0; }
 
     private java.util.List<perfio.protoapi.DescriptorProtos.UninterpretedOption> _uninterpretedOption = java.util.List.of();
+    private void _uninterpretedOption_initMut() {
+      if((java.util.List)this._uninterpretedOption == java.util.List.of()) this.setUninterpretedOptionList(new java.util.ArrayList<>());
+    }
+    public void addUninterpretedOption(perfio.protoapi.DescriptorProtos.UninterpretedOption value) { _uninterpretedOption_initMut(); this._uninterpretedOption.add(value); }
     public java.util.List<perfio.protoapi.DescriptorProtos.UninterpretedOption> getUninterpretedOptionList() { return _uninterpretedOption; }
     public void setUninterpretedOptionList(java.util.List<perfio.protoapi.DescriptorProtos.UninterpretedOption> value) { this._uninterpretedOption = value; }
-    public void addUninterpretedOption(perfio.protoapi.DescriptorProtos.UninterpretedOption value) {
-      if(this._uninterpretedOption == null || (java.util.List)this._uninterpretedOption == java.util.List.of()) this.setUninterpretedOptionList(new java.util.ArrayList<>());
-      this._uninterpretedOption.add(value);
-    }
     public boolean hasUninterpretedOption() { return !_uninterpretedOption.isEmpty(); }
 
     public static perfio.protoapi.DescriptorProtos.EnumOptions parseFrom(perfio.BufferedInput in) throws java.io.IOException {
@@ -2243,12 +2243,12 @@ public final class DescriptorProtos {
     public boolean hasFeatureSupport() { return (this.flags0 & 8) != 0; }
 
     private java.util.List<perfio.protoapi.DescriptorProtos.UninterpretedOption> _uninterpretedOption = java.util.List.of();
+    private void _uninterpretedOption_initMut() {
+      if((java.util.List)this._uninterpretedOption == java.util.List.of()) this.setUninterpretedOptionList(new java.util.ArrayList<>());
+    }
+    public void addUninterpretedOption(perfio.protoapi.DescriptorProtos.UninterpretedOption value) { _uninterpretedOption_initMut(); this._uninterpretedOption.add(value); }
     public java.util.List<perfio.protoapi.DescriptorProtos.UninterpretedOption> getUninterpretedOptionList() { return _uninterpretedOption; }
     public void setUninterpretedOptionList(java.util.List<perfio.protoapi.DescriptorProtos.UninterpretedOption> value) { this._uninterpretedOption = value; }
-    public void addUninterpretedOption(perfio.protoapi.DescriptorProtos.UninterpretedOption value) {
-      if(this._uninterpretedOption == null || (java.util.List)this._uninterpretedOption == java.util.List.of()) this.setUninterpretedOptionList(new java.util.ArrayList<>());
-      this._uninterpretedOption.add(value);
-    }
     public boolean hasUninterpretedOption() { return !_uninterpretedOption.isEmpty(); }
 
     public static perfio.protoapi.DescriptorProtos.EnumValueOptions parseFrom(perfio.BufferedInput in) throws java.io.IOException {
@@ -2320,12 +2320,12 @@ public final class DescriptorProtos {
     public boolean hasDeprecated() { return (this.flags0 & 2) != 0; }
 
     private java.util.List<perfio.protoapi.DescriptorProtos.UninterpretedOption> _uninterpretedOption = java.util.List.of();
+    private void _uninterpretedOption_initMut() {
+      if((java.util.List)this._uninterpretedOption == java.util.List.of()) this.setUninterpretedOptionList(new java.util.ArrayList<>());
+    }
+    public void addUninterpretedOption(perfio.protoapi.DescriptorProtos.UninterpretedOption value) { _uninterpretedOption_initMut(); this._uninterpretedOption.add(value); }
     public java.util.List<perfio.protoapi.DescriptorProtos.UninterpretedOption> getUninterpretedOptionList() { return _uninterpretedOption; }
     public void setUninterpretedOptionList(java.util.List<perfio.protoapi.DescriptorProtos.UninterpretedOption> value) { this._uninterpretedOption = value; }
-    public void addUninterpretedOption(perfio.protoapi.DescriptorProtos.UninterpretedOption value) {
-      if(this._uninterpretedOption == null || (java.util.List)this._uninterpretedOption == java.util.List.of()) this.setUninterpretedOptionList(new java.util.ArrayList<>());
-      this._uninterpretedOption.add(value);
-    }
     public boolean hasUninterpretedOption() { return !_uninterpretedOption.isEmpty(); }
 
     public static perfio.protoapi.DescriptorProtos.ServiceOptions parseFrom(perfio.BufferedInput in) throws java.io.IOException {
@@ -2411,12 +2411,12 @@ public final class DescriptorProtos {
     public boolean hasFeatures() { return (this.flags0 & 4) != 0; }
 
     private java.util.List<perfio.protoapi.DescriptorProtos.UninterpretedOption> _uninterpretedOption = java.util.List.of();
+    private void _uninterpretedOption_initMut() {
+      if((java.util.List)this._uninterpretedOption == java.util.List.of()) this.setUninterpretedOptionList(new java.util.ArrayList<>());
+    }
+    public void addUninterpretedOption(perfio.protoapi.DescriptorProtos.UninterpretedOption value) { _uninterpretedOption_initMut(); this._uninterpretedOption.add(value); }
     public java.util.List<perfio.protoapi.DescriptorProtos.UninterpretedOption> getUninterpretedOptionList() { return _uninterpretedOption; }
     public void setUninterpretedOptionList(java.util.List<perfio.protoapi.DescriptorProtos.UninterpretedOption> value) { this._uninterpretedOption = value; }
-    public void addUninterpretedOption(perfio.protoapi.DescriptorProtos.UninterpretedOption value) {
-      if(this._uninterpretedOption == null || (java.util.List)this._uninterpretedOption == java.util.List.of()) this.setUninterpretedOptionList(new java.util.ArrayList<>());
-      this._uninterpretedOption.add(value);
-    }
     public boolean hasUninterpretedOption() { return !_uninterpretedOption.isEmpty(); }
 
     public static perfio.protoapi.DescriptorProtos.MethodOptions parseFrom(perfio.BufferedInput in) throws java.io.IOException {
@@ -2523,12 +2523,12 @@ public final class DescriptorProtos {
     private int flags0;
 
     private java.util.List<perfio.protoapi.DescriptorProtos.UninterpretedOption.NamePart> _name = java.util.List.of();
+    private void _name_initMut() {
+      if((java.util.List)this._name == java.util.List.of()) this.setNameList(new java.util.ArrayList<>());
+    }
+    public void addName(perfio.protoapi.DescriptorProtos.UninterpretedOption.NamePart value) { _name_initMut(); this._name.add(value); }
     public java.util.List<perfio.protoapi.DescriptorProtos.UninterpretedOption.NamePart> getNameList() { return _name; }
     public void setNameList(java.util.List<perfio.protoapi.DescriptorProtos.UninterpretedOption.NamePart> value) { this._name = value; }
-    public void addName(perfio.protoapi.DescriptorProtos.UninterpretedOption.NamePart value) {
-      if(this._name == null || (java.util.List)this._name == java.util.List.of()) this.setNameList(new java.util.ArrayList<>());
-      this._name.add(value);
-    }
     public boolean hasName() { return !_name.isEmpty(); }
 
     private java.lang.String _identifierValue = "";
@@ -2876,12 +2876,12 @@ public final class DescriptorProtos {
     private int flags0;
 
     private java.util.List<perfio.protoapi.DescriptorProtos.FeatureSetDefaults.FeatureSetEditionDefault> _defaults = java.util.List.of();
+    private void _defaults_initMut() {
+      if((java.util.List)this._defaults == java.util.List.of()) this.setDefaultsList(new java.util.ArrayList<>());
+    }
+    public void addDefaults(perfio.protoapi.DescriptorProtos.FeatureSetDefaults.FeatureSetEditionDefault value) { _defaults_initMut(); this._defaults.add(value); }
     public java.util.List<perfio.protoapi.DescriptorProtos.FeatureSetDefaults.FeatureSetEditionDefault> getDefaultsList() { return _defaults; }
     public void setDefaultsList(java.util.List<perfio.protoapi.DescriptorProtos.FeatureSetDefaults.FeatureSetEditionDefault> value) { this._defaults = value; }
-    public void addDefaults(perfio.protoapi.DescriptorProtos.FeatureSetDefaults.FeatureSetEditionDefault value) {
-      if(this._defaults == null || (java.util.List)this._defaults == java.util.List.of()) this.setDefaultsList(new java.util.ArrayList<>());
-      this._defaults.add(value);
-    }
     public boolean hasDefaults() { return !_defaults.isEmpty(); }
 
     private perfio.protoapi.DescriptorProtos.Edition _minimumEdition = perfio.protoapi.DescriptorProtos.Edition.EDITION_UNKNOWN;
@@ -2943,22 +2943,22 @@ public final class DescriptorProtos {
 
       private int flags0;
 
-      private java.util.List<java.lang.Integer> _path = java.util.List.of();
-      public java.util.List<java.lang.Integer> getPathList() { return _path; }
-      public void setPathList(java.util.List<java.lang.Integer> value) { this._path = value; }
-      public void addPath(int value) {
-        if(this._path == null || (java.util.List)this._path == java.util.List.of()) this.setPathList(new java.util.ArrayList<>());
-        this._path.add(value);
+      private perfio.proto.runtime.IntList _path = perfio.proto.runtime.IntList.EMPTY;
+      private void _path_initMut() {
+        if(this._path == perfio.proto.runtime.IntList.EMPTY) this.setPathList(new perfio.proto.runtime.IntList());
       }
+      public void addPath(int value) { _path_initMut(); this._path.add(value); }
+      public perfio.proto.runtime.IntList getPathList() { return _path; }
+      public void setPathList(perfio.proto.runtime.IntList value) { this._path = value; }
       public boolean hasPath() { return !_path.isEmpty(); }
 
-      private java.util.List<java.lang.Integer> _span = java.util.List.of();
-      public java.util.List<java.lang.Integer> getSpanList() { return _span; }
-      public void setSpanList(java.util.List<java.lang.Integer> value) { this._span = value; }
-      public void addSpan(int value) {
-        if(this._span == null || (java.util.List)this._span == java.util.List.of()) this.setSpanList(new java.util.ArrayList<>());
-        this._span.add(value);
+      private perfio.proto.runtime.IntList _span = perfio.proto.runtime.IntList.EMPTY;
+      private void _span_initMut() {
+        if(this._span == perfio.proto.runtime.IntList.EMPTY) this.setSpanList(new perfio.proto.runtime.IntList());
       }
+      public void addSpan(int value) { _span_initMut(); this._span.add(value); }
+      public perfio.proto.runtime.IntList getSpanList() { return _span; }
+      public void setSpanList(perfio.proto.runtime.IntList value) { this._span = value; }
       public boolean hasSpan() { return !_span.isEmpty(); }
 
       private java.lang.String _leadingComments = "";
@@ -2972,12 +2972,12 @@ public final class DescriptorProtos {
       public boolean hasTrailingComments() { return (this.flags0 & 2) != 0; }
 
       private java.util.List<java.lang.String> _leadingDetachedComments = java.util.List.of();
+      private void _leadingDetachedComments_initMut() {
+        if((java.util.List)this._leadingDetachedComments == java.util.List.of()) this.setLeadingDetachedCommentsList(new java.util.ArrayList<>());
+      }
+      public void addLeadingDetachedComments(java.lang.String value) { _leadingDetachedComments_initMut(); this._leadingDetachedComments.add(value); }
       public java.util.List<java.lang.String> getLeadingDetachedCommentsList() { return _leadingDetachedComments; }
       public void setLeadingDetachedCommentsList(java.util.List<java.lang.String> value) { this._leadingDetachedComments = value; }
-      public void addLeadingDetachedComments(java.lang.String value) {
-        if(this._leadingDetachedComments == null || (java.util.List)this._leadingDetachedComments == java.util.List.of()) this.setLeadingDetachedCommentsList(new java.util.ArrayList<>());
-        this._leadingDetachedComments.add(value);
-      }
       public boolean hasLeadingDetachedComments() { return !_leadingDetachedComments.isEmpty(); }
 
       public static perfio.protoapi.DescriptorProtos.SourceCodeInfo.Location parseFrom(perfio.BufferedInput in) throws java.io.IOException {
@@ -2990,9 +2990,9 @@ public final class DescriptorProtos {
           int tag = (int)perfio.proto.runtime.Runtime.parseVarint(in);
           switch(tag) {
             case 8 -> base.addPath(perfio.proto.runtime.Runtime.parseInt32(in));
-            case 10 -> { var in2 = in.delimitedView(perfio.proto.runtime.Runtime.parseLen(in)); while(in2.hasMore()) base.addPath(perfio.proto.runtime.Runtime.parseInt32(in2));; in2.close(); }
+            case 10 -> { var in2 = in.delimitedView(perfio.proto.runtime.Runtime.parseLen(in)); base._path_initMut(); while(in2.hasMore()) base._path.add(perfio.proto.runtime.Runtime.parseInt32(in2)); in2.close(); }
             case 16 -> base.addSpan(perfio.proto.runtime.Runtime.parseInt32(in));
-            case 18 -> { var in2 = in.delimitedView(perfio.proto.runtime.Runtime.parseLen(in)); while(in2.hasMore()) base.addSpan(perfio.proto.runtime.Runtime.parseInt32(in2));; in2.close(); }
+            case 18 -> { var in2 = in.delimitedView(perfio.proto.runtime.Runtime.parseLen(in)); base._span_initMut(); while(in2.hasMore()) base._span.add(perfio.proto.runtime.Runtime.parseInt32(in2)); in2.close(); }
             case 26 -> base.setLeadingComments(perfio.proto.runtime.Runtime.parseString(in));
             case 34 -> base.setTrailingComments(perfio.proto.runtime.Runtime.parseString(in));
             case 50 -> base.addLeadingDetachedComments(perfio.proto.runtime.Runtime.parseString(in));
@@ -3010,22 +3010,8 @@ public final class DescriptorProtos {
       }
 
       public void writeTo(perfio.BufferedOutput out) throws java.io.IOException {
-        if(this.hasPath()) {
-          var it = this._path.iterator();
-          out.int8((byte)10);
-          var out2 = out.defer();
-          while(it.hasNext()) { var v = it.next(); perfio.proto.runtime.Runtime.writeInt32(out2, v); }
-          perfio.proto.runtime.Runtime.writeVarint(out, out2.totalBytesWritten());
-          out2.close();
-        }
-        if(this.hasSpan()) {
-          var it = this._span.iterator();
-          out.int8((byte)18);
-          var out2 = out.defer();
-          while(it.hasNext()) { var v = it.next(); perfio.proto.runtime.Runtime.writeInt32(out2, v); }
-          perfio.proto.runtime.Runtime.writeVarint(out, out2.totalBytesWritten());
-          out2.close();
-        }
+        if(this.hasPath()) { out.int8((byte)10); perfio.proto.runtime.Runtime.writePackedInt32(out, this._path); }
+        if(this.hasSpan()) { out.int8((byte)18); perfio.proto.runtime.Runtime.writePackedInt32(out, this._span); }
         if(this.hasLeadingComments()) { out.int8((byte)26); perfio.proto.runtime.Runtime.writeString(out, this._leadingComments); }
         if(this.hasTrailingComments()) { out.int8((byte)34); perfio.proto.runtime.Runtime.writeString(out, this._trailingComments); }
         if(this.hasLeadingDetachedComments()) { var it = this._leadingDetachedComments.iterator(); while(it.hasNext()) { var v = it.next(); out.int8((byte)50); perfio.proto.runtime.Runtime.writeString(out, v); }}
@@ -3046,12 +3032,12 @@ public final class DescriptorProtos {
     }
 
     private java.util.List<perfio.protoapi.DescriptorProtos.SourceCodeInfo.Location> _location = java.util.List.of();
+    private void _location_initMut() {
+      if((java.util.List)this._location == java.util.List.of()) this.setLocationList(new java.util.ArrayList<>());
+    }
+    public void addLocation(perfio.protoapi.DescriptorProtos.SourceCodeInfo.Location value) { _location_initMut(); this._location.add(value); }
     public java.util.List<perfio.protoapi.DescriptorProtos.SourceCodeInfo.Location> getLocationList() { return _location; }
     public void setLocationList(java.util.List<perfio.protoapi.DescriptorProtos.SourceCodeInfo.Location> value) { this._location = value; }
-    public void addLocation(perfio.protoapi.DescriptorProtos.SourceCodeInfo.Location value) {
-      if(this._location == null || (java.util.List)this._location == java.util.List.of()) this.setLocationList(new java.util.ArrayList<>());
-      this._location.add(value);
-    }
     public boolean hasLocation() { return !_location.isEmpty(); }
 
     public static perfio.protoapi.DescriptorProtos.SourceCodeInfo parseFrom(perfio.BufferedInput in) throws java.io.IOException {
@@ -3112,13 +3098,13 @@ public final class DescriptorProtos {
 
       private int flags0;
 
-      private java.util.List<java.lang.Integer> _path = java.util.List.of();
-      public java.util.List<java.lang.Integer> getPathList() { return _path; }
-      public void setPathList(java.util.List<java.lang.Integer> value) { this._path = value; }
-      public void addPath(int value) {
-        if(this._path == null || (java.util.List)this._path == java.util.List.of()) this.setPathList(new java.util.ArrayList<>());
-        this._path.add(value);
+      private perfio.proto.runtime.IntList _path = perfio.proto.runtime.IntList.EMPTY;
+      private void _path_initMut() {
+        if(this._path == perfio.proto.runtime.IntList.EMPTY) this.setPathList(new perfio.proto.runtime.IntList());
       }
+      public void addPath(int value) { _path_initMut(); this._path.add(value); }
+      public perfio.proto.runtime.IntList getPathList() { return _path; }
+      public void setPathList(perfio.proto.runtime.IntList value) { this._path = value; }
       public boolean hasPath() { return !_path.isEmpty(); }
 
       private java.lang.String _sourceFile = "";
@@ -3151,7 +3137,7 @@ public final class DescriptorProtos {
           int tag = (int)perfio.proto.runtime.Runtime.parseVarint(in);
           switch(tag) {
             case 8 -> base.addPath(perfio.proto.runtime.Runtime.parseInt32(in));
-            case 10 -> { var in2 = in.delimitedView(perfio.proto.runtime.Runtime.parseLen(in)); while(in2.hasMore()) base.addPath(perfio.proto.runtime.Runtime.parseInt32(in2));; in2.close(); }
+            case 10 -> { var in2 = in.delimitedView(perfio.proto.runtime.Runtime.parseLen(in)); base._path_initMut(); while(in2.hasMore()) base._path.add(perfio.proto.runtime.Runtime.parseInt32(in2)); in2.close(); }
             case 18 -> base.setSourceFile(perfio.proto.runtime.Runtime.parseString(in));
             case 24 -> base.setBegin(perfio.proto.runtime.Runtime.parseInt32(in));
             case 26 -> { var in2 = in.delimitedView(perfio.proto.runtime.Runtime.parseLen(in)); while(in2.hasMore()) base.setBegin(perfio.proto.runtime.Runtime.parseInt32(in2));; in2.close(); }
@@ -3172,14 +3158,7 @@ public final class DescriptorProtos {
       }
 
       public void writeTo(perfio.BufferedOutput out) throws java.io.IOException {
-        if(this.hasPath()) {
-          var it = this._path.iterator();
-          out.int8((byte)10);
-          var out2 = out.defer();
-          while(it.hasNext()) { var v = it.next(); perfio.proto.runtime.Runtime.writeInt32(out2, v); }
-          perfio.proto.runtime.Runtime.writeVarint(out, out2.totalBytesWritten());
-          out2.close();
-        }
+        if(this.hasPath()) { out.int8((byte)10); perfio.proto.runtime.Runtime.writePackedInt32(out, this._path); }
         if(this.hasSourceFile()) { out.int8((byte)18); perfio.proto.runtime.Runtime.writeString(out, this._sourceFile); }
         if(this.hasBegin()) { out.int8((byte)24); perfio.proto.runtime.Runtime.writeInt32(out, this._begin); }
         if(this.hasEnd()) { out.int8((byte)32); perfio.proto.runtime.Runtime.writeInt32(out, this._end); }
@@ -3201,12 +3180,12 @@ public final class DescriptorProtos {
     }
 
     private java.util.List<perfio.protoapi.DescriptorProtos.GeneratedCodeInfo.Annotation> _annotation = java.util.List.of();
+    private void _annotation_initMut() {
+      if((java.util.List)this._annotation == java.util.List.of()) this.setAnnotationList(new java.util.ArrayList<>());
+    }
+    public void addAnnotation(perfio.protoapi.DescriptorProtos.GeneratedCodeInfo.Annotation value) { _annotation_initMut(); this._annotation.add(value); }
     public java.util.List<perfio.protoapi.DescriptorProtos.GeneratedCodeInfo.Annotation> getAnnotationList() { return _annotation; }
     public void setAnnotationList(java.util.List<perfio.protoapi.DescriptorProtos.GeneratedCodeInfo.Annotation> value) { this._annotation = value; }
-    public void addAnnotation(perfio.protoapi.DescriptorProtos.GeneratedCodeInfo.Annotation value) {
-      if(this._annotation == null || (java.util.List)this._annotation == java.util.List.of()) this.setAnnotationList(new java.util.ArrayList<>());
-      this._annotation.add(value);
-    }
     public boolean hasAnnotation() { return !_annotation.isEmpty(); }
 
     public static perfio.protoapi.DescriptorProtos.GeneratedCodeInfo parseFrom(perfio.BufferedInput in) throws java.io.IOException {

@@ -84,12 +84,12 @@ public final class PluginProtos {
     private int flags0;
 
     private java.util.List<java.lang.String> _fileToGenerate = java.util.List.of();
+    private void _fileToGenerate_initMut() {
+      if((java.util.List)this._fileToGenerate == java.util.List.of()) this.setFileToGenerateList(new java.util.ArrayList<>());
+    }
+    public void addFileToGenerate(java.lang.String value) { _fileToGenerate_initMut(); this._fileToGenerate.add(value); }
     public java.util.List<java.lang.String> getFileToGenerateList() { return _fileToGenerate; }
     public void setFileToGenerateList(java.util.List<java.lang.String> value) { this._fileToGenerate = value; }
-    public void addFileToGenerate(java.lang.String value) {
-      if(this._fileToGenerate == null || (java.util.List)this._fileToGenerate == java.util.List.of()) this.setFileToGenerateList(new java.util.ArrayList<>());
-      this._fileToGenerate.add(value);
-    }
     public boolean hasFileToGenerate() { return !_fileToGenerate.isEmpty(); }
 
     private java.lang.String _parameter = "";
@@ -98,21 +98,21 @@ public final class PluginProtos {
     public boolean hasParameter() { return (this.flags0 & 1) != 0; }
 
     private java.util.List<perfio.protoapi.DescriptorProtos.FileDescriptorProto> _protoFile = java.util.List.of();
+    private void _protoFile_initMut() {
+      if((java.util.List)this._protoFile == java.util.List.of()) this.setProtoFileList(new java.util.ArrayList<>());
+    }
+    public void addProtoFile(perfio.protoapi.DescriptorProtos.FileDescriptorProto value) { _protoFile_initMut(); this._protoFile.add(value); }
     public java.util.List<perfio.protoapi.DescriptorProtos.FileDescriptorProto> getProtoFileList() { return _protoFile; }
     public void setProtoFileList(java.util.List<perfio.protoapi.DescriptorProtos.FileDescriptorProto> value) { this._protoFile = value; }
-    public void addProtoFile(perfio.protoapi.DescriptorProtos.FileDescriptorProto value) {
-      if(this._protoFile == null || (java.util.List)this._protoFile == java.util.List.of()) this.setProtoFileList(new java.util.ArrayList<>());
-      this._protoFile.add(value);
-    }
     public boolean hasProtoFile() { return !_protoFile.isEmpty(); }
 
     private java.util.List<perfio.protoapi.DescriptorProtos.FileDescriptorProto> _sourceFileDescriptors = java.util.List.of();
+    private void _sourceFileDescriptors_initMut() {
+      if((java.util.List)this._sourceFileDescriptors == java.util.List.of()) this.setSourceFileDescriptorsList(new java.util.ArrayList<>());
+    }
+    public void addSourceFileDescriptors(perfio.protoapi.DescriptorProtos.FileDescriptorProto value) { _sourceFileDescriptors_initMut(); this._sourceFileDescriptors.add(value); }
     public java.util.List<perfio.protoapi.DescriptorProtos.FileDescriptorProto> getSourceFileDescriptorsList() { return _sourceFileDescriptors; }
     public void setSourceFileDescriptorsList(java.util.List<perfio.protoapi.DescriptorProtos.FileDescriptorProto> value) { this._sourceFileDescriptors = value; }
-    public void addSourceFileDescriptors(perfio.protoapi.DescriptorProtos.FileDescriptorProto value) {
-      if(this._sourceFileDescriptors == null || (java.util.List)this._sourceFileDescriptors == java.util.List.of()) this.setSourceFileDescriptorsList(new java.util.ArrayList<>());
-      this._sourceFileDescriptors.add(value);
-    }
     public boolean hasSourceFileDescriptors() { return !_sourceFileDescriptors.isEmpty(); }
 
     private perfio.protoapi.PluginProtos.Version _compilerVersion;
@@ -286,12 +286,12 @@ public final class PluginProtos {
     public boolean hasMaximumEdition() { return (this.flags0 & 8) != 0; }
 
     private java.util.List<perfio.protoapi.PluginProtos.CodeGeneratorResponse.File> _file = java.util.List.of();
+    private void _file_initMut() {
+      if((java.util.List)this._file == java.util.List.of()) this.setFileList(new java.util.ArrayList<>());
+    }
+    public void addFile(perfio.protoapi.PluginProtos.CodeGeneratorResponse.File value) { _file_initMut(); this._file.add(value); }
     public java.util.List<perfio.protoapi.PluginProtos.CodeGeneratorResponse.File> getFileList() { return _file; }
     public void setFileList(java.util.List<perfio.protoapi.PluginProtos.CodeGeneratorResponse.File> value) { this._file = value; }
-    public void addFile(perfio.protoapi.PluginProtos.CodeGeneratorResponse.File value) {
-      if(this._file == null || (java.util.List)this._file == java.util.List.of()) this.setFileList(new java.util.ArrayList<>());
-      this._file.add(value);
-    }
     public boolean hasFile() { return !_file.isEmpty(); }
 
     public static perfio.protoapi.PluginProtos.CodeGeneratorResponse parseFrom(perfio.BufferedInput in) throws java.io.IOException {

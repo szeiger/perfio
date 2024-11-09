@@ -4,6 +4,7 @@ import perfio.BufferedInput;
 import perfio.BufferedOutput;
 
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 
 public class Runtime {
   public static final int VARINT = 0; // int32, int64, uint32, uint64, sint32, sint64, bool, enum
@@ -43,10 +44,10 @@ public class Runtime {
 
   public static void writeVarint(BufferedOutput out, long v) throws IOException {
     while(true) {
-      byte b = (byte)(v & 0x7FL);
+      long b = v;
       v >>>= 7;
       if(v == 0) {
-        out.int8(b);
+        out.int8((byte)b);
         return;
       }
       out.int8((byte)(b | 0x80));
@@ -103,16 +104,30 @@ public class Runtime {
   public static void writeSInt32(BufferedOutput out, int i) throws IOException { writeVarint(out, sint32ToVarint(i)); }
   public static void writeSInt64(BufferedOutput out, long l) throws IOException { writeVarint(out, sint64ToVarint(l)); }
   public static void writeBytes(BufferedOutput out, byte[] bytes) throws IOException {
-    var b = out.defer();
-    b.write(bytes);
-    writeLen(out, b.totalBytesWritten());
-    b.close();
+    writeLen(out, bytes.length);
+    out.write(bytes);
   }
-  public static void writeString(BufferedOutput out, String s) throws IOException {
-    var b = out.defer();
-    b.string(s);
-    writeLen(out, b.totalBytesWritten());
-    b.close();
-  }
+  public static void writeString(BufferedOutput out, String s) throws IOException { writeBytes(out, s.getBytes(StandardCharsets.UTF_8)); }
   public static void writeLen(BufferedOutput out, long l) throws IOException { writeVarint(out, l); }
+
+  public static void writePackedInt32(BufferedOutput out, IntList l) throws IOException {
+    int lenMin = varintSize(l.len), lenMax = varintSize(l.len*10);
+    if(lenMin == lenMax) {
+      var b = out.reserve(lenMin);
+      var l0 = out.totalBytesWritten();
+      for(int i=0; i<l.len; i++) writeInt32(out, l.data[i]);
+      var l1 = out.totalBytesWritten();
+      writeLen(b, l1-l0);
+      b.close();
+    } else {
+      var b = out.defer();
+      for(int i=0; i<l.len; i++) writeInt32(b, l.data[i]);
+      writeLen(out, b.totalBytesWritten());
+      b.close();
+    }
+  }
+
+  private static int varintSize(long v) {
+    return ((Long.SIZE * 9 + (1 << 6)) - (Long.numberOfLeadingZeros(v) * 9)) >>> 6;
+  }
 }

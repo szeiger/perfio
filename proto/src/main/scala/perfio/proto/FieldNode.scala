@@ -3,7 +3,7 @@ package perfio.proto
 import perfio.protoapi.DescriptorProtos.FieldDescriptorProto
 import perfio.protoapi.DescriptorProtos.FieldDescriptorProto.{Label, Type}
 import perfio.TextOutput
-import perfio.proto.runtime.Runtime
+import perfio.proto.runtime.{IntList, Runtime}
 
 import java.io.PrintStream
 
@@ -114,13 +114,25 @@ class FieldNode(val desc: FieldDescriptorProto, val parent: MessageNode) extends
   }
 
   private def emitRepeated(to: TextOutput, prefix: String): Unit = {
-    to.println(s"${prefix}private java.util.List<${tpe.javaBoxedType}> $javaFieldName = java.util.List.of();")
-    to.println(s"${prefix}public java.util.List<${tpe.javaBoxedType}> $javaGetter() { return $javaFieldName; }")
-    to.println(s"${prefix}public void $javaSetter(java.util.List<${tpe.javaBoxedType}> value) { this.$javaFieldName = value; }")
-    to.println(s"${prefix}public void $javaAdder(${tpe.javaType} value) {")
-    to.println(s"${prefix}  if(this.$javaFieldName == null || (java.util.List)this.$javaFieldName == java.util.List.of()) this.$javaSetter(new java.util.ArrayList<>());")
-    to.println(s"${prefix}  this.$javaFieldName.add(value);")
-    to.println(s"${prefix}}")
+    val lt: String = tpe.javaType match {
+      case "int" =>
+        val lt = classOf[IntList].getName
+        to.println(s"${prefix}private $lt $javaFieldName = $lt.EMPTY;")
+        to.println(s"${prefix}private void ${javaFieldName}_initMut() {")
+        to.println(s"${prefix}  if(this.$javaFieldName == $lt.EMPTY) this.$javaSetter(new $lt());")
+        to.println(s"${prefix}}")
+        lt
+      case _ =>
+        val lt = s"java.util.List<${tpe.javaBoxedType}>"
+        to.println(s"${prefix}private $lt $javaFieldName = java.util.List.of();")
+        to.println(s"${prefix}private void ${javaFieldName}_initMut() {")
+        to.println(s"${prefix}  if((java.util.List)this.$javaFieldName == java.util.List.of()) this.$javaSetter(new java.util.ArrayList<>());")
+        to.println(s"${prefix}}")
+        lt
+    }
+    to.println(s"${prefix}public void $javaAdder(${tpe.javaType} value) { ${javaFieldName}_initMut(); this.$javaFieldName.add(value); }")
+    to.println(s"${prefix}public $lt $javaGetter() { return $javaFieldName; }")
+    to.println(s"${prefix}public void $javaSetter($lt value) { this.$javaFieldName = value; }")
     to.println(s"${prefix}public boolean $javaHazzer() { return !${javaFieldName}.isEmpty(); }")
   }
 }

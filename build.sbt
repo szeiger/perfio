@@ -89,7 +89,7 @@ lazy val proto = (project in file("proto"))
       val cp = (Compile / fullClasspathAsJars).value
       val cachedCompile = FileFunction.cached(streams.value.cacheDirectory / "proto") { (in: Set[File]) =>
         val pin = in.intersect(srcs)
-        val outs = runProtoc(cp, pin.map(_.getPath), out.toPath, Seq("java", "perfio"), Some("com.example.perfio"), Some(srcDir.getPath)).toSet
+        val outs = runProtoc(cp, pin.map(_.getPath), out.toPath, Seq("java", "perfio"), Some("com.example.perfio"), Some(srcDir.getPath), true).toSet
         println("Generated "+outs.mkString(", "))
         outs
       }
@@ -117,10 +117,10 @@ bootstrapProto := {
     s"$PROTOBUF_HOME/include/google/protobuf/descriptor.proto",
   )
   val target = Path.of("proto/src/main/java")
-  runProtoc(cp, srcs, target, Seq("perfio"), Some("perfio.protoapi"))
+  runProtoc(cp, srcs, target, Seq("perfio"), Some("perfio.protoapi"), None, false)
 }
 
-def runProtoc(cp: Classpath, srcs: Iterable[String], target: Path, modes: Seq[String], perfioPackage: Option[String] = None, protoPath: Option[String] = None): Seq[File] = {
+def runProtoc(cp: Classpath, srcs: Iterable[String], target: Path, modes: Seq[String], perfioPackage: Option[String], protoPath: Option[String], isTest: Boolean): Seq[File] = {
   val gen = new File("proto/protoc-gen-perfio").getAbsolutePath
   val protoc = s"$PROTOBUF_HOME/bin/protoc"
   if(target.toFile.exists()) IO.delete(target.toFile.listFiles())
@@ -131,6 +131,7 @@ def runProtoc(cp: Classpath, srcs: Iterable[String], target: Path, modes: Seq[St
       val pb = new ProcessBuilder(Seq(protoc, s"--plugin=protoc-gen-perfio=$gen", s"--${mode}_out=$temp") ++ protoPath.map(s => s"--proto_path=$s") ++ srcs: _*).inheritIO()
       pb.environment().put("PERFIO_CLASSPATH", cp.iterator.map(_.data).mkString(sys.props.getOrElse("path.separator", ":")))
       perfioPackage.foreach { p => pb.environment().put("PERFIO_PACKAGE", p) }
+      if(isTest) pb.environment().put("PERFIO_TEST", "true")
       val ret = pb.start().waitFor()
       if(ret != 0) throw new RuntimeException(s"protoc failed with exit code $ret")
     }

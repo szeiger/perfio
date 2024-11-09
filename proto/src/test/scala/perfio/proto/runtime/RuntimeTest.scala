@@ -46,6 +46,9 @@ class RuntimeTest {
 
   @Test
   def testSimple(): Unit = {
+    //println("***** "+toBytes(GSimple.Nested.newBuilder().setB(Int.MinValue).build()).mkString(", "))
+
+
     val gs = GSimple.SimpleMessage.newBuilder()
       .setI32(100).setI64(200).setE(GSimple.SimpleMessage.E.V3).addInts(10).addInts(20).addInts(30)
       .setNested(GSimple.Nested.newBuilder().setA(Int.MaxValue).setB(Int.MinValue))
@@ -58,7 +61,7 @@ class RuntimeTest {
     val ps = PSimple.SimpleMessage.parseFrom(in)
     assertEquals(100, ps.getI32)
     assertEquals(200, ps.getI64)
-    assertEquals(Seq(10, 20, 30), ps.getIntsList.asScala)
+    assertEquals(Seq(10, 20, 30), ps.getIntsList.copyToArray().toSeq)
     assertEquals(PSimple.SimpleMessage.E.V3, ps.getE)
     val n = ps.getNested
     assertEquals(Int.MaxValue, n.getA)

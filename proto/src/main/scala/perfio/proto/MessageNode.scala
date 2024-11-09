@@ -80,8 +80,12 @@ class MessageNode(val desc: DescriptorProto, val parent: ParentNode) extends Par
     to.println(s"${prefix}    switch(tag) {")
     fields.foreach { f =>
       to.println(s"${prefix}      case ${f.tag} -> ${f.javaParseExpr("base", p, "(in)")}")
-      if(f.tpe.canBePacked)
-        to.println(s"${prefix}      case ${f.packedTag} -> { var in2 = in.delimitedView($p.parseLen(in)); while(in2.hasMore()) ${f.javaParseExpr("base", p, "(in2)")}; in2.close(); }")
+      if(f.tpe.canBePacked) {
+        if(f.tpe.javaType == "int" && f.packed)
+          to.println(s"${prefix}      case ${f.packedTag} -> { var in2 = in.delimitedView($p.parseLen(in)); base.${f.javaFieldName}_initMut(); while(in2.hasMore()) base.${f.javaFieldName}.add($p.parseInt32(in2)); in2.close(); }")
+        else
+          to.println(s"${prefix}      case ${f.packedTag} -> { var in2 = in.delimitedView($p.parseLen(in)); while(in2.hasMore()) ${f.javaParseExpr("base", p, "(in2)")}; in2.close(); }")
+      }
     }
     to.println(s"${prefix}      default -> parseOther(in, tag);")
     to.println(s"${prefix}    }")
@@ -104,20 +108,21 @@ class MessageNode(val desc: DescriptorProto, val parent: ParentNode) extends Par
     val p = classOf[Runtime].getName
     to.println(s"${prefix}public void writeTo(${classOf[BufferedOutput].getName} out) throws java.io.IOException {")
     for(f <- fields) {
-      val tag = (f.number << 3) | f.tpe.wireType
-      if(f.packed) {
+      if(f.packed && f.tpe.javaType == "int") {
+        to.println(s"${prefix}  if(this.${f.javaHazzer}()) { ${writeVarint(f.packedTag, "out")}; $p.writePackedInt32(out, this.${f.javaFieldName}); }")
+      } else if(f.packed) {
         to.println(s"${prefix}  if(this.${f.javaHazzer}()) {")
         to.println(s"${prefix}    var it = this.${f.javaFieldName}.iterator();")
-        to.println(s"${prefix}    ${writeVarint(f.number << 3 | Runtime.LEN, "out")};")
+        to.println(s"${prefix}    ${writeVarint(f.packedTag, "out")};")
         to.println(s"${prefix}    var out2 = out.defer();")
         to.println(s"${prefix}    while(it.hasNext()) { var v = it.next(); ${f.javaWriteStatements(p, "out2", "v")} }")
         to.println(s"${prefix}    $p.writeVarint(out, out2.totalBytesWritten());")
         to.println(s"${prefix}    out2.close();")
         to.println(s"${prefix}  }")
       } else if(f.cardinality == Cardinality.Repeated) {
-        to.println(s"${prefix}  if(this.${f.javaHazzer}()) { var it = this.${f.javaFieldName}.iterator(); while(it.hasNext()) { var v = it.next(); ${writeVarint(tag, "out")}; ${f.javaWriteStatements(p, "out", "v")} }}")
+        to.println(s"${prefix}  if(this.${f.javaHazzer}()) { var it = this.${f.javaFieldName}.iterator(); while(it.hasNext()) { var v = it.next(); ${writeVarint(f.tag, "out")}; ${f.javaWriteStatements(p, "out", "v")} }}")
       } else {
-        to.println(s"${prefix}  if(this.${f.javaHazzer}()) { ${writeVarint(tag, "out")}; ${f.javaWriteStatements(p, "out", s"this.${f.javaFieldName}")} }")
+        to.println(s"${prefix}  if(this.${f.javaHazzer}()) { ${writeVarint(f.tag, "out")}; ${f.javaWriteStatements(p, "out", s"this.${f.javaFieldName}")} }")
       }
     }
     to.println(s"${prefix}}")
