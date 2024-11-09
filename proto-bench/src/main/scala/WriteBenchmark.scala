@@ -7,7 +7,7 @@ import java.util.concurrent.TimeUnit
 import com.google.protobuf.compiler.{PluginProtos => GPluginProtos}
 import perfio.protoapi.{PluginProtos => PPluginProtos}
 
-import java.io.{BufferedInputStream, ByteArrayOutputStream, FileInputStream}
+import java.io.{BufferedInputStream, BufferedOutputStream, ByteArrayOutputStream, FileInputStream, FileOutputStream}
 import java.nio.ByteOrder
 import java.nio.file.{Files, Path}
 
@@ -43,9 +43,23 @@ class WriteBenchmark {
 
   @Benchmark
   def array_perfio(bh: Blackhole): Unit = {
-    val bo = BufferedOutput.growing(32)
+    val bo = BufferedOutput.growing(4096)
     pReq.writeTo(bo)
     bo.close()
     bh.consume(bo.length())
+  }
+
+  @Benchmark
+  def file_google(bh: Blackhole): Unit = {
+    val out = new BufferedOutputStream(new FileOutputStream("/dev/null"))
+    gReq.writeTo(out)
+    out.close()
+  }
+
+  @Benchmark
+  def file_perfio(bh: Blackhole): Unit = {
+    val bo = BufferedOutput.ofFile(Path.of("/dev/null"), 8192)
+    pReq.writeTo(bo)
+    bo.close()
   }
 }

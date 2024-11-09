@@ -484,7 +484,7 @@ public abstract sealed class BufferedOutput implements Closeable, Flushable perm
     var btot = b.totalBytesWritten();
     var rem = totalLimit - btot;
     if(btot > rem) throw new EOFException();
-    if(fixed) appendNestedToFixed(b);
+    if(fixed || b.totalBytesWritten() <= available()) mergeNested(b);
     else {
       var tmpbuf = buf;
       var tmpstart = start;
@@ -508,10 +508,21 @@ public abstract sealed class BufferedOutput implements Closeable, Flushable perm
       var bp = b.prev;
       bp.insertAllBefore(this);
       if(bp.prev == this) flushBlocks(false);
+      //System.out.println("root.numBlocks: "+root.numBlocks());
     }
   }
 
-  private void appendNestedToFixed(BufferedOutput r) throws IOException {
+  private int numBlocks() {
+    var b = next;
+    int i = 1;
+    while(b != this) {
+      i++;
+      b = b.next;
+    }
+    return i;
+  }
+
+  private void mergeNested(BufferedOutput r) throws IOException {
     for(var b = r.next; true;) {
       var blen = b.pos - b.start;
       if(blen > 0) {
