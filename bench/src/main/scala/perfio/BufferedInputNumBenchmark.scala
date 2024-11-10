@@ -1,9 +1,9 @@
 package perfio
 
-import org.openjdk.jmh.annotations._
-import org.openjdk.jmh.infra._
+import org.openjdk.jmh.annotations.*
+import org.openjdk.jmh.infra.*
 
-import java.io._
+import java.io.*
 import java.nio.{ByteBuffer, ByteOrder}
 import java.util.concurrent.TimeUnit
 
@@ -16,8 +16,8 @@ import java.util.concurrent.TimeUnit
 @State(Scope.Benchmark)
 class BufferedInputNumBenchmark extends BenchUtil {
 
-  private[this] var testData: Array[Byte] = _
-  private[this] var diskTestDataMedium: File = _
+  private var testData: Array[Byte] = null
+  private var diskTestDataMedium: File = null
 
   val count = 20000000
 
@@ -36,7 +36,7 @@ class BufferedInputNumBenchmark extends BenchUtil {
     diskTestDataMedium = writeFileIfMissing("medium", testData)
   }
 
-  private[this] def run(bh: Blackhole, bin: BufferedInput): Unit = {
+  private def run(bh: Blackhole, bin: BufferedInput): Unit = {
     var i = 0
     while(i < count) {
       bh.consume(bin.int8())

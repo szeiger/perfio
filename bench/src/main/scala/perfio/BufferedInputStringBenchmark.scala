@@ -1,9 +1,9 @@
 package perfio
 
-import org.openjdk.jmh.annotations._
-import org.openjdk.jmh.infra._
+import org.openjdk.jmh.annotations.*
+import org.openjdk.jmh.infra.*
 
-import java.io._
+import java.io.*
 import java.util.concurrent.TimeUnit
 
 @BenchmarkMode(Array(Mode.AverageTime))
@@ -15,7 +15,7 @@ import java.util.concurrent.TimeUnit
 @State(Scope.Benchmark)
 class BufferedInputStringBenchmark {
 
-  private[this] var testData: Array[Byte] = _
+  private var testData: Array[Byte] = null
   val count = 10000000
 
   @Setup(Level.Trial)

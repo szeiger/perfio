@@ -1,6 +1,6 @@
 package perfio
 
-import org.junit.Assert._
+import org.junit.Assert.*
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.junit.runners.JUnit4
@@ -8,10 +8,10 @@ import org.junit.runners.JUnit4
 import java.io.ByteArrayInputStream
 import java.nio.charset.StandardCharsets
 import scala.collection.mutable
-import scala.jdk.CollectionConverters._
+import scala.jdk.CollectionConverters.*
 
 @RunWith(classOf[JUnit4])
-abstract class LineTokenizerTest {
+abstract class LineTokenizerTest:
 
   @Test def smallAligned1: Unit = check(4096,
     """aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
@@ -58,7 +58,7 @@ abstract class LineTokenizerTest {
       |a""".stripMargin, split = true
   )
 
-  def check(ib: Int, s: String, maxRead: Int = Int.MaxValue, split: Boolean = false): Unit = {
+  def check(ib: Int, s: String, maxRead: Int = Int.MaxValue, split: Boolean = false): Unit =
     val exp = s.lines().toList.asScala
     val expL = exp.map(_.length)
     val bytes = s.getBytes(StandardCharsets.UTF_8)
@@ -75,45 +75,39 @@ abstract class LineTokenizerTest {
          |""".stripMargin, expL, res)
     assertNull(t.readLine())
     t.close()
-  }
 
-  def buildSplit(in: BufferedInput): (mutable.ArrayBuffer[String], LineTokenizer) = {
+  def buildSplit(in: BufferedInput): (mutable.ArrayBuffer[String], LineTokenizer) =
     var i = 0
     var t = createTokenizer(in)
     val buf = mutable.ArrayBuffer.empty[String]
-    while(t.readLine() match {
+    while t.readLine() match
       case null => false
       case s =>
         buf += s
         i += 1
-        if(i % 2 == 0) {
+        if(i % 2 == 0)
           t.end()
           t = createTokenizer(in)
-        }
         true
-    }) ()
+    do ()
     (buf, t)
-  }
 
-  def buildNormal(in: BufferedInput): (mutable.ArrayBuffer[String], LineTokenizer) = {
+  def buildNormal(in: BufferedInput): (mutable.ArrayBuffer[String], LineTokenizer) =
     val t = createTokenizer(in)
     val buf = mutable.ArrayBuffer.empty[String]
-    while(t.readLine() match {
+    while t.readLine() match
       case null => false
       case s => buf += s; true
-    }) ()
+    do ()
     (buf, t)
-  }
 
   def createTokenizer(in: BufferedInput): LineTokenizer
-}
 
-class VectorizedLineTokenizerTest extends LineTokenizerTest {
+
+class VectorizedLineTokenizerTest extends LineTokenizerTest:
   def createTokenizer(in: BufferedInput): LineTokenizer =
     VectorizedLineTokenizer.of(in, StandardCharsets.UTF_8, '\n'.toByte, '\r'.toByte)
-}
 
-class ScalarLineTokenizerTest extends LineTokenizerTest {
+class ScalarLineTokenizerTest extends LineTokenizerTest:
   def createTokenizer(in: BufferedInput): LineTokenizer =
     ScalarLineTokenizer.of(in, StandardCharsets.UTF_8, '\n'.toByte, '\r'.toByte)
-}

@@ -1,26 +1,24 @@
 package perfio
 
-import hedgehog._
-import hedgehog.runner._
+import hedgehog.*
+import hedgehog.runner.*
 
-import java.io.{ByteArrayOutputStream, OutputStreamWriter, PrintWriter}
+import java.io.{ByteArrayOutputStream, PrintWriter}
 import java.nio.charset.{Charset, StandardCharsets}
-import scala.collection.mutable.ArrayBuilder
 
-object TextOutputSpec extends Properties {
+object TextOutputSpec extends Properties:
 
   def tests: List[Test] =
-    (for {
+    (for
       cs <- List(StandardCharsets.UTF_8, StandardCharsets.ISO_8859_1, StandardCharsets.UTF_16, StandardCharsets.US_ASCII)
       eol <- List("\n", "\r\n", "XXX")
       t <- createTests(cs, eol)
-    } yield t).sortBy(_.name)
+    yield t).sortBy(_.name)
 
-  def showEol(eol: String) = eol match {
+  def showEol(eol: String) = eol match
     case "\n" => "LF"
     case "\r\n" => "CRLF"
     case "XXX" => "XXX"
-  }
 
   def createTests(cs: Charset, eol: String): List[Test] = List(
     property(s"println_String_${cs}_${showEol(eol)}", printlnStringP(cs, eol)),
@@ -30,52 +28,48 @@ object TextOutputSpec extends Properties {
   )
 
   def printlnStringP(cs: Charset, eol: String): Property =
-    for {
+    for
       l1 <- Gen.string(Gen.char('a', 'c'), Range.linear(0, 100)).forAll
-    } yield {
+    yield
       check(cs, eol) { out =>
         out.println(l1)
       } { out =>
         out.print(l1)
         out.print(eol)
       }
-    }
 
   def printStringP(cs: Charset, eol: String): Property =
-    for {
+    for
       l1 <- Gen.string(Gen.char('a', 'c'), Range.linear(0, 100)).forAll
-    } yield {
+    yield
       check(cs, eol) { out =>
         out.print(l1)
       } { out =>
         out.print(l1)
       }
-    }
 
   def printlnIntP(cs: Charset, eol: String): Property =
-    for {
+    for
       l1 <- Gen.int(Range.constantFrom(0, Int.MinValue, Int.MaxValue)).forAll
-    } yield {
+    yield
       check(cs, eol) { out =>
         out.println(l1)
       } { out =>
         out.print(l1)
         out.print(eol)
       }
-    }
 
   def printIntP(cs: Charset, eol: String): Property =
-    for {
+    for
       l1 <- Gen.int(Range.constantFrom(0, Int.MinValue, Int.MaxValue)).forAll
-    } yield {
+    yield
       check(cs, eol) { out =>
         out.print(l1)
       } { out =>
         out.print(l1)
       }
-    }
 
-  def check(cs: Charset, eol: String)(f: TextOutput => Unit)(g: PrintWriter => Unit): Result = {
+  def check(cs: Charset, eol: String)(f: TextOutput => Unit)(g: PrintWriter => Unit): Result =
     val bout = BufferedOutput.growing()
     val tout = TextOutput.of(bout, cs, eol)
     f(tout)
@@ -87,5 +81,3 @@ object TextOutputSpec extends Properties {
     pw.close()
     val exp: Vector[Int] = ba.toByteArray.toVector.map(b => b & 0xFF)
     buf ==== exp
-  }
-}

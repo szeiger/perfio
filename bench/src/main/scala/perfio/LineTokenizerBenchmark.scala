@@ -1,9 +1,9 @@
 package perfio
 
-import org.openjdk.jmh.annotations._
-import org.openjdk.jmh.infra._
+import org.openjdk.jmh.annotations.*
+import org.openjdk.jmh.infra.*
 
-import java.io._
+import java.io.*
 import java.lang.foreign.MemorySegment
 import java.nio.charset.{Charset, StandardCharsets}
 import java.nio.file.Files
@@ -16,60 +16,55 @@ import java.util.concurrent.TimeUnit
 @Measurement(iterations = 10, time = 1)
 @OutputTimeUnit(TimeUnit.MILLISECONDS)
 @State(Scope.Benchmark)
-class LineTokenizerBenchmark extends BenchUtil {
+class LineTokenizerBenchmark extends BenchUtil:
   //@Param(Array("UTF-8", "Latin1", "Latin1-internal"))
   @Param(Array("Latin1"))
-  var charset: String = _
-  var cs: Charset = _
+  var charset: String = null
+  var cs: Charset = null
 
-  private[this] var testData: Array[Byte] = _
-  private[this] var diskTestDataMedium, diskTestDataLarge: File = _
-  private[this] var testDataOffHeap: MemorySegment = _
+  private var testData: Array[Byte] = null
+  private var diskTestDataMedium, diskTestDataLarge: File = null
+  private var testDataOffHeap: MemorySegment = null
 
   @Setup(Level.Trial)
-  def buildTestData(): Unit = {
-    if(charset.endsWith("-internal")) {
+  def buildTestData(): Unit =
+    if(charset.endsWith("-internal"))
       sys.props.put("perfio.disableStringInternals", "false")
       if(StringInternals.internalAccessError != null) throw StringInternals.internalAccessError
       assert(StringInternals.internalAccessEnabled)
       charset = charset.substring(0, charset.length - 9)
-    } else {
+    else
       sys.props.put("perfio.disableStringInternals", "true")
       assert(!StringInternals.internalAccessEnabled)
-    }
     cs = Charset.forName(charset)
 
     val testStrings = (for(i <- 0 until 1000) yield "x" * i).toArray
     val repetitions = 1000
     val bout = new ByteArrayOutputStream()
     val wr = new BufferedWriter(new OutputStreamWriter(bout, StandardCharsets.UTF_8))
-    for {
+    for
       i <- 1 to repetitions
       s <- testStrings
-    } {
+    do
       wr.write(s)
       wr.write('\n')
-    }
     wr.close()
     testData = bout.toByteArray
     diskTestDataMedium = writeFileIfMissing("medium", testData, 1024*1024)
     diskTestDataLarge = writeFileIfMissing("large", testData, Int.MaxValue.toLong+1)
     testDataOffHeap = toGlobal(testData)
-  }
 
-  private[this] def count(in: BufferedReader): Int = {
+  private def count(in: BufferedReader): Int =
     var count = 0
     while(in.readLine() != null) count += 1
     in.close()
     count
-  }
 
-  private[this] def count(in: LineTokenizer): Int = {
+  private def count(in: LineTokenizer): Int =
     var count = 0
     while(in.readLine() != null) count += 1
     in.close()
     count
-  }
 
   @Benchmark
   def array_BufferedReader(bh: Blackhole): Unit =
@@ -136,4 +131,3 @@ class LineTokenizerBenchmark extends BenchUtil {
   @Benchmark
   def largeFile_DirectVectorizedLineTokenizer(bh: Blackhole): Unit =
     bh.consume(count(VectorizedLineTokenizer.of(BufferedInput.ofMappedFile(diskTestDataLarge.toPath), cs)))
-}

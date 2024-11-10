@@ -1,18 +1,18 @@
 package perfio
 
-import org.junit.Assert._
+import org.junit.Assert.*
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.junit.runners.Parameterized
-import scala.jdk.CollectionConverters._
+import scala.jdk.CollectionConverters.*
 
-import java.io.{ByteArrayOutputStream, EOFException, IOException, PrintWriter}
+import java.io.{ByteArrayOutputStream, PrintWriter}
 import java.nio.charset.{Charset, StandardCharsets}
 
 @RunWith(classOf[Parameterized])
-class TextOutputTest(_name: String, cs: Charset, eol: String) extends TestUtil {
+class TextOutputTest(_name: String, cs: Charset, eol: String) extends TestUtil:
 
-  def check(cs: Charset, eol: String, msg: String)(f: TextOutput => Unit)(g: PrintWriter => Unit): Unit = {
+  def check(cs: Charset, eol: String, msg: String)(f: TextOutput => Unit)(g: PrintWriter => Unit): Unit =
     val bout = BufferedOutput.growing()
     val tout = bout.text(cs, eol)
     f(tout)
@@ -24,7 +24,6 @@ class TextOutputTest(_name: String, cs: Charset, eol: String) extends TestUtil {
     pw.close()
     val exp = ba.toByteArray
     assertEquals(s"$msg\nexpected:\n  >${new String(exp, cs)}<\ngot:\n  >${new String(buf, cs)}<\n\n", exp.toVector.map(b => b & 0xFF), buf.toVector.map(b => b & 0xFF))
-  }
 
   val strings =
     if(cs eq StandardCharsets.ISO_8859_1) Vector("abc", "def")
@@ -88,12 +87,12 @@ class TextOutputTest(_name: String, cs: Charset, eol: String) extends TestUtil {
   @Test
   def printlnDouble(): Unit =
     doubles.foreach { i => check(cs, eol, String.valueOf(i)) { out => out.println(i) } { out => out.print(i); out.print(eol) } }
-}
 
-object TextOutputTest {
+
+object TextOutputTest:
   @Parameterized.Parameters(name = "{0}")
-  def params: java.util.List[Array[Any]] = (for {
+  def params: java.util.List[Array[Any]] = (for
     cs <- Vector(StandardCharsets.ISO_8859_1, StandardCharsets.UTF_8, StandardCharsets.UTF_16, StandardCharsets.US_ASCII)
     (eol, eolName) <- Vector(("\n", "LF"), ("\r\n", "CRLF"), ("XXX", "XXX"))
-  } yield Array[Any](s"${cs}_${eolName}", cs, eol)).asJava
-}
+  yield Array[Any](s"${cs}_${eolName}", cs, eol)).asJava
+

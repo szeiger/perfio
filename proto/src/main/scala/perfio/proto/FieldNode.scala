@@ -7,7 +7,7 @@ import perfio.proto.runtime.{IntList, Runtime}
 
 import java.io.PrintStream
 
-class FieldNode(val desc: FieldDescriptorProto, val parent: MessageNode) extends Node {
+class FieldNode(val desc: FieldDescriptorProto, val parent: MessageNode) extends Node:
   def file: FileNode = parent.file
   val name: String = desc.getName
   val javaLowerName: String = Util.mkLowerJavaName(name)
@@ -18,28 +18,30 @@ class FieldNode(val desc: FieldDescriptorProto, val parent: MessageNode) extends
   def tag: Int = (number << 3) | tpe.wireType
   def packedTag: Int = (number << 3) | Runtime.LEN
   val isProto3Optional: Boolean = desc.getProto3Optional
-  val cardinality: Cardinality = desc.getLabel match {
+
+  val cardinality: Cardinality = desc.getLabel match
     case Label.LABEL_OPTIONAL =>
       if(file.syntax == Syntax.Proto3 && !(isProto3Optional || desc.getType == Type.TYPE_MESSAGE)) Cardinality.Implicit
       else Cardinality.Optional
     case Label.LABEL_REPEATED => Cardinality.Repeated
     case Label.LABEL_REQUIRED => Cardinality.Required
     case _ => Cardinality.Implicit
-  }
+
   val packed: Boolean = cardinality == Cardinality.Repeated && (desc.getOptions.getPacked || file.syntax == Syntax.Proto3) && tpe.canBePacked
   val oneOf: Option[(OneOfNode, Int)] =
-    if(desc.hasOneofIndex) {
+    if(desc.hasOneofIndex)
       val o = parent.oneOfs(desc.getOneofIndex)
       o.fields += this
-      if(isProto3Optional) {
+      if(isProto3Optional)
         o.synthetic = true
         None
-      } else Some((o, o.fields.length))
-    } else None
-  val flagIndex: Int = if(cardinality == Cardinality.Optional && oneOf.isEmpty) {
-    parent.flagCount += 1
-    parent.flagCount - 1
-  } else -1
+      else Some((o, o.fields.length))
+    else None
+  val flagIndex: Int =
+    if(cardinality == Cardinality.Optional && oneOf.isEmpty)
+      parent.flagCount += 1
+      parent.flagCount - 1
+    else -1
   val defaultValue: Option[String] = if(desc.hasDefaultValue) Some(desc.getDefaultValue) else None
   def repeated: Boolean = cardinality == Cardinality.Repeated
   val javaSetter: String = if(repeated) s"set${javaUpperName}List" else s"set$javaUpperName"
@@ -49,19 +51,17 @@ class FieldNode(val desc: FieldDescriptorProto, val parent: MessageNode) extends
 
   override def toString: String = s"field $name $number $cardinality $tpe${defaultValue.map(s => s" ('$s')").getOrElse("")}"
 
-  override def dump(out: PrintStream, prefix: String): Unit = {
+  override def dump(out: PrintStream, prefix: String): Unit =
     out.println(s"${prefix}$this")
-  }
 
-  def emit(to: TextOutput, prefix: String): Unit = {
+  def emit(to: TextOutput, prefix: String): Unit =
     if(cardinality == Cardinality.Repeated) emitRepeated(to, prefix)
     else emitNormal(to, prefix)
-  }
 
-  private def emitNormal(to: TextOutput, prefix: String): Unit = {
+  private def emitNormal(to: TextOutput, prefix: String): Unit =
     val dflt = if(tpe.javaNeedsExplicitDefault)s" = ${tpe.javaDefaultValue}" else ""
     to.println(s"${prefix}private ${tpe.javaType} $javaFieldName$dflt;")
-    tpe match {
+    tpe match
       case tpe: Tpe.MessageT =>
         to.println(s"${prefix}public ${tpe.javaType} $javaGetter() {")
         to.println(s"${prefix}  if($javaFieldName == null) $javaFieldName = new ${tpe.javaType}();")
@@ -69,8 +69,7 @@ class FieldNode(val desc: FieldDescriptorProto, val parent: MessageNode) extends
         to.println(s"${prefix}}")
       case _ =>
         to.println(s"${prefix}public ${tpe.javaType} $javaGetter() { return $javaFieldName; }")
-    }
-    oneOf match {
+    oneOf match
       case Some((o, i)) =>
         to.println(s"${prefix}public ${parent.fqJavaName} $javaSetter(${tpe.javaType} value) { this.$javaFieldName = value; this.${o.javaFieldName} = $i;")
         for(f <- o.fields if f ne this) {
@@ -87,10 +86,8 @@ class FieldNode(val desc: FieldDescriptorProto, val parent: MessageNode) extends
       case _ =>
         to.println(s"${prefix}public ${parent.fqJavaName} $javaSetter(${tpe.javaType} value) { this.$javaFieldName = value; return this; }")
         to.println(s"${prefix}public boolean $javaHazzer() { return ${tpe.javaIsSet(javaFieldName)}; }")
-    }
-  }
 
-  def javaParseExpr(receiver: String, rt: String, parseArgs: String): String = tpe match {
+  def javaParseExpr(receiver: String, rt: String, parseArgs: String): String = tpe match
     case tpe: Tpe.EnumT =>
       val m = if(cardinality == Cardinality.Repeated) javaAdder else javaSetter
       s"$receiver.$m(${tpe.javaType}.valueOf($rt.${tpe.parserMethod}$parseArgs));"
@@ -102,19 +99,17 @@ class FieldNode(val desc: FieldDescriptorProto, val parent: MessageNode) extends
     case _ =>
       val m = if(cardinality == Cardinality.Repeated) javaAdder else javaSetter
       s"$receiver.$m($rt.${tpe.parserMethod}$parseArgs);"
-  }
 
-  def javaWriteStatements(rt: String, out: String, v: String): String = tpe match {
+  def javaWriteStatements(rt: String, out: String, v: String): String = tpe match
     case tpe: Tpe.EnumT =>
       s"$rt.${tpe.writeMethod}($out, $v.number);"
     case tpe: Tpe.MessageT =>
       s"var out2 = $out.defer(); $v.writeTo(out2); $rt.${tpe.writeMethod}($out, out2.totalBytesWritten()); out2.close();"
     case _ =>
       s"$rt.${tpe.writeMethod}($out, $v);"
-  }
 
-  private def emitRepeated(to: TextOutput, prefix: String): Unit = {
-    val lt: String = tpe.javaType match {
+  private def emitRepeated(to: TextOutput, prefix: String): Unit =
+    val lt: String = tpe.javaType match
       case "int" =>
         val lt = classOf[IntList].getName
         to.println(s"${prefix}private $lt $javaFieldName = $lt.EMPTY;")
@@ -129,19 +124,11 @@ class FieldNode(val desc: FieldDescriptorProto, val parent: MessageNode) extends
         to.println(s"${prefix}  if((java.util.List)this.$javaFieldName == java.util.List.of()) this.$javaSetter(new java.util.ArrayList<>());")
         to.println(s"${prefix}}")
         lt
-    }
     to.println(s"${prefix}public void $javaAdder(${tpe.javaType} value) { ${javaFieldName}_initMut(); this.$javaFieldName.add(value); }")
     to.println(s"${prefix}public $lt $javaGetter() { return $javaFieldName; }")
     to.println(s"${prefix}public void $javaSetter($lt value) { this.$javaFieldName = value; }")
     to.println(s"${prefix}public boolean $javaHazzer() { return !${javaFieldName}.isEmpty(); }")
-  }
-}
 
 
-sealed abstract class Cardinality
-object Cardinality {
-  case object Optional extends Cardinality
-  case object Implicit extends Cardinality
-  case object Repeated extends Cardinality
-  case object Required extends Cardinality
-}
+enum Cardinality:
+  case Optional, Implicit, Repeated, Required

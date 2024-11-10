@@ -7,9 +7,9 @@ import perfio.{BufferedInput, BufferedOutput, TextOutput}
 
 import java.io.PrintStream
 import scala.collection.mutable.{ArrayBuffer, Buffer}
-import scala.jdk.CollectionConverters._
+import scala.jdk.CollectionConverters.*
 
-class MessageNode(val desc: DescriptorProto, val parent: ParentNode) extends ParentNode {
+class MessageNode(val desc: DescriptorProto, val parent: ParentNode) extends ParentNode:
   val root: RootNode = parent.root
   val file: FileNode = parent.file
   val fields = new ArrayBuffer[FieldNode]
@@ -30,34 +30,29 @@ class MessageNode(val desc: DescriptorProto, val parent: ParentNode) extends Par
 
   override def toString: String = s"message $name${if(isMapEntry) " (map entry)" else ""}"
 
-  override def dump(out: PrintStream, prefix: String): Unit = {
+  override def dump(out: PrintStream, prefix: String): Unit =
     out.println(s"${prefix}$this")
     super.dump(out, prefix)
     fields.foreach(_.dump(out, prefix + "  "))
     oneOfs.foreach(_.dump(out, prefix + "  "))
-  }
 
-  def emit(to: TextOutput, prefix: String): Unit = {
+  def emit(to: TextOutput, prefix: String): Unit =
     to.println(s"${prefix}public static final class ${javaName} {")
     enums.foreach(_.emit(to, prefix + "  "))
-    messages.foreach { m =>
+    for m <- messages do
       to.println()
       m.emit(to, prefix + "  ")
-    }
-    if(flagCount > 0) {
+    if(flagCount > 0)
       to.println()
       if(flagCount <= 32)
         to.println(s"${prefix}  private int ${flagFieldForIdx(0)};")
-      else {
+      else
         for(i <- 0 until flagCount by 64)
           to.println(s"${prefix}  private long ${flagFieldForIdx(i)};")
-      }
-    }
     oneOfs.foreach(o => if(!o.synthetic) o.emit(to, prefix+"  "))
-    fields.foreach { f =>
+    for f <- fields do
       to.println()
       f.emit(to, prefix+"  ")
-    }
     to.println()
     emitParser(to, prefix + "  ")
     to.println()
@@ -65,9 +60,8 @@ class MessageNode(val desc: DescriptorProto, val parent: ParentNode) extends Par
     to.println()
     emitEquals(to, prefix + "  ") //TODO hashCode
     to.println(s"${prefix}}")
-  }
 
-  private[this] def emitParser(to: TextOutput, prefix: String): Unit = {
+  private def emitParser(to: TextOutput, prefix: String): Unit =
     val p = classOf[Runtime].getName
     to.println(s"${prefix}public static $fqJavaName parseFrom(${classOf[BufferedInput].getName} in) throws java.io.IOException {")
     to.println(s"${prefix}  var m = new $fqJavaName();")
@@ -78,15 +72,13 @@ class MessageNode(val desc: DescriptorProto, val parent: ParentNode) extends Par
     to.println(s"${prefix}  while(in.hasMore()) {")
     to.println(s"${prefix}    int tag = (int)$p.parseVarint(in);")
     to.println(s"${prefix}    switch(tag) {")
-    fields.foreach { f =>
+    for f <- fields do
       to.println(s"${prefix}      case ${f.tag} -> ${f.javaParseExpr("base", p, "(in)")}")
-      if(f.tpe.canBePacked) {
+      if(f.tpe.canBePacked)
         if(f.tpe.javaType == "int" && f.packed)
           to.println(s"${prefix}      case ${f.packedTag} -> { var in2 = in.delimitedView($p.parseLen(in)); base.${f.javaFieldName}_initMut(); while(in2.hasMore()) base.${f.javaFieldName}.add($p.parseInt32(in2)); in2.close(); }")
         else
           to.println(s"${prefix}      case ${f.packedTag} -> { var in2 = in.delimitedView($p.parseLen(in)); while(in2.hasMore()) ${f.javaParseExpr("base", p, "(in2)")}; in2.close(); }")
-      }
-    }
     to.println(s"${prefix}      default -> parseOther(in, tag);")
     to.println(s"${prefix}    }")
     to.println(s"${prefix}  }")
@@ -101,10 +93,9 @@ class MessageNode(val desc: DescriptorProto, val parent: ParentNode) extends Par
     to.println(s"${prefix}    default -> $p.skip(in, wt);")
     to.println(s"${prefix}  }")
     to.println(s"${prefix}}")
-  }
 
   //TODO optimize oneof writing
-  private[this] def emitWriter(to: TextOutput, prefix: String): Unit = {
+  private def emitWriter(to: TextOutput, prefix: String): Unit = {
     val p = classOf[Runtime].getName
     to.println(s"${prefix}public void writeTo(${classOf[BufferedOutput].getName} out) throws java.io.IOException {")
     for(f <- fields) {
@@ -128,27 +119,24 @@ class MessageNode(val desc: DescriptorProto, val parent: ParentNode) extends Par
     to.println(s"${prefix}}")
   }
 
-  private[this] def writeVarint(v: Long, bo: String): String =
+  private def writeVarint(v: Long, bo: String): String =
     Util.encodeVarint(v).map { i => s"$bo.int8((byte)$i)" }.mkString("; ")
 
-  private[this] def emitEquals(to: TextOutput, prefix: String): Unit = {
+  private def emitEquals(to: TextOutput, prefix: String): Unit =
     to.println(s"${prefix}public boolean equals(java.lang.Object o) {")
     to.println(s"${prefix}  if(o == this) return true;")
     to.println(s"${prefix}  else if(o instanceof ${fqJavaName} m) {")
-    for(i <- 0 until flagCount by 64)
+    for i <- 0 until flagCount by 64 do
       to.println(s"${prefix}    if(this.${flagFieldForIdx(i)} != m.${flagFieldForIdx(i)}) return false;")
-    for(o <- oneOfs if !o.synthetic)
+    for o <- oneOfs if !o.synthetic do
       to.println(s"${prefix}    if(this.${o.javaFieldName} != m.${o.javaFieldName}) return false;")
-    for(f <- fields) {
+    for f <- fields do
       if(f.tpe.javaHasPrimitiveEquality && f.cardinality != Repeated)
         to.println(s"${prefix}    if(this.${f.javaFieldName} != m.${f.javaFieldName}) return false;")
       else if(f.oneOf.isDefined || f.flagIndex >= 0)
         to.println(s"${prefix}    if(this.${f.javaHazzer}() && !this.${f.javaFieldName}.equals(m.${f.javaFieldName})) return false;")
       else //TODO do we ever need this?
         to.println(s"${prefix}    if(!this.${f.javaFieldName}.equals(m.${f.javaFieldName})) return false;")
-    }
     to.println(s"${prefix}    return true;")
     to.println(s"${prefix}  } else return false;")
     to.println(s"${prefix}}")
-  }
-}

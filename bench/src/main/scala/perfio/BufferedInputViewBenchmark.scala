@@ -1,9 +1,9 @@
 package perfio
 
-import org.openjdk.jmh.annotations._
-import org.openjdk.jmh.infra._
+import org.openjdk.jmh.annotations.*
+import org.openjdk.jmh.infra.*
 
-import java.io._
+import java.io.*
 import java.util.concurrent.TimeUnit
 
 import com.google.common.io.ByteStreams
@@ -15,91 +15,77 @@ import com.google.common.io.ByteStreams
 @Measurement(iterations = 7, time = 1)
 @OutputTimeUnit(TimeUnit.MILLISECONDS)
 @State(Scope.Benchmark)
-class BufferedInputViewBenchmark extends BenchUtil {
+class BufferedInputViewBenchmark extends BenchUtil:
 
-  private[this] var testData: Array[Byte] = _
-  private[this] var diskTestDataMedium: File = _
+  private var testData: Array[Byte] = null
+  private var diskTestDataMedium: File = null
   val count = 20000000
 
   @Setup(Level.Trial)
-  def buildTestData(): Unit = {
+  def buildTestData(): Unit =
     val out = new ByteArrayOutputStream()
     val dout = new DataOutputStream(out)
     var i = 0
-    while(i < count) {
+    while i < count do
       dout.writeByte(i)
       dout.writeInt(i+100)
       dout.writeLong(i+101)
       i += 1
-    }
     testData = out.toByteArray
     diskTestDataMedium = writeFileIfMissing("medium", testData)
-  }
 
-  private[this] def runDirect(bh: Blackhole, bin: BufferedInput): Unit = {
+  private def runDirect(bh: Blackhole, bin: BufferedInput): Unit =
     var i = 0
     val end = count/10
-    while(i < end) {
+    while i < end do
       var j = 0
-      while(j < 10) {
+      while j < 10 do
         bh.consume(bin.int8())
         bh.consume(bin.int32())
         bh.consume(bin.int64())
         j += 1
-      }
       i += 1
-    }
     bin.close()
-  }
 
-  private[this] def runCounting(bh: Blackhole, bin: BufferedInput): Unit = {
+  private def runCounting(bh: Blackhole, bin: BufferedInput): Unit =
     var i = 0
     val end = count/10
-    while(i < end) {
+    while i < end do
       val end = bin.totalBytesRead + 130
-      while(bin.totalBytesRead < end) {
+      while bin.totalBytesRead < end do
         bh.consume(bin.int8())
         bh.consume(bin.int32())
         bh.consume(bin.int64())
-      }
       i += 1
-    }
     bin.close()
-  }
 
-  private[this] def runView(bh: Blackhole, bin: BufferedInput): Unit = {
+  private def runView(bh: Blackhole, bin: BufferedInput): Unit =
     var i = 0
     val end = count/10
-    while(i < end) {
+    while i < end do
       val v = bin.delimitedView(130)
-      while(v.hasMore) {
+      while v.hasMore do
         bh.consume(v.int8())
         bh.consume(v.int32())
         bh.consume(v.int64())
-      }
       v.close()
       i += 1
-    }
     bin.close()
-  }
 
-  private[this] def runDataInputStream(bh: Blackhole, in: InputStream): Unit = {
+  private def runDataInputStream(bh: Blackhole, in: InputStream): Unit =
     val din = new DataInputStream(in)
     var i = 0
     val end = count/10
-    while(i < end) {
+    while i < end do
       val v = new DataInputStream(ByteStreams.limit(in, 130))
-      try {
-        while(true) {
+      try
+        while true do
           bh.consume(v.readByte())
           bh.consume(v.readInt())
           bh.consume(v.readLong())
-        }
-      } catch { case _: EOFException => }
+      catch case _: EOFException => ()
       i += 1
-    }
     din.close()
-  }
 
   @Benchmark
   def array_LimitedInputStream(bh: Blackhole): Unit = runDataInputStream(bh, new ByteArrayInputStream(testData))
@@ -130,4 +116,3 @@ class BufferedInputViewBenchmark extends BenchUtil {
   def mediumFile_mapped_counting(bh: Blackhole): Unit = runCounting(bh, BufferedInput.ofMappedFile(diskTestDataMedium.toPath))
   @Benchmark
   def mediumFile_mapped_view(bh: Blackhole): Unit = runView(bh, BufferedInput.ofMappedFile(diskTestDataMedium.toPath))
-}

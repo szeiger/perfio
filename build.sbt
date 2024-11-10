@@ -29,7 +29,7 @@ ThisBuild / Test / fork := true
 ThisBuild / run / fork := true
 ThisBuild / run / connectInput := true
 
-Global / scalaVersion := "2.13.14"
+Global / scalaVersion := "3.5.2"
 
 val hedgehogVersion = "0.10.1"
 
