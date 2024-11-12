@@ -24,7 +24,7 @@ def Main: Unit =
     bo.close()
     res.addFile(
       new PluginProtos.CodeGeneratorResponse.File()
-        .setName(fm.javaOutputFileName)
+        .setName(fm.outputFileName)
         .setContent(new String(bo.buffer(), 0, bo.length(), StandardCharsets.UTF_8)))
 
   val bo = BufferedOutput.of(System.out)

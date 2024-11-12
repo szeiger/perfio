@@ -13,13 +13,13 @@ trait Node:
   def dump(out: PrintStream, prefix: String): Unit
 
 
-class RootNode(val req: CodeGeneratorRequest) extends Node:
+class RootNode(req: CodeGeneratorRequest) extends Node:
   val packageOverride = sys.env.get("PERFIO_PACKAGE")
   val genFiles: Buffer[String] = req.getFileToGenerateList.asScala
   val files = req.getProtoFileList.asScala.map(new FileNode(_, this))
-  val fileMap = files.map { fm => (fm.name, fm) }.toMap
-  val allMessages = files.iterator.flatMap(_.allMessages).map(m => (m.fqName, m)).toMap
-  val allEnums = files.iterator.flatMap(_.allEnums).map(e => (e.fqName, e)).toMap
+  val fileMap = files.map { fm => (fm.pbName, fm) }.toMap
+  val allMessages = files.iterator.flatMap(_.allMessages).map(m => (m.pbFQName, m)).toMap
+  val allEnums = files.iterator.flatMap(_.allEnums).map(e => (e.pbFQName, e)).toMap
 
   def dump(out: PrintStream, prefix: String): Unit =
     files.foreach(_.dump(System.err, prefix))
@@ -30,8 +30,9 @@ trait ParentNode extends Node:
   val enums = new ArrayBuffer[EnumNode]
   def root: RootNode
   def file: FileNode
+  def pbFQName: String
+
   def fqName: String
-  def fqJavaName: String
 
   def allMessages: Iterator[MessageNode] = messages.iterator ++ messages.iterator.flatMap(_.allMessages)
   def allEnums: Iterator[EnumNode] = enums.iterator ++ allMessages.iterator.flatMap(_.allEnums)
@@ -61,3 +62,5 @@ object Util:
     Runtime.writeVarint(bo, v)
     bo.close()
     bo.copyToByteArray()
+
+  val RT = classOf[Runtime].getName

@@ -2,6 +2,7 @@ package perfio.proto
 
 import perfio.protoapi.DescriptorProtos.EnumDescriptorProto
 import perfio.TextOutput
+import perfio.scalaapi.*
 
 import java.io.PrintStream
 import scala.collection.mutable
@@ -9,35 +10,36 @@ import scala.collection.mutable.Buffer
 import scala.jdk.CollectionConverters.*
 
 
-class EnumNode(val desc: EnumDescriptorProto, val parent: ParentNode) extends Node:
-  val name: String = desc.getName
-  def javaName: String = name
-  val fqName: String = s"${parent.fqName}.$name"
-  val fqJavaName: String = s"${parent.fqJavaName}.$javaName"
+class EnumNode(desc: EnumDescriptorProto, val parent: ParentNode) extends Node:
+  val pbName: String = desc.getName
+  val pbFQName: String = s"${parent.pbFQName}.$pbName"
+
+  def enumName: String = pbName
+  val fqName: String = s"${parent.fqName}.$enumName"
   val values: Buffer[(String, Int)] = desc.getValueList.asScala.map { v => (v.getName, v.getNumber) }
-  val uniqueValues: Buffer[(String, Int)] =
+  private val uniqueValues: Buffer[(String, Int)] =
     val map = mutable.HashMap.empty[Int, String]
     values.foreach { case (n, i) => map.put(i, n) }
     values.map { case (n, i) => (map(i), i) }
 
-  override def toString: String = s"enum $name"
+  override def toString: String = s"enum $pbName"
 
   override def dump(out: PrintStream, prefix: String): Unit =
     out.println(s"${prefix}$this")
     values.foreach { case (n, i) => s"$prefix  $n $i"}
 
-  def emit(to: TextOutput, prefix: String): Unit =
-    to.println(s"${prefix}public enum $javaName {")
+  def emit(using TextOutputContext): Printed =
+    pm"""public enum $enumName {"""
     for (n, i) <- values do
-      to.println(s"${prefix}  $n($i),")
-    to.println(s"${prefix}  UNRECOGNIZED(-1);")
-    to.println(s"${prefix}  public final int number;")
-    to.println(s"${prefix}  $javaName(int number) { this.number = number; }")
-    to.println(s"${prefix}  public static $javaName valueOf(int number) {")
-    to.println(s"${prefix}    return switch(number) {")
+      pm"""  $n($i),"""
+    pm"""  UNRECOGNIZED(-1);
+        |  public final int number;
+        |  $enumName(int number) { this.number = number; }
+        |  public static $enumName valueOf(int number) {
+        |    return switch(number) {"""
     for (n, i) <- uniqueValues do
-      to.println(s"${prefix}      case $i -> $n;")
-    to.println(s"${prefix}      default -> UNRECOGNIZED;")
-    to.println(s"${prefix}    };")
-    to.println(s"${prefix}  }")
-    to.println(s"${prefix}}")
+      pm"""      case $i -> $n;"""
+    pm"""      default -> UNRECOGNIZED;
+        |    };
+        |  }
+        |}"""

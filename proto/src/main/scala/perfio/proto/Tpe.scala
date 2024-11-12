@@ -6,22 +6,22 @@ import perfio.proto.runtime.Runtime
 import scala.reflect.ClassTag
 
 sealed abstract class Tpe:
-  def javaType: String
-  def javaDefaultValue: String
-  def javaNeedsExplicitDefault: Boolean
-  def javaIsSet(v: String): String
-  def javaBoxedType: String = javaType
-  def parserMethod: String
+  def fieldType: String
+  def defaultExpr: String
+  def needsExplicitDefault: Boolean
+  def isSet(v: String): String
+  def boxedType: String = fieldType
+  def parseMethod: String
   def writeMethod: String
   def wireType: Int
   def canBePacked: Boolean = true
-  def javaHasPrimitiveEquality: Boolean = true
+  def hasPrimitiveEquality: Boolean = true
 
-sealed abstract class SimpleTpe[T](boxed: Class[?], val parserMethod: String, val writeMethod: String, val wireType: Int,
-  val javaDefaultValue: String, val javaNeedsExplicitDefault: Boolean = false)(implicit ct: ClassTag[T]) extends Tpe:
-  def javaType = ct.runtimeClass.getCanonicalName
-  def javaIsSet(v: String): String = s"$v != 0"
-  override def javaBoxedType: String = boxed.getCanonicalName
+sealed abstract class SimpleTpe[T](boxed: Class[?], val parseMethod: String, val writeMethod: String, val wireType: Int,
+  val defaultExpr: String, val needsExplicitDefault: Boolean = false)(implicit ct: ClassTag[T]) extends Tpe:
+  def fieldType = ct.runtimeClass.getCanonicalName
+  def isSet(v: String): String = s"$v != 0"
+  override def boxedType: String = boxed.getCanonicalName
 
 object Tpe:
   case object Int64T    extends SimpleTpe[Long   ](classOf[java.lang.Long   ], "parseInt64",   "writeInt64",   Runtime.VARINT, "0L")
@@ -38,47 +38,47 @@ object Tpe:
   case object FloatT    extends SimpleTpe[Float  ](classOf[java.lang.Float  ], "parseFloat",   "writeFloat",   Runtime.I32,    "0.0")
 
   case object BoolT     extends SimpleTpe[Boolean](classOf[java.lang.Boolean], "parseBoolean", "writeBoolean", Runtime.VARINT, "false"):
-    override def javaIsSet(v: String): String = v
+    override def isSet(v: String): String = v
 
   case object BytesT extends SimpleTpe[Array[Byte]](classOf[Array[Byte]], "parseBytes", "writeBytes", Runtime.LEN, "new byte[0]", true):
-    override def javaIsSet(v: String): String = s"${v}.length != 0"
+    override def isSet(v: String): String = s"${v}.length != 0"
     override def canBePacked: Boolean = false
-    override def javaHasPrimitiveEquality: Boolean = false
+    override def hasPrimitiveEquality: Boolean = false
 
   case object StringT extends SimpleTpe[String](classOf[String], "parseString", "writeString", Runtime.LEN, "\"\"", true):
-    override def javaIsSet(v: String): String = s"!${v}.isEmpty()"
+    override def isSet(v: String): String = s"!${v}.isEmpty()"
     override def canBePacked: Boolean = false
-    override def javaHasPrimitiveEquality: Boolean = false
+    override def hasPrimitiveEquality: Boolean = false
 
   case class GroupT(name: String) extends Tpe:
-    def javaType = ???
-    def javaDefaultValue: String = ???
-    def javaNeedsExplicitDefault: Boolean = ???
-    def javaIsSet(v: String): String = ???
-    def parserMethod: String = ???
+    def fieldType = ???
+    def defaultExpr: String = ???
+    def needsExplicitDefault: Boolean = ???
+    def isSet(v: String): String = ???
+    def parseMethod: String = ???
     def writeMethod: String = ???
     def wireType: Int = ???
     override def canBePacked: Boolean = ???
-    override def javaHasPrimitiveEquality: Boolean = ???
+    override def hasPrimitiveEquality: Boolean = ???
 
   case class MessageT(name: String)(root: RootNode) extends Tpe:
-    lazy val javaType = root.allMessages(name).fqJavaName
-    def javaDefaultValue: String = "null"
-    def javaNeedsExplicitDefault = false // special handling  in FieldNode
-    def javaIsSet(v: String): String = s"$v != null"
-    def parserMethod: String = "parseLen" // special handling in FieldNode
+    lazy val fieldType = root.allMessages(name).fqName
+    def defaultExpr: String = "null"
+    def needsExplicitDefault = false // special handling  in FieldNode
+    def isSet(v: String): String = s"$v != null"
+    def parseMethod: String = "parseLen" // special handling in FieldNode
     def writeMethod: String = "writeLen" // special handling in FieldNode
     def wireType: Int = Runtime.LEN
     override def canBePacked: Boolean = false
-    override def javaHasPrimitiveEquality: Boolean = false
+    override def hasPrimitiveEquality: Boolean = false
 
   case class EnumT(name: String)(root: RootNode) extends Tpe:
     lazy val en = root.allEnums(name)
-    lazy val javaType = en.fqJavaName
-    def javaDefaultValue: String = s"${javaType}.${en.values.head._1}"
-    def javaNeedsExplicitDefault = true
-    def javaIsSet(v: String): String = s"$v.number != 0"
-    def parserMethod: String = "parseInt32" // special handling in FieldNode
+    lazy val fieldType = en.fqName
+    def defaultExpr: String = s"${fieldType}.${en.values.head._1}"
+    def needsExplicitDefault = true
+    def isSet(v: String): String = s"$v.number != 0"
+    def parseMethod: String = "parseInt32" // special handling in FieldNode
     def writeMethod: String = "writeInt32" // special handling in FieldNode
     def wireType: Int = Runtime.VARINT
     override def canBePacked: Boolean = false //TODO is this right? the spec says so

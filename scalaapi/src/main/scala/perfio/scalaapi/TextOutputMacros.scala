@@ -8,13 +8,16 @@ import scala.quoted.*
 
 class TextOutputContext(val to: TextOutput):
   var prefix: String = ""
-  inline def indented[T](inline f: TextOutputContext ?=> T): T = {
+  inline def indented[T](inline n: Int)(inline f: TextOutputContext ?=> T): T = {
     val p = prefix
-    prefix += "  "
+    prefix += " " * (n*2)
     val r = f(using this)
     prefix = p
     r
   }
+  inline def indented1[T](inline f: TextOutputContext ?=> T): T = indented(1)(f)
+  inline def indented2[T](inline f: TextOutputContext ?=> T): T = indented(2)(f)
+  inline def indented3[T](inline f: TextOutputContext ?=> T): T = indented(3)(f)
 
 sealed trait Printed
 object Printed extends Printed
