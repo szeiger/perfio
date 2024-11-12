@@ -34,15 +34,21 @@ Global / scalaVersion := "3.5.2"
 val hedgehogVersion = "0.10.1"
 
 lazy val main = (project in file("."))
-  .aggregate(LocalProject("bench"), LocalProject("test"))
+  .aggregate(LocalProject("bench"), LocalProject("test"), LocalProject("scalaApi"))
   .settings(
     crossPaths := false,
     autoScalaLibrary := false,
     name := "perfio",
   )
 
-lazy val bench = (project in file("bench"))
+lazy val scalaApi = (project in file("scalaapi"))
   .dependsOn(main)
+  .settings(
+    name := "perfio-scala",
+  )
+
+lazy val bench = (project in file("bench"))
+  .dependsOn(scalaApi)
   .enablePlugins(JmhPlugin)
   .settings(
     scalacOptions ++= Seq("-feature", "-opt:l:inline", "-opt-inline-from:perfio.*"),
@@ -53,8 +59,8 @@ lazy val bench = (project in file("bench"))
     publish / skip := true,
   )
 
-lazy val test = (project in file("test"))
-  .dependsOn(main)
+lazy val test_ = Project("test", file("test"))
+  .dependsOn(scalaApi)
   .settings(
     libraryDependencies += "com.github.sbt" % "junit-interface" % "0.13.2" % "test",
     testOptions += Tests.Argument(TestFrameworks.JUnit, "-a", "-v"),
@@ -76,7 +82,7 @@ lazy val protoRuntime = (project in file("proto-runtime"))
   )
 
 lazy val proto = (project in file("proto"))
-  .dependsOn(protoRuntime)
+  .dependsOn(protoRuntime, scalaApi)
   .settings(
     libraryDependencies += "com.google.protobuf" % "protobuf-java" % "4.29.0-RC2" % "test",
     libraryDependencies += "com.github.sbt" % "junit-interface" % "0.13.2" % "test",
@@ -145,4 +151,15 @@ def runProtoc(cp: Classpath, srcs: Iterable[String], target: Path, modes: Seq[St
     }
     outs
   } finally IO.delete(temp.toFile)
+}
+
+val javap = inputKey[Unit]("Run javap")
+
+test_ / Test / javap := {
+  import complete.DefaultParsers._
+  val args: Seq[String] = spaceDelimited("<arg>").parsed
+  val cp = (test_ / Test / fullClasspath).value
+
+  val pb = new ProcessBuilder(Seq("javap", "-cp", cp.iterator.map(_.data).mkString(sys.props.getOrElse("path.separator", ":"))) ++ args: _*).inheritIO()
+  pb.start().waitFor()
 }

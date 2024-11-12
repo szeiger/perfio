@@ -4,6 +4,7 @@ import perfio.protoapi.DescriptorProtos.FieldDescriptorProto
 import perfio.protoapi.DescriptorProtos.FieldDescriptorProto.{Label, Type}
 import perfio.TextOutput
 import perfio.proto.runtime.{IntList, Runtime}
+import perfio.scalaapi.*
 
 import java.io.PrintStream
 
@@ -54,38 +55,36 @@ class FieldNode(val desc: FieldDescriptorProto, val parent: MessageNode) extends
   override def dump(out: PrintStream, prefix: String): Unit =
     out.println(s"${prefix}$this")
 
-  def emit(to: TextOutput, prefix: String): Unit =
-    if(cardinality == Cardinality.Repeated) emitRepeated(to, prefix)
-    else emitNormal(to, prefix)
+  def emit(using TextOutputContext): Printed =
+    if(cardinality == Cardinality.Repeated) emitRepeated else emitNormal
 
-  private def emitNormal(to: TextOutput, prefix: String): Unit =
-    val dflt = if(tpe.javaNeedsExplicitDefault)s" = ${tpe.javaDefaultValue}" else ""
-    to.println(s"${prefix}private ${tpe.javaType} $javaFieldName$dflt;")
+  private def emitNormal(using toc: TextOutputContext): Printed =
+    val dflt = if(tpe.javaNeedsExplicitDefault) s" = ${tpe.javaDefaultValue}" else ""
+    pm"""private ${tpe.javaType} $javaFieldName$dflt;"""
     tpe match
       case tpe: Tpe.MessageT =>
-        to.println(s"${prefix}public ${tpe.javaType} $javaGetter() {")
-        to.println(s"${prefix}  if($javaFieldName == null) $javaFieldName = new ${tpe.javaType}();")
-        to.println(s"${prefix}  return $javaFieldName;")
-        to.println(s"${prefix}}")
+        pm"""public ${tpe.javaType} $javaGetter() {
+            |  if($javaFieldName == null) $javaFieldName = new ${tpe.javaType}();
+            |  return $javaFieldName;
+            |}"""
       case _ =>
-        to.println(s"${prefix}public ${tpe.javaType} $javaGetter() { return $javaFieldName; }")
+        pm"""public ${tpe.javaType} $javaGetter() { return $javaFieldName; }"""
     oneOf match
       case Some((o, i)) =>
-        to.println(s"${prefix}public ${parent.fqJavaName} $javaSetter(${tpe.javaType} value) { this.$javaFieldName = value; this.${o.javaFieldName} = $i;")
-        for(f <- o.fields if f ne this) {
-          to.println(s"${prefix}  this.${f.javaFieldName} = ${f.tpe.javaDefaultValue};")
-          to.println(s"${prefix}  return this;")
-        }
-        to.println(s"${prefix}}")
-        to.println(s"${prefix}public boolean $javaHazzer() { return this.${o.javaFieldName} == $i; }")
+        pm"""public ${parent.fqJavaName} $javaSetter(${tpe.javaType} value) { this.$javaFieldName = value; this.${o.javaFieldName} = $i;"""
+        for f <- o.fields if f ne this do
+          pm"""  this.${f.javaFieldName} = ${f.tpe.javaDefaultValue};
+              |  return this;"""
+        pm"""}
+            |public boolean $javaHazzer() { return this.${o.javaFieldName} == $i; }"""
       case _ if flagIndex >= 0 =>
         val ff = parent.flagFieldForIdx(flagIndex)
         val fb = parent.flagBitForIdx(flagIndex)
-        to.println(s"${prefix}public ${parent.fqJavaName} $javaSetter(${tpe.javaType} value) { this.$javaFieldName = value; this.$ff |= $fb; return this; }")
-        to.println(s"${prefix}public boolean $javaHazzer() { return (this.$ff & $fb) != 0; }")
+        pm"""public ${parent.fqJavaName} $javaSetter(${tpe.javaType} value) { this.$javaFieldName = value; this.$ff |= $fb; return this; }
+            |public boolean $javaHazzer() { return (this.$ff & $fb) != 0; }"""
       case _ =>
-        to.println(s"${prefix}public ${parent.fqJavaName} $javaSetter(${tpe.javaType} value) { this.$javaFieldName = value; return this; }")
-        to.println(s"${prefix}public boolean $javaHazzer() { return ${tpe.javaIsSet(javaFieldName)}; }")
+        pm"""public ${parent.fqJavaName} $javaSetter(${tpe.javaType} value) { this.$javaFieldName = value; return this; }
+            |public boolean $javaHazzer() { return ${tpe.javaIsSet(javaFieldName)}; }"""
 
   def javaParseExpr(receiver: String, rt: String, parseArgs: String): String = tpe match
     case tpe: Tpe.EnumT =>
@@ -100,34 +99,34 @@ class FieldNode(val desc: FieldDescriptorProto, val parent: MessageNode) extends
       val m = if(cardinality == Cardinality.Repeated) javaAdder else javaSetter
       s"$receiver.$m($rt.${tpe.parserMethod}$parseArgs);"
 
-  def javaWriteStatements(rt: String, out: String, v: String): String = tpe match
+  def javaWriteStatements(rt: String, out: String, v: String)(using TextOutputContext): Printed = tpe match
     case tpe: Tpe.EnumT =>
-      s"$rt.${tpe.writeMethod}($out, $v.number);"
+      p"$rt.${tpe.writeMethod}($out, $v.number);"
     case tpe: Tpe.MessageT =>
-      s"var out2 = $out.defer(); $v.writeTo(out2); $rt.${tpe.writeMethod}($out, out2.totalBytesWritten()); out2.close();"
+      p"var out2 = $out.defer(); $v.writeTo(out2); $rt.${tpe.writeMethod}($out, out2.totalBytesWritten()); out2.close();"
     case _ =>
-      s"$rt.${tpe.writeMethod}($out, $v);"
+      p"$rt.${tpe.writeMethod}($out, $v);"
 
-  private def emitRepeated(to: TextOutput, prefix: String): Unit =
+  private def emitRepeated(using toc: TextOutputContext): Printed =
     val lt: String = tpe.javaType match
       case "int" =>
         val lt = classOf[IntList].getName
-        to.println(s"${prefix}private $lt $javaFieldName = $lt.EMPTY;")
-        to.println(s"${prefix}private void ${javaFieldName}_initMut() {")
-        to.println(s"${prefix}  if(this.$javaFieldName == $lt.EMPTY) this.$javaSetter(new $lt());")
-        to.println(s"${prefix}}")
+        pm"""private $lt $javaFieldName = $lt.EMPTY;
+            |private void ${javaFieldName}_initMut() {
+            |  if(this.$javaFieldName == $lt.EMPTY) this.$javaSetter(new $lt());
+            |}"""
         lt
       case _ =>
         val lt = s"java.util.List<${tpe.javaBoxedType}>"
-        to.println(s"${prefix}private $lt $javaFieldName = java.util.List.of();")
-        to.println(s"${prefix}private void ${javaFieldName}_initMut() {")
-        to.println(s"${prefix}  if((java.util.List)this.$javaFieldName == java.util.List.of()) this.$javaSetter(new java.util.ArrayList<>());")
-        to.println(s"${prefix}}")
+        pm"""private $lt $javaFieldName = java.util.List.of();
+            |private void ${javaFieldName}_initMut() {
+            |  if((java.util.List)this.$javaFieldName == java.util.List.of()) this.$javaSetter(new java.util.ArrayList<>());
+            |}"""
         lt
-    to.println(s"${prefix}public void $javaAdder(${tpe.javaType} value) { ${javaFieldName}_initMut(); this.$javaFieldName.add(value); }")
-    to.println(s"${prefix}public $lt $javaGetter() { return $javaFieldName; }")
-    to.println(s"${prefix}public void $javaSetter($lt value) { this.$javaFieldName = value; }")
-    to.println(s"${prefix}public boolean $javaHazzer() { return !${javaFieldName}.isEmpty(); }")
+    pm"""public void $javaAdder(${tpe.javaType} value) { ${javaFieldName}_initMut(); this.$javaFieldName.add(value); }
+        |public $lt $javaGetter() { return $javaFieldName; }
+        |public void $javaSetter($lt value) { this.$javaFieldName = value; }
+        |public boolean $javaHazzer() { return !${javaFieldName}.isEmpty(); }"""
 
 
 enum Cardinality:

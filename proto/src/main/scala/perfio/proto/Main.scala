@@ -1,6 +1,7 @@
 package perfio.proto
 
 import perfio.protoapi.PluginProtos
+import perfio.scalaapi.TextOutputContext
 import perfio.{BufferedInput, BufferedOutput}
 
 import java.nio.charset.StandardCharsets
@@ -19,7 +20,7 @@ def Main: Unit =
     val fm = root.fileMap(genFile)
     val bo = BufferedOutput.growing()
     val to = bo.text()
-    fm.emit(to, "")
+    fm.emit(using TextOutputContext(to))
     bo.close()
     res.addFile(
       new PluginProtos.CodeGeneratorResponse.File()

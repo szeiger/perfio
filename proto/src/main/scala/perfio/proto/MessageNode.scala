@@ -3,7 +3,8 @@ package perfio.proto
 import perfio.protoapi.DescriptorProtos.DescriptorProto
 import perfio.proto.Cardinality.Repeated
 import perfio.proto.runtime.Runtime
-import perfio.{BufferedInput, BufferedOutput, TextOutput}
+import perfio.scalaapi.*
+import perfio.{BufferedInput, BufferedOutput}
 
 import java.io.PrintStream
 import scala.collection.mutable.{ArrayBuffer, Buffer}
@@ -36,107 +37,106 @@ class MessageNode(val desc: DescriptorProto, val parent: ParentNode) extends Par
     fields.foreach(_.dump(out, prefix + "  "))
     oneOfs.foreach(_.dump(out, prefix + "  "))
 
-  def emit(to: TextOutput, prefix: String): Unit =
-    to.println(s"${prefix}public static final class ${javaName} {")
-    enums.foreach(_.emit(to, prefix + "  "))
-    for m <- messages do
-      to.println()
-      m.emit(to, prefix + "  ")
+  def emit(using toc: TextOutputContext): Printed =
+    pm"""public static final class ${javaName} {"""
+    toc.indented:
+      enums.foreach(_.emit(toc.to, toc.prefix))
+      for m <- messages do
+        toc.to.println()
+        m.emit
     if(flagCount > 0)
-      to.println()
+      toc.to.println()
       if(flagCount <= 32)
-        to.println(s"${prefix}  private int ${flagFieldForIdx(0)};")
+        pm"""  private int ${flagFieldForIdx(0)};"""
       else
         for(i <- 0 until flagCount by 64)
-          to.println(s"${prefix}  private long ${flagFieldForIdx(i)};")
-    oneOfs.foreach(o => if(!o.synthetic) o.emit(to, prefix+"  "))
-    for f <- fields do
-      to.println()
-      f.emit(to, prefix+"  ")
-    to.println()
-    emitParser(to, prefix + "  ")
-    to.println()
-    emitWriter(to, prefix + "  ")
-    to.println()
-    emitEquals(to, prefix + "  ") //TODO hashCode
-    to.println(s"${prefix}}")
+          pm"""  private long ${flagFieldForIdx(i)};"""
+    oneOfs.foreach(o => if(!o.synthetic) o.emit(toc.to, toc.prefix+"  "))
+    toc.indented:
+      for f <- fields do
+        toc.to.println()
+        f.emit
+      toc.to.println()
+      emitParser
+      toc.to.println()
+      emitWriter
+      toc.to.println()
+      emitEquals //TODO hashCode
+    pm"""}"""
 
-  private def emitParser(to: TextOutput, prefix: String): Unit =
+  private def emitParser(using toc: TextOutputContext): Printed =
     val p = classOf[Runtime].getName
-    to.println(s"${prefix}public static $fqJavaName parseFrom(${classOf[BufferedInput].getName} in) throws java.io.IOException {")
-    to.println(s"${prefix}  var m = new $fqJavaName();")
-    to.println(s"${prefix}  parseFrom(in, m);")
-    to.println(s"${prefix}  return m;")
-    to.println(s"${prefix}}")
-    to.println(s"${prefix}public static void parseFrom(${classOf[BufferedInput].getName} in, $fqJavaName base) throws java.io.IOException {")
-    to.println(s"${prefix}  while(in.hasMore()) {")
-    to.println(s"${prefix}    int tag = (int)$p.parseVarint(in);")
-    to.println(s"${prefix}    switch(tag) {")
+    pm"""public static $fqJavaName parseFrom(${classOf[BufferedInput].getName} in) throws java.io.IOException {
+        |  var m = new $fqJavaName();
+        |  parseFrom(in, m);
+        |  return m;
+        |}
+        |public static void parseFrom(${classOf[BufferedInput].getName} in, $fqJavaName base) throws java.io.IOException {
+        |  while(in.hasMore()) {
+        |    int tag = (int)$p.parseVarint(in);
+        |    switch(tag) {"""
     for f <- fields do
-      to.println(s"${prefix}      case ${f.tag} -> ${f.javaParseExpr("base", p, "(in)")}")
+      pm"      case ${f.tag} -> ${f.javaParseExpr("base", p, "(in)")}"
       if(f.tpe.canBePacked)
         if(f.tpe.javaType == "int" && f.packed)
-          to.println(s"${prefix}      case ${f.packedTag} -> { var in2 = in.delimitedView($p.parseLen(in)); base.${f.javaFieldName}_initMut(); while(in2.hasMore()) base.${f.javaFieldName}.add($p.parseInt32(in2)); in2.close(); }")
+          pm"      case ${f.packedTag} -> { var in2 = in.delimitedView($p.parseLen(in)); base.${f.javaFieldName}_initMut(); while(in2.hasMore()) base.${f.javaFieldName}.add($p.parseInt32(in2)); in2.close(); }"
         else
-          to.println(s"${prefix}      case ${f.packedTag} -> { var in2 = in.delimitedView($p.parseLen(in)); while(in2.hasMore()) ${f.javaParseExpr("base", p, "(in2)")}; in2.close(); }")
-    to.println(s"${prefix}      default -> parseOther(in, tag);")
-    to.println(s"${prefix}    }")
-    to.println(s"${prefix}  }")
-    to.println(s"${prefix}}")
-    to.println(s"${prefix}private static void parseOther(${classOf[BufferedInput].getName} in, int tag) throws java.io.IOException {")
-    to.println(s"${prefix}  int wt = tag & 7;")
-    to.println(s"${prefix}  int field = tag >>> 3;")
-    to.println(s"${prefix}  switch(field) {")
+          pm"      case ${f.packedTag} -> { var in2 = in.delimitedView($p.parseLen(in)); while(in2.hasMore()) ${f.javaParseExpr("base", p, "(in2)")}; in2.close(); }"
+    pm"""      default -> parseOther(in, tag);
+        |    }
+        |  }
+        |}
+        |private static void parseOther(${classOf[BufferedInput].getName} in, int tag) throws java.io.IOException {
+        |  int wt = tag & 7;
+        |  int field = tag >>> 3;
+        |  switch(field) {"""
     val known = fields.map(_.number)
     if(known.nonEmpty)
-      to.println(s"${prefix}    case ${known.mkString(", ")} -> throw $p.invalidWireType(wt, field);")
-    to.println(s"${prefix}    default -> $p.skip(in, wt);")
-    to.println(s"${prefix}  }")
-    to.println(s"${prefix}}")
+      pm"    case ${known.mkString(", ")} -> throw $p.invalidWireType(wt, field);"
+    pm"""    default -> $p.skip(in, wt);
+        |  }
+        |}"""
 
   //TODO optimize oneof writing
-  private def emitWriter(to: TextOutput, prefix: String): Unit = {
+  private def emitWriter(using toc: TextOutputContext): Printed =
     val p = classOf[Runtime].getName
-    to.println(s"${prefix}public void writeTo(${classOf[BufferedOutput].getName} out) throws java.io.IOException {")
-    for(f <- fields) {
-      if(f.packed && f.tpe.javaType == "int") {
-        to.println(s"${prefix}  if(this.${f.javaHazzer}()) { ${writeVarint(f.packedTag, "out")}; $p.writePackedInt32(out, this.${f.javaFieldName}); }")
-      } else if(f.packed) {
-        to.println(s"${prefix}  if(this.${f.javaHazzer}()) {")
-        to.println(s"${prefix}    var it = this.${f.javaFieldName}.iterator();")
-        to.println(s"${prefix}    ${writeVarint(f.packedTag, "out")};")
-        to.println(s"${prefix}    var out2 = out.defer();")
-        to.println(s"${prefix}    while(it.hasNext()) { var v = it.next(); ${f.javaWriteStatements(p, "out2", "v")} }")
-        to.println(s"${prefix}    $p.writeVarint(out, out2.totalBytesWritten());")
-        to.println(s"${prefix}    out2.close();")
-        to.println(s"${prefix}  }")
-      } else if(f.cardinality == Cardinality.Repeated) {
-        to.println(s"${prefix}  if(this.${f.javaHazzer}()) { var it = this.${f.javaFieldName}.iterator(); while(it.hasNext()) { var v = it.next(); ${writeVarint(f.tag, "out")}; ${f.javaWriteStatements(p, "out", "v")} }}")
-      } else {
-        to.println(s"${prefix}  if(this.${f.javaHazzer}()) { ${writeVarint(f.tag, "out")}; ${f.javaWriteStatements(p, "out", s"this.${f.javaFieldName}")} }")
-      }
-    }
-    to.println(s"${prefix}}")
-  }
+    pm"public void writeTo(${classOf[BufferedOutput].getName} out) throws java.io.IOException {"
+    for f <- fields do
+      if(f.packed && f.tpe.javaType == "int")
+        pm"  if(this.${f.javaHazzer}()) { ${writeVarint(f.packedTag, "out")}; $p.writePackedInt32(out, this.${f.javaFieldName}); }"
+      else if(f.packed)
+        pm"""  if(this.${f.javaHazzer}()) {
+            |    var it = this.${f.javaFieldName}.iterator();
+            |    ${writeVarint(f.packedTag, "out")};
+            |    var out2 = out.defer();
+            |    while(it.hasNext()) { var v = it.next(); ${f.javaWriteStatements(p, "out2", "v")} }
+            |    $p.writeVarint(out, out2.totalBytesWritten());
+            |    out2.close();
+            |  }"""
+      else if(f.cardinality == Cardinality.Repeated)
+        pm"  if(this.${f.javaHazzer}()) { var it = this.${f.javaFieldName}.iterator(); while(it.hasNext()) { var v = it.next(); ${writeVarint(f.tag, "out")}; ${f.javaWriteStatements(p, "out", "v")} }}"
+      else
+        pm"  if(this.${f.javaHazzer}()) { ${writeVarint(f.tag, "out")}; ${f.javaWriteStatements(p, "out", s"this.${f.javaFieldName}")} }"
+    pm"}"
 
   private def writeVarint(v: Long, bo: String): String =
     Util.encodeVarint(v).map { i => s"$bo.int8((byte)$i)" }.mkString("; ")
 
-  private def emitEquals(to: TextOutput, prefix: String): Unit =
-    to.println(s"${prefix}public boolean equals(java.lang.Object o) {")
-    to.println(s"${prefix}  if(o == this) return true;")
-    to.println(s"${prefix}  else if(o instanceof ${fqJavaName} m) {")
+  private def emitEquals(using TextOutputContext): Printed =
+    pm"""public boolean equals(java.lang.Object o) {
+        |  if(o == this) return true;
+        |  else if(o instanceof ${fqJavaName} m) {"""
     for i <- 0 until flagCount by 64 do
-      to.println(s"${prefix}    if(this.${flagFieldForIdx(i)} != m.${flagFieldForIdx(i)}) return false;")
+      pm"    if(this.${flagFieldForIdx(i)} != m.${flagFieldForIdx(i)}) return false;"
     for o <- oneOfs if !o.synthetic do
-      to.println(s"${prefix}    if(this.${o.javaFieldName} != m.${o.javaFieldName}) return false;")
+      pm"    if(this.${o.javaFieldName} != m.${o.javaFieldName}) return false;"
     for f <- fields do
       if(f.tpe.javaHasPrimitiveEquality && f.cardinality != Repeated)
-        to.println(s"${prefix}    if(this.${f.javaFieldName} != m.${f.javaFieldName}) return false;")
+        pm"    if(this.${f.javaFieldName} != m.${f.javaFieldName}) return false;"
       else if(f.oneOf.isDefined || f.flagIndex >= 0)
-        to.println(s"${prefix}    if(this.${f.javaHazzer}() && !this.${f.javaFieldName}.equals(m.${f.javaFieldName})) return false;")
+        pm"    if(this.${f.javaHazzer}() && !this.${f.javaFieldName}.equals(m.${f.javaFieldName})) return false;"
       else //TODO do we ever need this?
-        to.println(s"${prefix}    if(!this.${f.javaFieldName}.equals(m.${f.javaFieldName})) return false;")
-    to.println(s"${prefix}    return true;")
-    to.println(s"${prefix}  } else return false;")
-    to.println(s"${prefix}}")
+        pm"    if(!this.${f.javaFieldName}.equals(m.${f.javaFieldName})) return false;"
+    pm"""    return true;
+        |  } else return false;
+        |}"""
