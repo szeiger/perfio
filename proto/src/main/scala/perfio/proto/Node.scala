@@ -3,6 +3,7 @@ package perfio.proto
 import perfio.BufferedOutput
 import perfio.proto.runtime.Runtime
 import perfio.protoapi.PluginProtos.CodeGeneratorRequest
+import perfio.scalaapi.*
 
 import java.io.PrintStream
 import scala.collection.mutable.{ArrayBuffer, Buffer}
@@ -64,3 +65,9 @@ object Util:
     bo.copyToByteArray()
 
   val RT = classOf[Runtime].getName
+
+
+inline given classPrintable: Printable[Class[?]] with
+  def print(toc: TextOutputContext, v: Class[?]): Printed =
+    toc.to.print(v.getName)
+    Printed

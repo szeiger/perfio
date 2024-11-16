@@ -29,17 +29,16 @@ class EnumNode(desc: EnumDescriptorProto, val parent: ParentNode) extends Node:
     values.foreach { case (n, i) => s"$prefix  $n $i"}
 
   def emit(using TextOutputContext): Printed =
-    pm"""public enum $enumName {"""
-    for (n, i) <- values do
-      pm"""  $n($i),"""
-    pm"""  UNRECOGNIZED(-1);
+    pm"""
+        |public enum $enumName {
+        >  ${Printed(for (n,i) <- values do pm"$n($i),")}
+        |  UNRECOGNIZED(-1);
         |  public final int number;
         |  $enumName(int number) { this.number = number; }
         |  public static $enumName valueOf(int number) {
-        |    return switch(number) {"""
-    for (n, i) <- uniqueValues do
-      pm"""      case $i -> $n;"""
-    pm"""      default -> UNRECOGNIZED;
+        |    return switch(number) {
+        >      ${Printed(for (n, i) <- uniqueValues do pm"case $i -> $n;")}
+        |      default -> UNRECOGNIZED;
         |    };
         |  }
         |}"""

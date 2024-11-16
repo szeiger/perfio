@@ -173,6 +173,7 @@ public final class PluginProtos {
   }
 
   public static final class CodeGeneratorResponse {
+
     public enum Feature {
       FEATURE_NONE(0),
       FEATURE_PROTO3_OPTIONAL(1),

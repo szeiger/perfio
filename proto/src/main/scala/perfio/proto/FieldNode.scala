@@ -61,7 +61,8 @@ class FieldNode(desc: FieldDescriptorProto, val parent: MessageNode) extends Nod
 
   private def emitNormal(using toc: TextOutputContext): Printed =
     val dflt = if(tpe.needsExplicitDefault) s" = ${tpe.defaultExpr}" else ""
-    pm"""private ${tpe.fieldType} $field$dflt;"""
+    pm"""
+        |private ${tpe.fieldType} $field$dflt;"""
     tpe match
       case tpe: Tpe.MessageT =>
         pm"""public ${tpe.fieldType} $get() {
@@ -109,22 +110,19 @@ class FieldNode(desc: FieldDescriptorProto, val parent: MessageNode) extends Nod
       p"$RT.${tpe.writeMethod}($out, $v);"
 
   private def emitRepeated(using toc: TextOutputContext): Printed =
-    val lt: String = tpe.fieldType match
+    val (lt, init, initMut) = tpe.fieldType match
       case "int" =>
         val lt = classOf[IntList].getName
-        pm"""private $lt $field = $lt.EMPTY;
-            |private void ${field}_initMut() {
-            |  if(this.$field == $lt.EMPTY) this.$set(new $lt());
-            |}"""
-        lt
+        (lt, s"$lt.EMPTY", s"if(this.$field == $lt.EMPTY) this.$set(new $lt());")
       case _ =>
         val lt = s"java.util.List<${tpe.boxedType}>"
-        pm"""private $lt $field = java.util.List.of();
-            |private void ${field}_initMut() {
-            |  if((java.util.List)this.$field == java.util.List.of()) this.$set(new java.util.ArrayList<>());
-            |}"""
-        lt
-    pm"""public void $add(${tpe.fieldType} value) { ${field}_initMut(); this.$field.add(value); }
+        (lt, "java.util.List.of()", s"if((java.util.List)this.$field == java.util.List.of()) this.$set(new java.util.ArrayList<>());")
+    pm"""
+        |private $lt $field = $init;
+        |private void ${field}_initMut() {
+        |  $initMut
+        |}
+        |public void $add(${tpe.fieldType} value) { ${field}_initMut(); this.$field.add(value); }
         |public $lt $get() { return $field; }
         |public void $set($lt value) { this.$field = value; }
         |public boolean $has() { return !${field}.isEmpty(); }"""

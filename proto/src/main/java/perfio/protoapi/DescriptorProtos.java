@@ -543,6 +543,7 @@ public final class DescriptorProtos {
   }
 
   public static final class ExtensionRangeOptions {
+
     public enum VerificationState {
       DECLARATION(0),
       UNVERIFIED(1),
@@ -719,6 +720,7 @@ public final class DescriptorProtos {
   }
 
   public static final class FieldDescriptorProto {
+
     public enum Type {
       TYPE_DOUBLE(1),
       TYPE_FLOAT(2),
@@ -765,6 +767,7 @@ public final class DescriptorProtos {
         };
       }
     }
+
     public enum Label {
       LABEL_OPTIONAL(1),
       LABEL_REPEATED(3),
@@ -1345,6 +1348,7 @@ public final class DescriptorProtos {
   }
 
   public static final class FileOptions {
+
     public enum OptimizeMode {
       SPEED(1),
       CODE_SIZE(2),
@@ -1688,6 +1692,7 @@ public final class DescriptorProtos {
   }
 
   public static final class FieldOptions {
+
     public enum CType {
       STRING(0),
       CORD(1),
@@ -1704,6 +1709,7 @@ public final class DescriptorProtos {
         };
       }
     }
+
     public enum JSType {
       JS_NORMAL(0),
       JS_STRING(1),
@@ -1720,6 +1726,7 @@ public final class DescriptorProtos {
         };
       }
     }
+
     public enum OptionRetention {
       RETENTION_UNKNOWN(0),
       RETENTION_RUNTIME(1),
@@ -1736,6 +1743,7 @@ public final class DescriptorProtos {
         };
       }
     }
+
     public enum OptionTargetType {
       TARGET_TYPE_UNKNOWN(0),
       TARGET_TYPE_FILE(1),
@@ -2373,6 +2381,7 @@ public final class DescriptorProtos {
   }
 
   public static final class MethodOptions {
+
     public enum IdempotencyLevel {
       IDEMPOTENCY_UNKNOWN(0),
       NO_SIDE_EFFECTS(1),
@@ -2620,6 +2629,7 @@ public final class DescriptorProtos {
   }
 
   public static final class FeatureSet {
+
     public enum FieldPresence {
       FIELD_PRESENCE_UNKNOWN(0),
       EXPLICIT(1),
@@ -2638,6 +2648,7 @@ public final class DescriptorProtos {
         };
       }
     }
+
     public enum EnumType {
       ENUM_TYPE_UNKNOWN(0),
       OPEN(1),
@@ -2654,6 +2665,7 @@ public final class DescriptorProtos {
         };
       }
     }
+
     public enum RepeatedFieldEncoding {
       REPEATED_FIELD_ENCODING_UNKNOWN(0),
       PACKED(1),
@@ -2670,6 +2682,7 @@ public final class DescriptorProtos {
         };
       }
     }
+
     public enum Utf8Validation {
       UTF8_VALIDATION_UNKNOWN(0),
       VERIFY(2),
@@ -2686,6 +2699,7 @@ public final class DescriptorProtos {
         };
       }
     }
+
     public enum MessageEncoding {
       MESSAGE_ENCODING_UNKNOWN(0),
       LENGTH_PREFIXED(1),
@@ -2702,6 +2716,7 @@ public final class DescriptorProtos {
         };
       }
     }
+
     public enum JsonFormat {
       JSON_FORMAT_UNKNOWN(0),
       ALLOW(1),
@@ -3079,6 +3094,7 @@ public final class DescriptorProtos {
   public static final class GeneratedCodeInfo {
 
     public static final class Annotation {
+
       public enum Semantic {
         NONE(0),
         SET(1),

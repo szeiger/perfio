@@ -1,7 +1,6 @@
 package perfio.proto
 
 import perfio.protoapi.DescriptorProtos.DescriptorProto
-import perfio.proto.Cardinality.Repeated
 import perfio.proto.runtime.Runtime
 import perfio.scalaapi.*
 import perfio.{BufferedInput, BufferedOutput}
@@ -40,48 +39,39 @@ class MessageNode(desc: DescriptorProto, val parent: ParentNode) extends ParentN
     oneOfs.foreach(_.dump(out, prefix + "  "))
 
   def emit(using toc: TextOutputContext): Printed =
-    pm"""public static final class ${className} {"""
-    toc.indented1:
-      enums.foreach(_.emit)
-      for m <- messages do
-        toc.to.println()
-        m.emit
-    if(flagCount > 0)
-      toc.to.println()
-      if(flagCount <= 32)
-        pm"""  private int ${flagFieldForIdx(0)};"""
-      else for(f <- flagFields)
-        pm"""  private long $f;"""
-    toc.indented1:
-      oneOfs.foreach(o => if(!o.synthetic) o.emit)
-      for f <- fields do
-        toc.to.println()
-        f.emit
-      toc.to.println()
-      emitParser
-      toc.to.println()
-      emitWriter
-      toc.to.println()
-      emitEquals //TODO hashCode
-    pm"""}"""
+    pm"""
+        |public static final class ${className} {
+        >  ${Printed(enums)(_.emit)}
+        >  ${Printed(messages)(_.emit)}
+        >  ${Printed(if(flagFields.nonEmpty || oneOfs.nonEmpty) pm"")}
+        >  ${Printed(flagFields)(f => if(flagCount <= 32) pm"private int $f;" else pm"private long $f;")}
+        >  ${Printed(oneOfs)(o => if(!o.synthetic) o.emit else Printed)}
+        >  ${Printed(fields)(_.emit)}
+        |
+        >  $emitParser
+        |
+        >  $emitWriter
+        |
+        >  $emitEquals
+        |}"""
 
   private def emitParser(using toc: TextOutputContext): Printed =
-    val p = classOf[Runtime].getName
-    pm"""public static $fqName parseFrom(${classOf[BufferedInput].getName} in) throws java.io.IOException {
+    val p = classOf[Runtime]
+    pm"""public static $fqName parseFrom(${classOf[BufferedInput]} in) throws java.io.IOException {
         |  var m = new $fqName();
         |  parseFrom(in, m);
         |  return m;
         |}
-        |public static void parseFrom(${classOf[BufferedInput].getName} in, $fqName base) throws java.io.IOException {
+        |public static void parseFrom(${classOf[BufferedInput]} in, $fqName base) throws java.io.IOException {
         |  while(in.hasMore()) {
         |    int tag = (int)$p.parseVarint(in);
-        |    switch(tag) {"""
-    toc.indented3(for f <- fields do f.emitParser)
-    pm"""      default -> parseOther(in, tag);
+        |    switch(tag) {
+        >      ${Printed(fields)(_.emitParser)}
+        |      default -> parseOther(in, tag);
         |    }
         |  }
         |}
-        |private static void parseOther(${classOf[BufferedInput].getName} in, int tag) throws java.io.IOException {
+        |private static void parseOther(${classOf[BufferedInput]} in, int tag) throws java.io.IOException {
         |  int wt = tag & 7;
         |  int field = tag >>> 3;
         |  switch(field) {"""
@@ -93,20 +83,17 @@ class MessageNode(desc: DescriptorProto, val parent: ParentNode) extends ParentN
 
   //TODO optimize oneof writing
   private def emitWriter(using toc: TextOutputContext): Printed =
-    val p = classOf[Runtime].getName
-    pm"public void writeTo(${classOf[BufferedOutput].getName} out) throws java.io.IOException {"
-    toc.indented1(for f <- fields do f.emitWriter)
-    pm"}"
+    pm"""public void writeTo(${classOf[BufferedOutput]} out) throws java.io.IOException {
+        >  ${Printed(fields)(_.emitWriter)}
+        |}"""
 
   private def emitEquals(using toc: TextOutputContext): Printed =
     pm"""public boolean equals(java.lang.Object o) {
         |  if(o == this) return true;
-        |  else if(o instanceof ${fqName} m) {"""
-    for f <- flagFields do
-      pm"    if(this.$f != m.$f) return false;"
-    for o <- oneOfs if !o.synthetic do
-      pm"    if(this.${o.field} != m.${o.field}) return false;"
-    toc.indented2(for f <- fields do f.emitEquals)
-    pm"""    return true;
+        |  else if(o instanceof ${fqName} m) {
+        >    ${Printed(flagFields)(f => pm"if(this.$f != m.$f) return false;")}
+        >    ${Printed(oneOfs.filterNot(_.synthetic))(o => pm"if(this.${o.field} != m.${o.field}) return false;")}
+        >    ${Printed(fields)(_.emitEquals)}
+        |    return true;
         |  } else return false;
         |}"""

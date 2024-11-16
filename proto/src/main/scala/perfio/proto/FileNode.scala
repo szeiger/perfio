@@ -1,7 +1,6 @@
 package perfio.proto
 
 import perfio.protoapi.DescriptorProtos.FileDescriptorProto
-import perfio.TextOutput
 import perfio.scalaapi.*
 
 import java.io.PrintStream
@@ -55,15 +54,10 @@ class FileNode(desc: FileDescriptorProto, val root: RootNode) extends ParentNode
       pm"""package $packageName;
           |"""
     pm"""public final class $outerClassName {
-        |  private $outerClassName() {}"""
-    toc.indented1:
-      for e <- enums do
-        toc.to.println
-        e.emit
-      for m <- messages do
-        toc.to.println
-        m.emit
-    pm"""}"""
+        |  private $outerClassName() {}
+        >  ${Printed(enums)(_.emit)}
+        >  ${Printed(messages)(_.emit)}
+        |}"""
 
 
 enum Syntax:

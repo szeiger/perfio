@@ -21,14 +21,45 @@ class TextFormattingTest:
           |y${"Y"}\n
           |<$nested>
           |"""
+    check("""abc
+            |  123
+            |  nested 1
+            |  nested 2
+            |456
+            |""".stripMargin):
+      pm"""abc
+          |  123
+          >  $nestedMulti
+          |456"""
+    check("**str\n", "**"):
+      pm"""${str}"""
+    check("""**xxx nested output {
+            |**  x str
+            |**    2
+            |**  x str
+            |**    2
+            |""".stripMargin, "**"):
+      pm"""xxx $nested {
+          >  ${Printed(for(i <- 1 to 2) nestedMulti2)}"""
+
 
   def nested(using TextOutputContext) =
     p"nested output"
 
-  def check(exp: String)(f: TextOutputContext ?=> Unit): Unit =
+  def str = "str"
+
+  def nestedMulti(using TextOutputContext) =
+    pm"""nested 1
+        |nested 2"""
+
+  def nestedMulti2(using toc: TextOutputContext) =
+    pm"x $str"
+    pm"  2"
+
+  def check(exp: String, pre: String = "")(f: TextOutputContext ?=> Unit): Unit =
     val bo = BufferedOutput.growing()
     val to = bo.text(StandardCharsets.UTF_8, "\n")
-    f(using TextOutputContext(to))
+    f(using TextOutputContext(to, pre))
     bo.close()
     val got = new String(bo.buffer(), 0, bo.length(), StandardCharsets.UTF_8)
     assertEquals(exp, got)
