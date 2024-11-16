@@ -310,7 +310,7 @@ public abstract sealed class BufferedOutput implements Closeable, Flushable perm
     n.pos = pos + nlen;
   }
 
-  /// Switch a potentially shared block to exclusive after re-allocating its buffer .
+  /// Switch a potentially shared block to exclusive after re-allocating its buffer.
   void unshare() {
     if(sharing == SHARING_RIGHT) {
       sharing = SHARING_EXCLUSIVE;

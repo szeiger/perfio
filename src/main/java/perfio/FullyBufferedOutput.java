@@ -43,10 +43,10 @@ public final class FullyBufferedOutput extends CacheRootBufferedOutput {
       outpos = b.pos;
       if(unlink) b.unlinkOnly();
     } else {
-      var tot = totalBytesWritten();
-      if((outbuf.length - outpos) < tot) {
-        if(tot + outpos > Integer.MAX_VALUE) throw new IOException("Buffer exceeds maximum array length");
-        growOutBuffer((int)(tot + outpos));
+      var outrem = outbuf.length - outpos;
+      if(outrem < blen) {
+        if(blen + outpos < 0) throw new IOException("Buffer exceeds maximum array length");
+        growOutBuffer((int)(blen + outpos));
       }
       System.arraycopy(b.buf, b.start, outbuf, outpos, blen);
       outpos += blen;
