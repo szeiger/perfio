@@ -73,6 +73,14 @@ class TestData(val bytes: Array[Byte], val name: String, owner: Class[?]):
       Assert.assertArrayEquals(bytes, a)
     (bo, checker)
 
+  def createBlockBufferedOutput(initialBufferSize: Int = 64): (BufferedOutput, () => Unit) =
+    val bo = BufferedOutput.buffering(initialBufferSize)
+    val checker = () =>
+      bo.close()
+      val in = bo.toInputStream
+      Assert.assertArrayEquals(bytes, in.readAllBytes())
+    (bo, checker)
+
   def createFixedBufferedOutput(buf: Array[Byte], start: Int = 0, len: Int = -1): (BufferedOutput, () => Unit) =
     val bo = BufferedOutput.fixed(buf, start, if(len == -1) buf.length-start else len)
     val checker = () =>

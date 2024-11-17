@@ -26,10 +26,10 @@ class RuntimeTest:
   @Test
   def testVarintRoundtrip(): Unit =
     def check(l: Long): Unit =
-      val bo = BufferedOutput.growing()
+      val bo = BufferedOutput.buffering()
       Runtime.writeVarint(bo, l)
       bo.close()
-      val in = BufferedInput.ofArray(bo.buffer(), 0, bo.length())
+      val in = bo.toBufferedInput
       val l2 = Runtime.parseVarint(in)
       assertEquals(l, l2)
     check(0L)

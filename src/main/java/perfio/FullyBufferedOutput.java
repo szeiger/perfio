@@ -62,6 +62,7 @@ public final class FullyBufferedOutput extends CacheRootBufferedOutput {
   @Override
   void closeUpstream() throws IOException {
     flushSingle(this, false);
+    super.closeUpstream();
   }
 
   void flushUpstream() {}
@@ -80,5 +81,9 @@ public final class FullyBufferedOutput extends CacheRootBufferedOutput {
   public int length() throws IOException {
     checkClosed();
     return outpos;
+  }
+
+  public BufferedInput toBufferedInput() throws IOException {
+    return BufferedInput.ofArray(buffer(), 0, length());
   }
 }

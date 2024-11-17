@@ -1,22 +1,17 @@
 package perfio;
 
-import java.io.EOFException;
+import java.io.Closeable;
 import java.io.IOException;
-import java.io.InputStream;
 import java.nio.charset.Charset;
 
 import static perfio.BufferUtil.*;
 
-final class HeapBufferedInput extends BufferedInput {
+sealed abstract class HeapBufferedInput extends BufferedInput permits StreamingHeapBufferedInput, SwitchingHeapBufferedInput {
   byte[] buf;
-  final InputStream in;
-  final int minRead;
 
-  HeapBufferedInput(byte[] buf, int pos, int lim, long totalReadLimit, InputStream in, int minRead, BufferedInput parent, boolean bigEndian) {
-    super(pos, lim, totalReadLimit, in, parent, bigEndian);
+  HeapBufferedInput(byte[] buf, int pos, int lim, long totalReadLimit, Closeable closeable, BufferedInput parent, boolean bigEndian) {
+    super(pos, lim, totalReadLimit, closeable, parent, bigEndian);
     this.buf = buf;
-    this.in = in;
-    this.minRead = minRead;
   }
 
   void copyBufferFrom(BufferedInput b) {
@@ -26,68 +21,6 @@ final class HeapBufferedInput extends BufferedInput {
   void clearBuffer() {
     buf = null;
   }
-
-  private int fillBuffer() throws IOException {
-    var read = in.read(buf, lim, buf.length - lim);
-    if(read > 0) {
-      totalBuffered += read;
-      lim += read;
-      if(totalBuffered >= totalReadLimit) {
-        excessRead = (int)(totalBuffered-totalReadLimit);
-        lim -= excessRead;
-        totalBuffered -= excessRead;
-      }
-    }
-    return read;
-  }
-
-  void prepareAndFillBuffer(int count) throws IOException {
-    checkState();
-    if(in != null && totalBuffered < totalReadLimit) {
-      if(pos + count > buf.length || pos >= buf.length-minRead) {
-        var a = available();
-        // Buffer shifts must be aligned to the vector size, otherwise VectorizedLineTokenizer
-        // performance will tank after rebuffering even when all vector reads are aligned.
-        var offset = a > 0 ? pos % BufferUtil.VECTOR_LENGTH : 0;
-        if(count + offset > buf.length) {
-          var buflen = buf.length;
-          while(buflen < count + offset) buflen *= 2;
-          var buf2 = new byte[buflen];
-          if(a > 0) System.arraycopy(buf, pos, buf2, offset, a);
-          buf = buf2;
-        } else if (a > 0 && pos != offset) {
-          System.arraycopy(buf, pos, buf, offset, a);
-        }
-        pos = offset;
-        lim = a + offset;
-      }
-      while(fillBuffer() >= 0 && available() < count) {}
-    }
-  }
-
-  public void bytes(byte[] a, int off, int len) throws IOException {
-    var tot = totalBytesRead() + len;
-    if(tot < 0 || tot > totalReadLimit) throw new EOFException();
-    var copied = Math.min(len, available());
-    if(copied > 0) {
-      System.arraycopy(buf, pos, a, off, copied);
-      pos += copied;
-    }
-    var rem = len - copied;
-    while(rem >= minRead && in != null) {
-      var r = in.read(a, off + copied, rem);
-      if(r <= 0) throw new EOFException();
-      totalBuffered += r;
-      copied += r;
-      rem -= r;
-    }
-    if(rem > 0) {
-      var p = fwd(rem);
-      System.arraycopy(buf, p, a, off + copied, rem);
-    }
-  }
-
-  BufferedInput createEmptyView() { return new HeapBufferedInput(null, 0, 0, 0, in, minRead, this, bigEndian); }
 
   public byte int8() throws IOException {
     var p = fwd(1);
@@ -145,35 +78,23 @@ final class HeapBufferedInput extends BufferedInput {
     }
   }
 
-  public long skip(long bytes) throws IOException {
-    checkState();
-    var base = 0L;
-    while(true) {
-      if(bytes <= 0) return base;
-      var skipAv = (int)Math.min(bytes, available());
-      pos += skipAv;
-      var rem = bytes - skipAv;
-      if(rem <= 0 || in == null) return base + skipAv;
-      var remTotal = totalReadLimit - totalBuffered;
-      rem = Math.min(rem, remTotal);
-      rem -= trySkipIn(rem); //TODO have a minSkip similar to minRead?
-      if(rem <= 0) return base + bytes;
-      request((int)Math.min(rem, buf.length));
-      if(available() <= 0) return base + bytes - rem;
-      base = base + bytes - rem;
-      bytes = rem;
+  /// Shift the remaining buffer data to the left and/or reallocate the buffer to make room for
+  /// `count` bytes past the current `pos`.
+  void shiftOrGrow(int count) {
+    var a = available();
+    // Buffer shifts must be aligned to the vector size, otherwise VectorizedLineTokenizer
+    // performance will tank after rebuffering even when all vector reads are aligned.
+    var offset = a > 0 ? pos % BufferUtil.VECTOR_LENGTH : 0;
+    if(count + offset > buf.length) {
+      var buflen = buf.length;
+      while(buflen < count + offset) buflen *= 2;
+      var buf2 = new byte[buflen];
+      if(a > 0) System.arraycopy(buf, pos, buf2, offset, a);
+      buf = buf2;
+    } else if(a > 0 && pos != offset) {
+      System.arraycopy(buf, pos, buf, offset, a);
     }
-  }
-
-  // repeatedly try in.skip(); may return early even when more data is available
-  private long trySkipIn(long b) throws IOException {
-    var skipped = 0L;
-    while(skipped < b) {
-      var l = in.skip(b-skipped);
-      if(l <= 0) return skipped;
-      totalBuffered += l;
-      skipped += l;
-    }
-    return skipped;
+    pos = offset;
+    lim = a + offset;
   }
 }

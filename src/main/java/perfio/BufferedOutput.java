@@ -38,8 +38,9 @@ public abstract sealed class BufferedOutput implements Closeable, Flushable perm
   /// @see #of(OutputStream, int)
   public static BufferedOutput of(OutputStream out) { return of(out, DefaultBufferSize); }
 
-  /// Write data to an internal byte array buffer that can be accessed directly or copies after
-  /// closing the BufferedOutput (similar to [ByteArrayOutputStream]).
+  /// Write data to an internal byte array buffer that can be accessed directly or copied after
+  /// closing the BufferedOutput (similar to [ByteArrayOutputStream]). The size is limited to 2 GB
+  /// (the maximum size of a byte array).
   ///
   /// @param initialBufferSize Initial buffer size. The buffer is expanded later if necessary.
   public static FullyBufferedOutput growing(int initialBufferSize) {
@@ -47,11 +48,24 @@ public abstract sealed class BufferedOutput implements Closeable, Flushable perm
     return new FullyBufferedOutput(buf, true, 0, 0, buf.length, initialBufferSize, false);
   }
 
-  /// Write data to an internal byte array buffer that can be accessed directly or copies after
+  /// Write data to an internal byte array buffer that can be accessed directly or copied after
   /// closing the BufferedOutput (similar to [ByteArrayOutputStream]) using the default initial
-  /// buffer size.
+  /// buffer size. The size is limited to 2 GB (the maximum size of a byte array).
   /// @see #growing(int)
   public static FullyBufferedOutput growing() { return growing(DefaultBufferSize); }
+
+  /// Write data to an internal buffer that can be read as an [InputStream] or [BufferedInput]
+  /// after closing the BufferedOutput.
+  ///
+  /// @param initialBufferSize Initial buffer size. The buffer is expanded later if necessary.
+  public static BlockBufferedOutput buffering(int initialBufferSize) {
+    return new BlockBufferedOutput(true, initialBufferSize);
+  }
+
+  /// Write data to an internal buffer that can be read as an [InputStream] or [BufferedInput]
+  /// after closing the BufferedOutput using the default initial buffer size.
+  /// @see #buffering(int)
+  public static BlockBufferedOutput buffering() { return buffering(DefaultBufferSize); }
 
   /// Write data to a given region of an existing byte array. The BufferedOutput is limited to the
   /// initial size.
@@ -136,7 +150,7 @@ public abstract sealed class BufferedOutput implements Closeable, Flushable perm
   /// Return the byte order of this BufferedOutput.
   public final ByteOrder order() { return bigEndian ? ByteOrder.BIG_ENDIAN : ByteOrder.LITTLE_ENDIAN; }
 
-  private void checkState() throws IOException {
+  void checkState() throws IOException {
     if(closed) throw new IOException("BufferedOutput has already been closed");
   }
 
@@ -269,7 +283,7 @@ public abstract sealed class BufferedOutput implements Closeable, Flushable perm
   /// @see #string(String, Charset)
   public final int zstring(String s) throws IOException { return zstring(s, StandardCharsets.UTF_8); }
 
-  private void flushAndGrow(int count) throws IOException {
+  void flushAndGrow(int count) throws IOException {
     checkState();
     if(!fixed) {
       //println(s"$show.flushAndGrow($count)")
@@ -330,7 +344,8 @@ public abstract sealed class BufferedOutput implements Closeable, Flushable perm
 
   private void growBufferCopy(int count) {
     var tlim = (int)Math.min(totalLimit - totalBytesWritten(), pos + count);
-    var buflen = growBuffer(buf.length, tlim, 1);
+    var buflen = growBuffer(buf.length, tlim, 2);
+    //System.out.println("grow "+buf.length+", "+tlim+", "+buflen);
     if(buflen > buf.length) buf = Arrays.copyOf(buf, buflen);
     lim = buf.length;
     unshare();
@@ -590,7 +605,7 @@ final class NestedBufferedOutput extends BufferedOutput {
 }
 
 
-sealed abstract class CacheRootBufferedOutput extends BufferedOutput permits FlushingBufferedOutput, FullyBufferedOutput {
+sealed abstract class CacheRootBufferedOutput extends BufferedOutput permits FlushingBufferedOutput, FullyBufferedOutput, BlockBufferedOutput {
   final int initialBufferSize;
 
   CacheRootBufferedOutput(byte[] buf, boolean bigEndian, int start, int pos, int lim, int initialBufferSize, boolean fixed, long totalLimit) {
@@ -600,6 +615,11 @@ sealed abstract class CacheRootBufferedOutput extends BufferedOutput permits Flu
   }
 
   private BufferedOutput cachedExclusive, cachedShared = null; // single-linked lists (via `next`) of blocks cached for reuse
+
+  void closeUpstream() throws IOException {
+    cachedExclusive = null;
+    cachedShared = null;
+  }
 
   void returnToCache(BufferedOutput b) {
     if(b.sharing == SHARING_LEFT) {
@@ -664,11 +684,9 @@ final class FlushingBufferedOutput extends CacheRootBufferedOutput {
         return;
       }
       if(b.sharing == SHARING_LEFT) {
-        if(blen < initialBufferSize) {
-          var n = b.next;
-          n.start = b.start;
-          n.totalFlushed -= blen;
-        } else if(blen > 0) writeToOutput(b.buf, b.start, blen);
+        var n = b.next;
+        n.start = b.start;
+        n.totalFlushed -= blen;
       } else {
         if(blen < initialBufferSize/2 && maybeMergeToRight(b)) {}
         else if(blen > 0) writeToOutput(b.buf, b.start, blen);

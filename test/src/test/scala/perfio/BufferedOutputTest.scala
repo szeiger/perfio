@@ -159,4 +159,5 @@ object BufferedOutputTest:
     Array[Any]("baos_32768", (_: TestData).createBufferedOutputToOutputStream(32768)),
     Array[Any]("growing_64", (_: TestData).createGrowingBufferedOutput(64)),
     Array[Any]("fixed_32768", (_: TestData).createFixedBufferedOutput(new Array[Byte](32768))),
+    Array[Any]("block_64", (_: TestData).createBlockBufferedOutput(64)),
   )

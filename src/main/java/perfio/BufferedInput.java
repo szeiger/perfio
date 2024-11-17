@@ -37,7 +37,7 @@ public abstract sealed class BufferedInput implements Closeable permits HeapBuff
   ///                          at least half of initialBufferSize at once.
   public static BufferedInput of(InputStream in, int initialBufferSize) {
     var buf = new byte[Math.max(initialBufferSize, MIN_BUFFER_SIZE)];
-    return new HeapBufferedInput(buf, buf.length, buf.length, Long.MAX_VALUE, in, buf.length/2, null, true);
+    return new StreamingHeapBufferedInput(buf, buf.length, buf.length, Long.MAX_VALUE, in, buf.length/2, null, true);
   }
 
   /// Same as `ofArray(buf, 0, buf.length)`.
@@ -51,7 +51,7 @@ public abstract sealed class BufferedInput implements Closeable permits HeapBuff
   /// @param len        Length of the data within the array.
   public static BufferedInput ofArray(byte[] buf, int off, int len) {
     Objects.checkFromIndexSize(off, len, buf.length);
-    return new HeapBufferedInput(buf, off, off+len, Long.MAX_VALUE, null, 0, null, true);
+    return new StreamingHeapBufferedInput(buf, off, off+len, Long.MAX_VALUE, null, 0, null, true);
   }
 
   /// Read data from a [MemorySegment] using the default [ByteOrder#BIG_ENDIAN]. Use
@@ -83,7 +83,7 @@ public abstract sealed class BufferedInput implements Closeable permits HeapBuff
       bb.position(p);
       return new DirectBufferedInput(bb, ms, p, bb.limit(), bb.limit(), ms, null, null, new LineBuffer());
     }
-    else return new HeapBufferedInput(bb.array(), bb.position(), bb.limit(), Long.MAX_VALUE, null, 0, null, bb.order() == ByteOrder.BIG_ENDIAN);
+    else return new StreamingHeapBufferedInput(bb.array(), bb.position(), bb.limit(), Long.MAX_VALUE, null, 0, null, bb.order() == ByteOrder.BIG_ENDIAN);
   }
 
   /// Read data from a file which is memory-mapped for efficient reading.
@@ -137,6 +137,18 @@ public abstract sealed class BufferedInput implements Closeable permits HeapBuff
   abstract BufferedInput createEmptyView();
   abstract void clearBuffer();
   abstract void copyBufferFrom(BufferedInput b);
+  
+  /// Fill the buffer as much as possible without blocking (starting at [#lim]), but at least
+  /// until `count` bytes are available starting at [#pos] even if this requires blocking or
+  /// growing the buffer. Less data may only be made available when the end of the input has been
+  /// reached or nothing more can be read without exceeding the [#totalReadLimit]. The fields
+  /// [#totalBuffered] and [#lim] are updated accordingly.
+  ///
+  /// If [#totalBuffered] would exceed [#totalReadLimit] after filling the buffer, any excess
+  /// bytes must be counted as [#excessRead] and subtracted from [#totalBuffered] and [#lim].
+  ///
+  /// This method may change the buffer references when requesting more than
+  /// [#MIN_BUFFER_SIZE] / 2 bytes.
   abstract void prepareAndFillBuffer(int count) throws IOException;
 
   String show() {
@@ -173,7 +185,7 @@ public abstract sealed class BufferedInput implements Closeable permits HeapBuff
   }
 
   /// Request `count` bytes to be available to read in the buffer. Less may be available if the end of the input
-  /// is reached. This method may change the `buf` and `bb` references when requesting more than
+  /// is reached. This method may change the buffer references when requesting more than
   /// [#MIN_BUFFER_SIZE] / 2 bytes.
   void request(int count) throws IOException { if(available() < count) prepareAndFillBuffer(count); }
 

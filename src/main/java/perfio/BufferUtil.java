@@ -19,11 +19,14 @@ class BufferUtil {
     int l = current;
     while(l < target) {
       l *= 2;
-      if(l < 0) return Integer.MAX_VALUE - align + 1;
+      if(l < 0) l = Integer.MAX_VALUE;
     }
-    return l;
+    return Math.min(l, SOFT_MAX_ARRAY_LENGTH) & -align;
   }
 
+  // From jdk.internal.util.ArraysSupport
+  static final int SOFT_MAX_ARRAY_LENGTH = Integer.MAX_VALUE - 8;
+  
   static final VarHandle BA_LONG_BIG = bavh(Long.TYPE, true);
   static final VarHandle BA_INT_BIG = bavh(Integer.TYPE, true);
   static final VarHandle BA_SHORT_BIG = bavh(Short.TYPE, true);
