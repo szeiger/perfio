@@ -74,7 +74,7 @@ class TestData(val bytes: Array[Byte], val name: String, owner: Class[?]):
     (bo, checker)
 
   def createBlockBufferedOutput(initialBufferSize: Int = 64): (BufferedOutput, () => Unit) =
-    val bo = BufferedOutput.buffering(initialBufferSize)
+    val bo = BufferedOutput.ofBlocks(initialBufferSize)
     val checker = () =>
       bo.close()
       val in = bo.toInputStream
@@ -82,7 +82,7 @@ class TestData(val bytes: Array[Byte], val name: String, owner: Class[?]):
     (bo, checker)
 
   def createFixedBufferedOutput(buf: Array[Byte], start: Int = 0, len: Int = -1): (BufferedOutput, () => Unit) =
-    val bo = BufferedOutput.fixed(buf, start, if(len == -1) buf.length-start else len)
+    val bo = BufferedOutput.ofArray(buf, start, if(len == -1) buf.length-start else len)
     val checker = () =>
       bo.close()
       val checkLen = bo.totalBytesWritten.toInt

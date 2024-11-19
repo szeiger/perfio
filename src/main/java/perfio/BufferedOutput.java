@@ -13,13 +13,13 @@ import java.util.Objects;
 import static perfio.BufferUtil.*;
 
 
-/// BufferedInput provides buffered streaming writes to an OutputStream or similar data sink.
+/// BufferedOutput provides buffered streaming writes to an OutputStream or similar data sink.
 ///
 /// The API is not thread-safe. Access from multiple threads must be synchronized externally.
 /// The number of bytes written is tracked as a 64-bit signed long value [#totalBytesWritten()].
 /// The behaviour after writing more than [Long#MAX_VALUE] (8 exabytes) is undefined.
 ///
-/// A freshly created BufferedInput always uses [ByteOrder#BIG_ENDIAN]. This can be changed with
+/// A freshly created BufferedOutput always uses [ByteOrder#BIG_ENDIAN]. This can be changed with
 /// [#order(ByteOrder)]. Unless specified explicitly, the initial buffer size is 32768.
 public abstract sealed class BufferedOutput implements Closeable, Flushable permits CacheRootBufferedOutput, NestedBufferedOutput {
 
@@ -43,47 +43,47 @@ public abstract sealed class BufferedOutput implements Closeable, Flushable perm
   /// (the maximum size of a byte array).
   ///
   /// @param initialBufferSize Initial buffer size. The buffer is expanded later if necessary.
-  public static FullyBufferedOutput growing(int initialBufferSize) {
+  public static ArrayBufferedOutput growing(int initialBufferSize) {
     var buf = new byte[Math.max(initialBufferSize, MinBufferSize)];
-    return new FullyBufferedOutput(buf, true, 0, 0, buf.length, initialBufferSize, false);
+    return new ArrayBufferedOutput(buf, true, 0, 0, buf.length, initialBufferSize, false);
   }
 
   /// Write data to an internal byte array buffer that can be accessed directly or copied after
   /// closing the BufferedOutput (similar to [ByteArrayOutputStream]) using the default initial
   /// buffer size. The size is limited to 2 GB (the maximum size of a byte array).
   /// @see #growing(int)
-  public static FullyBufferedOutput growing() { return growing(DefaultBufferSize); }
+  public static ArrayBufferedOutput growing() { return growing(DefaultBufferSize); }
 
   /// Write data to an internal buffer that can be read as an [InputStream] or [BufferedInput]
   /// after closing the BufferedOutput.
   ///
   /// @param initialBufferSize Initial buffer size. The buffer is expanded later if necessary.
-  public static BlockBufferedOutput buffering(int initialBufferSize) {
+  public static BlockBufferedOutput ofBlocks(int initialBufferSize) {
     return new BlockBufferedOutput(true, initialBufferSize);
   }
 
   /// Write data to an internal buffer that can be read as an [InputStream] or [BufferedInput]
   /// after closing the BufferedOutput using the default initial buffer size.
-  /// @see #buffering(int)
-  public static BlockBufferedOutput buffering() { return buffering(DefaultBufferSize); }
+  /// @see #ofBlocks(int)
+  public static BlockBufferedOutput ofBlocks() { return ofBlocks(DefaultBufferSize); }
 
   /// Write data to a given region of an existing byte array. The BufferedOutput is limited to the
   /// initial size.
   ///
   /// @param initialBufferSize Initial buffer size for additional temporary buffers that may be
   ///                          created when using [#defer(long)], otherwise unused.
-  public static FullyBufferedOutput fixed(byte[] buf, int off, int len, int initialBufferSize) {
+  public static ArrayBufferedOutput ofArray(byte[] buf, int off, int len, int initialBufferSize) {
     Objects.checkFromIndexSize(off, len, buf.length);
-    return new FullyBufferedOutput(buf, true, off, off, len+off, initialBufferSize, true);
+    return new ArrayBufferedOutput(buf, true, off, off, len+off, initialBufferSize, true);
   }
 
-  /// Write data to a given byte array. Same as `fixed(buf, 0, buf.length)`.
-  /// @see #fixed(byte[], int, int, int)
-  public static FullyBufferedOutput fixed(byte[] buf) { return fixed(buf, 0, buf.length, DefaultBufferSize); }
+  /// Write data to a given byte array. Same as `ofArray(buf, 0, buf.length)`.
+  /// @see #ofArray(byte[], int, int, int)
+  public static ArrayBufferedOutput ofArray(byte[] buf) { return ofArray(buf, 0, buf.length, DefaultBufferSize); }
 
-  /// Write data to a given region of an existing byte array..
-  /// @see #fixed(byte[], int, int, int)
-  public static FullyBufferedOutput fixed(byte[] buf, int start, int len) { return fixed(buf, start, len, DefaultBufferSize); }
+  /// Write data to a given region of an existing byte array.
+  /// @see #ofArray(byte[], int, int, int)
+  public static ArrayBufferedOutput ofArray(byte[] buf, int start, int len) { return ofArray(buf, start, len, DefaultBufferSize); }
 
   /// Write data to a file.
   ///
@@ -405,7 +405,7 @@ public abstract sealed class BufferedOutput implements Closeable, Flushable perm
   ///
   /// If this is a root BufferedOutput based on an [OutputStream] or similar data sink, any
   /// outstanding data is flushed to the sink which is then closed as well. In case of a
-  /// [FullyBufferedOutput], the data becomes available for reading once it is closed.
+  /// [ArrayBufferedOutput], the data becomes available for reading once it is closed.
   ///
   /// Closing a nested BufferedOutput created with [#reserve(long)] before writing all the
   /// requested data results in an IOException.
@@ -605,7 +605,7 @@ final class NestedBufferedOutput extends BufferedOutput {
 }
 
 
-sealed abstract class CacheRootBufferedOutput extends BufferedOutput permits FlushingBufferedOutput, FullyBufferedOutput, BlockBufferedOutput {
+sealed abstract class CacheRootBufferedOutput extends BufferedOutput permits FlushingBufferedOutput, ArrayBufferedOutput, BlockBufferedOutput {
   final int initialBufferSize;
 
   CacheRootBufferedOutput(byte[] buf, boolean bigEndian, int start, int pos, int lim, int initialBufferSize, boolean fixed, long totalLimit) {

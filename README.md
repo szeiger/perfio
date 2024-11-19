@@ -2,14 +2,16 @@
 
 ## Overview
 
-perfIO provides buffered streaming I/O abstractions for both binary and text data. The design is optimized for performance. The main perfIO classes correspond roughly to the following standard library abstractions:
+perfIO provides buffered streaming I/O abstractions for both binary and text data. The design is optimized for performance. The public perfIO classes correspond roughly to the following standard library abstractions:
 
-| perfIO         | JDK (* and common 3rd-party additions)                                          |
-|----------------|---------------------------------------------------------------------------------|
-| BufferedInput  | BufferedInputStream, ByteArrayInputStream, DataInputStream, LimitedInputStream* |
-| BufferedOutput | BufferedOutputStream, ByteArrayOutputStream, DataOutputStream                   |
-| LineTokenizer  | BufferedReader + InputStreamReader                                              |
-| TextOutput     | PrintWriter + BufferedWriter + OutputStreamWriter                               |
+| perfIO              | JDK (* and common 3rd-party additions)                                          |
+|---------------------|---------------------------------------------------------------------------------|
+| BufferedInput       | BufferedInputStream, ByteArrayInputStream, DataInputStream, LimitedInputStream* |
+| BufferedOutput      | BufferedOutputStream, DataOutputStream                                          |
+| ArrayBufferedOutput | ByteArrayOutputStream                                                           |
+| BlockBufferedOutput | (ByteArrayOutputStream, but with multiple arrays)                               |
+| LineTokenizer       | BufferedReader + InputStreamReader                                              |
+| TextOutput          | PrintWriter + BufferedWriter + OutputStreamWriter                               |
 
 ## How fast is it?
 
@@ -46,9 +48,19 @@ Another source of performance is not just making the available abstractions fast
 
 ## Usage
 
-A top-level `BufferedInput` or `BufferedOutput` object is always instantiated by calling one of the static factory methods in the respective class. It should be closed after use by calling `close()`.
+A top-level `BufferedInput` or `BufferedOutput` object is instantiated by calling one of the static factory methods in the respective class. It should be closed after use by calling `close()`.
 
-The methods for reading and writing multi-byte numeric values require a byte order. All factory methods set it to `BIG_ENDIAN` by default, but it can be changed at any time with the `order` method. This is consistent with `ByteBuffer` but different from the FFM API (which is mostly intended for interacting with native code and consequently uses the native byte order by default).
+```java
+  var out = BufferedOutput.ofFile(Path.of("foo"));
+  out.int8(1);
+  out.int32(2);
+  out.close();
+
+  var in = BufferedInput.ofMappedFile(Path.of("foo"));
+  var a = in.int8();
+  var b = in.int32();
+  in.close();
+```
 
 Since Java does not have unsigned integers, the main methods for reading and writing binary data are the signed ones. The only exception is `uint16` which uses `char`, the only unsigned primitive type. Other `uint` methods are convenience wrappers that use a larger signed type.
 
@@ -64,7 +76,11 @@ Since Java does not have unsigned integers, the main methods for reading and wri
 | float32 | 32 bits floating-point | float                    |
 | float64 | 64 bits floating-point | double                   |
 
-Both `BufferedInput` and `BufferedOutput` can have nested views, but the semantics are different. A `BufferedInput` is always read sequentially, thus creating a view at the current position (using the `delimitedView` method) locks the parent until the view is closed. The only method that may still be called while a view is active is `close()` which implicitly closes all active nested views.
+The methods for reading and writing multi-byte numeric values require a byte order. All factory methods set it to `BIG_ENDIAN` by default, but it can be changed at any time with the `order` method. This is consistent with `ByteBuffer` but different from the FFM API (which is mostly intended for interacting with native code and consequently uses the native byte order by default).
+
+### Views
+
+Both `BufferedInput` and `BufferedOutput` can have nested views, but the semantics are different. A `BufferedInput` is always read sequentially, thus creating a view at the current position (using the `limitedView` method) locks the parent until the view is closed. The only method that may still be called while a view is active is `close()` which implicitly closes all active nested views.
 
 A `BufferedOutput` can be written to out of order. This is important for writing binary formats with length prefixes. It is often inconvenient or inefficient to calculate the length without actually writing the data. If the prefix has a fixed size, you can use `reserve` to insert a nested `BufferedOutput` at the current position which can be filled at a later point. You must write exactly the requested amount of data to it before closing it:
 
@@ -91,6 +107,8 @@ When the length of the prefix is variable, you can use `defer` instead. This met
 ```
 
 Both `BufferedInput` and `BufferedOutput` will reuse views by default. This means that you should not access any view after closing it (unless it was explicitly detached by calling `detach()`) because the object and/or its buffer may have been repurposed. This design makes the repeated use of views for writing small amounts of data very efficient.
+
+### Text I/O
 
 A `LineTokenizer` can be obtained by calling `lines` on a `BufferedInput` object. It allows you to read a text file line by line. Line tokenization is currently limited to ASCII-compatible encodings, which includes UTF-8 and the ISO-8859 ("Latin") charsets. `LineTokenizer` will use a faster SIMD-based implementation if the Vector API (incubator version as of JDK 22) is available.
 

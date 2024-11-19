@@ -4,7 +4,7 @@ import org.junit.Assert.*
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.junit.runners.JUnit4
-import perfio.{BufferedOutput, FullyBufferedOutput, TextOutput}
+import perfio.{BufferedOutput, ArrayBufferedOutput, TextOutput}
 
 import java.nio.charset.StandardCharsets
 

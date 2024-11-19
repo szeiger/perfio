@@ -90,6 +90,6 @@ class OutputToInputBenchmark extends BenchUtil:
 
   @Benchmark
   def num_BlockBufferedOutput(bh: Blackhole): Unit =
-    val out = BufferedOutput.buffering()
+    val out = BufferedOutput.ofBlocks()
     writeTo(out)
     readFrom(bh, out.toBufferedInput)

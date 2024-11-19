@@ -26,7 +26,7 @@ class RuntimeTest:
   @Test
   def testVarintRoundtrip(): Unit =
     def check(l: Long): Unit =
-      val bo = BufferedOutput.buffering()
+      val bo = BufferedOutput.ofBlocks()
       Runtime.writeVarint(bo, l)
       bo.close()
       val in = bo.toBufferedInput

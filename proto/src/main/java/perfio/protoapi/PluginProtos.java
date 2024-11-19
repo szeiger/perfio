@@ -40,11 +40,11 @@ public final class PluginProtos {
         int tag = (int)perfio.proto.runtime.Runtime.parseVarint(in);
         switch(tag) {
           case 8 -> base.setMajor(perfio.proto.runtime.Runtime.parseInt32(in));
-          case 10 -> { var in2 = in.delimitedView(perfio.proto.runtime.Runtime.parseLen(in)); while(in2.hasMore()) base.setMajor(perfio.proto.runtime.Runtime.parseInt32(in2));; in2.close(); }
+          case 10 -> { var in2 = in.limitedView(perfio.proto.runtime.Runtime.parseLen(in)); while(in2.hasMore()) base.setMajor(perfio.proto.runtime.Runtime.parseInt32(in2));; in2.close(); }
           case 16 -> base.setMinor(perfio.proto.runtime.Runtime.parseInt32(in));
-          case 18 -> { var in2 = in.delimitedView(perfio.proto.runtime.Runtime.parseLen(in)); while(in2.hasMore()) base.setMinor(perfio.proto.runtime.Runtime.parseInt32(in2));; in2.close(); }
+          case 18 -> { var in2 = in.limitedView(perfio.proto.runtime.Runtime.parseLen(in)); while(in2.hasMore()) base.setMinor(perfio.proto.runtime.Runtime.parseInt32(in2));; in2.close(); }
           case 24 -> base.setPatch(perfio.proto.runtime.Runtime.parseInt32(in));
-          case 26 -> { var in2 = in.delimitedView(perfio.proto.runtime.Runtime.parseLen(in)); while(in2.hasMore()) base.setPatch(perfio.proto.runtime.Runtime.parseInt32(in2));; in2.close(); }
+          case 26 -> { var in2 = in.limitedView(perfio.proto.runtime.Runtime.parseLen(in)); while(in2.hasMore()) base.setPatch(perfio.proto.runtime.Runtime.parseInt32(in2));; in2.close(); }
           case 34 -> base.setSuffix(perfio.proto.runtime.Runtime.parseString(in));
           default -> parseOther(in, tag);
         }
@@ -134,9 +134,9 @@ public final class PluginProtos {
         switch(tag) {
           case 10 -> base.addFileToGenerate(perfio.proto.runtime.Runtime.parseString(in));
           case 18 -> base.setParameter(perfio.proto.runtime.Runtime.parseString(in));
-          case 122 -> { var in2 = in.delimitedView(perfio.proto.runtime.Runtime.parseLen(in)); base.addProtoFile(perfio.protoapi.DescriptorProtos.FileDescriptorProto.parseFrom(in2)); in2.close(); }
-          case 138 -> { var in2 = in.delimitedView(perfio.proto.runtime.Runtime.parseLen(in)); base.addSourceFileDescriptors(perfio.protoapi.DescriptorProtos.FileDescriptorProto.parseFrom(in2)); in2.close(); }
-          case 26 -> { var in2 = in.delimitedView(perfio.proto.runtime.Runtime.parseLen(in)); var m = base.getCompilerVersion(); perfio.protoapi.PluginProtos.Version.parseFrom(in2, m); in2.close(); base.setCompilerVersion(m); }
+          case 122 -> { var in2 = in.limitedView(perfio.proto.runtime.Runtime.parseLen(in)); base.addProtoFile(perfio.protoapi.DescriptorProtos.FileDescriptorProto.parseFrom(in2)); in2.close(); }
+          case 138 -> { var in2 = in.limitedView(perfio.proto.runtime.Runtime.parseLen(in)); base.addSourceFileDescriptors(perfio.protoapi.DescriptorProtos.FileDescriptorProto.parseFrom(in2)); in2.close(); }
+          case 26 -> { var in2 = in.limitedView(perfio.proto.runtime.Runtime.parseLen(in)); var m = base.getCompilerVersion(); perfio.protoapi.PluginProtos.Version.parseFrom(in2, m); in2.close(); base.setCompilerVersion(m); }
           default -> parseOther(in, tag);
         }
       }
@@ -230,7 +230,7 @@ public final class PluginProtos {
             case 10 -> base.setName(perfio.proto.runtime.Runtime.parseString(in));
             case 18 -> base.setInsertionPoint(perfio.proto.runtime.Runtime.parseString(in));
             case 122 -> base.setContent(perfio.proto.runtime.Runtime.parseString(in));
-            case 130 -> { var in2 = in.delimitedView(perfio.proto.runtime.Runtime.parseLen(in)); var m = base.getGeneratedCodeInfo(); perfio.protoapi.DescriptorProtos.GeneratedCodeInfo.parseFrom(in2, m); in2.close(); base.setGeneratedCodeInfo(m); }
+            case 130 -> { var in2 = in.limitedView(perfio.proto.runtime.Runtime.parseLen(in)); var m = base.getGeneratedCodeInfo(); perfio.protoapi.DescriptorProtos.GeneratedCodeInfo.parseFrom(in2, m); in2.close(); base.setGeneratedCodeInfo(m); }
             default -> parseOther(in, tag);
           }
         }
@@ -306,12 +306,12 @@ public final class PluginProtos {
         switch(tag) {
           case 10 -> base.setError(perfio.proto.runtime.Runtime.parseString(in));
           case 16 -> base.setSupportedFeatures(perfio.proto.runtime.Runtime.parseInt64(in));
-          case 18 -> { var in2 = in.delimitedView(perfio.proto.runtime.Runtime.parseLen(in)); while(in2.hasMore()) base.setSupportedFeatures(perfio.proto.runtime.Runtime.parseInt64(in2));; in2.close(); }
+          case 18 -> { var in2 = in.limitedView(perfio.proto.runtime.Runtime.parseLen(in)); while(in2.hasMore()) base.setSupportedFeatures(perfio.proto.runtime.Runtime.parseInt64(in2));; in2.close(); }
           case 24 -> base.setMinimumEdition(perfio.proto.runtime.Runtime.parseInt32(in));
-          case 26 -> { var in2 = in.delimitedView(perfio.proto.runtime.Runtime.parseLen(in)); while(in2.hasMore()) base.setMinimumEdition(perfio.proto.runtime.Runtime.parseInt32(in2));; in2.close(); }
+          case 26 -> { var in2 = in.limitedView(perfio.proto.runtime.Runtime.parseLen(in)); while(in2.hasMore()) base.setMinimumEdition(perfio.proto.runtime.Runtime.parseInt32(in2));; in2.close(); }
           case 32 -> base.setMaximumEdition(perfio.proto.runtime.Runtime.parseInt32(in));
-          case 34 -> { var in2 = in.delimitedView(perfio.proto.runtime.Runtime.parseLen(in)); while(in2.hasMore()) base.setMaximumEdition(perfio.proto.runtime.Runtime.parseInt32(in2));; in2.close(); }
-          case 122 -> { var in2 = in.delimitedView(perfio.proto.runtime.Runtime.parseLen(in)); base.addFile(perfio.protoapi.PluginProtos.CodeGeneratorResponse.File.parseFrom(in2)); in2.close(); }
+          case 34 -> { var in2 = in.limitedView(perfio.proto.runtime.Runtime.parseLen(in)); while(in2.hasMore()) base.setMaximumEdition(perfio.proto.runtime.Runtime.parseInt32(in2));; in2.close(); }
+          case 122 -> { var in2 = in.limitedView(perfio.proto.runtime.Runtime.parseLen(in)); base.addFile(perfio.protoapi.PluginProtos.CodeGeneratorResponse.File.parseFrom(in2)); in2.close(); }
           default -> parseOther(in, tag);
         }
       }

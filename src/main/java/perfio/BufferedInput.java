@@ -316,13 +316,13 @@ public abstract sealed class BufferedInput implements Closeable permits HeapBuff
   ///
   /// This BufferedInput cannot be used until the view is closed. Calling close() on this BufferedInput is allowed and
   /// will also close the view. Any other method throws an IOException until the view is closed. Views of the same
-  /// BufferedInput are reused. Calling delimitedView() again will return the same object reinitialized to the new state
-  /// unless the view was previously detached.
+  /// BufferedInput are reused. Calling [#limitedView(long, boolean)()] again will return the same object reinitialized
+  /// to the new state unless the view was previously detached.
   ///
   /// @param limit         Maximum number of bytes in the view.
   /// @param skipRemaining Skip over the remaining bytes up to the limit in this BufferedInput if the view is closed
   ///                      without reading it fully.
-  public BufferedInput delimitedView(long limit, boolean skipRemaining) throws IOException {
+  public BufferedInput limitedView(long limit, boolean skipRemaining) throws IOException {
     checkState();
     var tbread = totalBuffered - available();
     var t = Math.min((tbread + limit), totalReadLimit);
@@ -337,9 +337,9 @@ public abstract sealed class BufferedInput implements Closeable permits HeapBuff
     return activeView;
   }
 
-  /// Same as `delimitedView(limit, false)`.
-  /// @see #delimitedView(long, boolean)
-  public BufferedInput delimitedView(long limit) throws IOException { return delimitedView(limit, false); }
+  /// Same as `limitedView(limit, false)`.
+  /// @see #limitedView(long, boolean)
+  public BufferedInput limitedView(long limit) throws IOException { return limitedView(limit, false); }
 
   /// Create a vectorized or scalar [LineTokenizer] depending on JVM and hardware support.
   ///

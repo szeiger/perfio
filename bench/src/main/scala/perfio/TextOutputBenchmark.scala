@@ -193,7 +193,7 @@ class TextOutputBenchmark extends BenchUtil:
       bh.consume(bout.getSize)
 
   private def runTextOutput(bh: Blackhole, f: TextOutput => Unit): Unit =
-    var fbout: FullyBufferedOutput = null
+    var fbout: ArrayBufferedOutput = null
     val bout = if(output == "file") BufferedOutput.ofFile(Paths.get("/dev/null"))
     else
       fbout = BufferedOutput.growing(totalLength)

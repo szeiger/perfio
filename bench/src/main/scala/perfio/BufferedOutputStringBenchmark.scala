@@ -114,7 +114,7 @@ class BufferedOutputStringBenchmark extends BenchUtil:
 
   @Benchmark
   def array_FullyBufferedOutput_fixed(bh: Blackhole): Unit =
-    val out = BufferedOutput.fixed(new Array[Byte](totalLength))
+    val out = BufferedOutput.ofArray(new Array[Byte](totalLength))
     writeTo(out)
     bh.consume(out.buffer)
     bh.consume(out.length)

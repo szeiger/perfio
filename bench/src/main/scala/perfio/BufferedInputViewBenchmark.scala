@@ -63,7 +63,7 @@ class BufferedInputViewBenchmark extends BenchUtil:
     var i = 0
     val end = count/10
     while i < end do
-      val v = bin.delimitedView(130)
+      val v = bin.limitedView(130)
       while v.hasMore do
         bh.consume(v.int8())
         bh.consume(v.int32())

@@ -94,9 +94,9 @@ class FieldNode(desc: FieldDescriptorProto, val parent: MessageNode) extends Nod
       s"$receiver.$m(${tpe.fieldType}.valueOf($rt.${tpe.parseMethod}$parseArgs));"
     case tpe: Tpe.MessageT =>
       if(isRepeated)
-        s"{ var in2 = in.delimitedView($rt.${tpe.parseMethod}$parseArgs); $receiver.$add(${tpe.fieldType}.parseFrom(in2)); in2.close(); }"
+        s"{ var in2 = in.limitedView($rt.${tpe.parseMethod}$parseArgs); $receiver.$add(${tpe.fieldType}.parseFrom(in2)); in2.close(); }"
       else
-        s"{ var in2 = in.delimitedView($rt.${tpe.parseMethod}$parseArgs); var m = $receiver.$get(); ${tpe.fieldType}.parseFrom(in2, m); in2.close(); $receiver.$set(m); }"
+        s"{ var in2 = in.limitedView($rt.${tpe.parseMethod}$parseArgs); var m = $receiver.$get(); ${tpe.fieldType}.parseFrom(in2, m); in2.close(); $receiver.$set(m); }"
     case _ =>
       val m = if(isRepeated) add else set
       s"$receiver.$m($rt.${tpe.parseMethod}$parseArgs);"
@@ -131,9 +131,9 @@ class FieldNode(desc: FieldDescriptorProto, val parent: MessageNode) extends Nod
     pm"case $tag -> ${javaParseExpr("base", RT, "(in)")}"
     if(tpe.canBePacked)
       if(tpe.fieldType == "int" && packed)
-        pm"case ${packedTag} -> { var in2 = in.delimitedView($RT.parseLen(in)); base.${field}_initMut(); while(in2.hasMore()) base.${field}.add($RT.parseInt32(in2)); in2.close(); }"
+        pm"case ${packedTag} -> { var in2 = in.limitedView($RT.parseLen(in)); base.${field}_initMut(); while(in2.hasMore()) base.${field}.add($RT.parseInt32(in2)); in2.close(); }"
       else
-        pm"case ${packedTag} -> { var in2 = in.delimitedView($RT.parseLen(in)); while(in2.hasMore()) ${javaParseExpr("base", RT, "(in2)")}; in2.close(); }"
+        pm"case ${packedTag} -> { var in2 = in.limitedView($RT.parseLen(in)); while(in2.hasMore()) ${javaParseExpr("base", RT, "(in2)")}; in2.close(); }"
     Printed
 
   def emitWriter(using TextOutputContext): Printed =

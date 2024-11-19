@@ -5,6 +5,10 @@ import java.io.InputStream;
 import java.nio.ByteOrder;
 import java.util.Objects;
 
+/// A [BufferedOutput] which collects data in one or more byte array segments. The data can be
+/// accessed with [#toBufferedInput()] or [#toInputStream()] after closing the buffer.
+/// 
+/// Instances are created with [BufferedOutput#ofBlocks(int)] (and its overloads).
 public final class BlockBufferedOutput extends CacheRootBufferedOutput {
   private boolean retrieved = false;
 
@@ -58,7 +62,6 @@ public final class BlockBufferedOutput extends CacheRootBufferedOutput {
   public BufferedInput toBufferedInput() throws IOException {
     checkRetrievalState();
     retrieved = true;
-    //return BufferedInput.of(new BlockBufferedInputStream(this), initialBufferSize); //TODO don't copy buffers
     return new SwitchingHeapBufferedInput(this);
   }
 

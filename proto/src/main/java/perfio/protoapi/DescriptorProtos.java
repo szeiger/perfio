@@ -61,7 +61,7 @@ public final class DescriptorProtos {
       while(in.hasMore()) {
         int tag = (int)perfio.proto.runtime.Runtime.parseVarint(in);
         switch(tag) {
-          case 10 -> { var in2 = in.delimitedView(perfio.proto.runtime.Runtime.parseLen(in)); base.addFile(perfio.protoapi.DescriptorProtos.FileDescriptorProto.parseFrom(in2)); in2.close(); }
+          case 10 -> { var in2 = in.limitedView(perfio.proto.runtime.Runtime.parseLen(in)); base.addFile(perfio.protoapi.DescriptorProtos.FileDescriptorProto.parseFrom(in2)); in2.close(); }
           default -> parseOther(in, tag);
         }
       }
@@ -204,15 +204,15 @@ public final class DescriptorProtos {
           case 18 -> base.setPackage(perfio.proto.runtime.Runtime.parseString(in));
           case 26 -> base.addDependency(perfio.proto.runtime.Runtime.parseString(in));
           case 80 -> base.addPublicDependency(perfio.proto.runtime.Runtime.parseInt32(in));
-          case 82 -> { var in2 = in.delimitedView(perfio.proto.runtime.Runtime.parseLen(in)); while(in2.hasMore()) base.addPublicDependency(perfio.proto.runtime.Runtime.parseInt32(in2));; in2.close(); }
+          case 82 -> { var in2 = in.limitedView(perfio.proto.runtime.Runtime.parseLen(in)); while(in2.hasMore()) base.addPublicDependency(perfio.proto.runtime.Runtime.parseInt32(in2));; in2.close(); }
           case 88 -> base.addWeakDependency(perfio.proto.runtime.Runtime.parseInt32(in));
-          case 90 -> { var in2 = in.delimitedView(perfio.proto.runtime.Runtime.parseLen(in)); while(in2.hasMore()) base.addWeakDependency(perfio.proto.runtime.Runtime.parseInt32(in2));; in2.close(); }
-          case 34 -> { var in2 = in.delimitedView(perfio.proto.runtime.Runtime.parseLen(in)); base.addMessageType(perfio.protoapi.DescriptorProtos.DescriptorProto.parseFrom(in2)); in2.close(); }
-          case 42 -> { var in2 = in.delimitedView(perfio.proto.runtime.Runtime.parseLen(in)); base.addEnumType(perfio.protoapi.DescriptorProtos.EnumDescriptorProto.parseFrom(in2)); in2.close(); }
-          case 50 -> { var in2 = in.delimitedView(perfio.proto.runtime.Runtime.parseLen(in)); base.addService(perfio.protoapi.DescriptorProtos.ServiceDescriptorProto.parseFrom(in2)); in2.close(); }
-          case 58 -> { var in2 = in.delimitedView(perfio.proto.runtime.Runtime.parseLen(in)); base.addExtension(perfio.protoapi.DescriptorProtos.FieldDescriptorProto.parseFrom(in2)); in2.close(); }
-          case 66 -> { var in2 = in.delimitedView(perfio.proto.runtime.Runtime.parseLen(in)); var m = base.getOptions(); perfio.protoapi.DescriptorProtos.FileOptions.parseFrom(in2, m); in2.close(); base.setOptions(m); }
-          case 74 -> { var in2 = in.delimitedView(perfio.proto.runtime.Runtime.parseLen(in)); var m = base.getSourceCodeInfo(); perfio.protoapi.DescriptorProtos.SourceCodeInfo.parseFrom(in2, m); in2.close(); base.setSourceCodeInfo(m); }
+          case 90 -> { var in2 = in.limitedView(perfio.proto.runtime.Runtime.parseLen(in)); while(in2.hasMore()) base.addWeakDependency(perfio.proto.runtime.Runtime.parseInt32(in2));; in2.close(); }
+          case 34 -> { var in2 = in.limitedView(perfio.proto.runtime.Runtime.parseLen(in)); base.addMessageType(perfio.protoapi.DescriptorProtos.DescriptorProto.parseFrom(in2)); in2.close(); }
+          case 42 -> { var in2 = in.limitedView(perfio.proto.runtime.Runtime.parseLen(in)); base.addEnumType(perfio.protoapi.DescriptorProtos.EnumDescriptorProto.parseFrom(in2)); in2.close(); }
+          case 50 -> { var in2 = in.limitedView(perfio.proto.runtime.Runtime.parseLen(in)); base.addService(perfio.protoapi.DescriptorProtos.ServiceDescriptorProto.parseFrom(in2)); in2.close(); }
+          case 58 -> { var in2 = in.limitedView(perfio.proto.runtime.Runtime.parseLen(in)); base.addExtension(perfio.protoapi.DescriptorProtos.FieldDescriptorProto.parseFrom(in2)); in2.close(); }
+          case 66 -> { var in2 = in.limitedView(perfio.proto.runtime.Runtime.parseLen(in)); var m = base.getOptions(); perfio.protoapi.DescriptorProtos.FileOptions.parseFrom(in2, m); in2.close(); base.setOptions(m); }
+          case 74 -> { var in2 = in.limitedView(perfio.proto.runtime.Runtime.parseLen(in)); var m = base.getSourceCodeInfo(); perfio.protoapi.DescriptorProtos.SourceCodeInfo.parseFrom(in2, m); in2.close(); base.setSourceCodeInfo(m); }
           case 98 -> base.setSyntax(perfio.proto.runtime.Runtime.parseString(in));
           case 112 -> base.setEdition(perfio.protoapi.DescriptorProtos.Edition.valueOf(perfio.proto.runtime.Runtime.parseInt32(in)));
           default -> parseOther(in, tag);
@@ -300,10 +300,10 @@ public final class DescriptorProtos {
           int tag = (int)perfio.proto.runtime.Runtime.parseVarint(in);
           switch(tag) {
             case 8 -> base.setStart(perfio.proto.runtime.Runtime.parseInt32(in));
-            case 10 -> { var in2 = in.delimitedView(perfio.proto.runtime.Runtime.parseLen(in)); while(in2.hasMore()) base.setStart(perfio.proto.runtime.Runtime.parseInt32(in2));; in2.close(); }
+            case 10 -> { var in2 = in.limitedView(perfio.proto.runtime.Runtime.parseLen(in)); while(in2.hasMore()) base.setStart(perfio.proto.runtime.Runtime.parseInt32(in2));; in2.close(); }
             case 16 -> base.setEnd(perfio.proto.runtime.Runtime.parseInt32(in));
-            case 18 -> { var in2 = in.delimitedView(perfio.proto.runtime.Runtime.parseLen(in)); while(in2.hasMore()) base.setEnd(perfio.proto.runtime.Runtime.parseInt32(in2));; in2.close(); }
-            case 26 -> { var in2 = in.delimitedView(perfio.proto.runtime.Runtime.parseLen(in)); var m = base.getOptions(); perfio.protoapi.DescriptorProtos.ExtensionRangeOptions.parseFrom(in2, m); in2.close(); base.setOptions(m); }
+            case 18 -> { var in2 = in.limitedView(perfio.proto.runtime.Runtime.parseLen(in)); while(in2.hasMore()) base.setEnd(perfio.proto.runtime.Runtime.parseInt32(in2));; in2.close(); }
+            case 26 -> { var in2 = in.limitedView(perfio.proto.runtime.Runtime.parseLen(in)); var m = base.getOptions(); perfio.protoapi.DescriptorProtos.ExtensionRangeOptions.parseFrom(in2, m); in2.close(); base.setOptions(m); }
             default -> parseOther(in, tag);
           }
         }
@@ -359,9 +359,9 @@ public final class DescriptorProtos {
           int tag = (int)perfio.proto.runtime.Runtime.parseVarint(in);
           switch(tag) {
             case 8 -> base.setStart(perfio.proto.runtime.Runtime.parseInt32(in));
-            case 10 -> { var in2 = in.delimitedView(perfio.proto.runtime.Runtime.parseLen(in)); while(in2.hasMore()) base.setStart(perfio.proto.runtime.Runtime.parseInt32(in2));; in2.close(); }
+            case 10 -> { var in2 = in.limitedView(perfio.proto.runtime.Runtime.parseLen(in)); while(in2.hasMore()) base.setStart(perfio.proto.runtime.Runtime.parseInt32(in2));; in2.close(); }
             case 16 -> base.setEnd(perfio.proto.runtime.Runtime.parseInt32(in));
-            case 18 -> { var in2 = in.delimitedView(perfio.proto.runtime.Runtime.parseLen(in)); while(in2.hasMore()) base.setEnd(perfio.proto.runtime.Runtime.parseInt32(in2));; in2.close(); }
+            case 18 -> { var in2 = in.limitedView(perfio.proto.runtime.Runtime.parseLen(in)); while(in2.hasMore()) base.setEnd(perfio.proto.runtime.Runtime.parseInt32(in2));; in2.close(); }
             default -> parseOther(in, tag);
           }
         }
@@ -488,14 +488,14 @@ public final class DescriptorProtos {
         int tag = (int)perfio.proto.runtime.Runtime.parseVarint(in);
         switch(tag) {
           case 10 -> base.setName(perfio.proto.runtime.Runtime.parseString(in));
-          case 18 -> { var in2 = in.delimitedView(perfio.proto.runtime.Runtime.parseLen(in)); base.addField(perfio.protoapi.DescriptorProtos.FieldDescriptorProto.parseFrom(in2)); in2.close(); }
-          case 50 -> { var in2 = in.delimitedView(perfio.proto.runtime.Runtime.parseLen(in)); base.addExtension(perfio.protoapi.DescriptorProtos.FieldDescriptorProto.parseFrom(in2)); in2.close(); }
-          case 26 -> { var in2 = in.delimitedView(perfio.proto.runtime.Runtime.parseLen(in)); base.addNestedType(perfio.protoapi.DescriptorProtos.DescriptorProto.parseFrom(in2)); in2.close(); }
-          case 34 -> { var in2 = in.delimitedView(perfio.proto.runtime.Runtime.parseLen(in)); base.addEnumType(perfio.protoapi.DescriptorProtos.EnumDescriptorProto.parseFrom(in2)); in2.close(); }
-          case 42 -> { var in2 = in.delimitedView(perfio.proto.runtime.Runtime.parseLen(in)); base.addExtensionRange(perfio.protoapi.DescriptorProtos.DescriptorProto.ExtensionRange.parseFrom(in2)); in2.close(); }
-          case 66 -> { var in2 = in.delimitedView(perfio.proto.runtime.Runtime.parseLen(in)); base.addOneofDecl(perfio.protoapi.DescriptorProtos.OneofDescriptorProto.parseFrom(in2)); in2.close(); }
-          case 58 -> { var in2 = in.delimitedView(perfio.proto.runtime.Runtime.parseLen(in)); var m = base.getOptions(); perfio.protoapi.DescriptorProtos.MessageOptions.parseFrom(in2, m); in2.close(); base.setOptions(m); }
-          case 74 -> { var in2 = in.delimitedView(perfio.proto.runtime.Runtime.parseLen(in)); base.addReservedRange(perfio.protoapi.DescriptorProtos.DescriptorProto.ReservedRange.parseFrom(in2)); in2.close(); }
+          case 18 -> { var in2 = in.limitedView(perfio.proto.runtime.Runtime.parseLen(in)); base.addField(perfio.protoapi.DescriptorProtos.FieldDescriptorProto.parseFrom(in2)); in2.close(); }
+          case 50 -> { var in2 = in.limitedView(perfio.proto.runtime.Runtime.parseLen(in)); base.addExtension(perfio.protoapi.DescriptorProtos.FieldDescriptorProto.parseFrom(in2)); in2.close(); }
+          case 26 -> { var in2 = in.limitedView(perfio.proto.runtime.Runtime.parseLen(in)); base.addNestedType(perfio.protoapi.DescriptorProtos.DescriptorProto.parseFrom(in2)); in2.close(); }
+          case 34 -> { var in2 = in.limitedView(perfio.proto.runtime.Runtime.parseLen(in)); base.addEnumType(perfio.protoapi.DescriptorProtos.EnumDescriptorProto.parseFrom(in2)); in2.close(); }
+          case 42 -> { var in2 = in.limitedView(perfio.proto.runtime.Runtime.parseLen(in)); base.addExtensionRange(perfio.protoapi.DescriptorProtos.DescriptorProto.ExtensionRange.parseFrom(in2)); in2.close(); }
+          case 66 -> { var in2 = in.limitedView(perfio.proto.runtime.Runtime.parseLen(in)); base.addOneofDecl(perfio.protoapi.DescriptorProtos.OneofDescriptorProto.parseFrom(in2)); in2.close(); }
+          case 58 -> { var in2 = in.limitedView(perfio.proto.runtime.Runtime.parseLen(in)); var m = base.getOptions(); perfio.protoapi.DescriptorProtos.MessageOptions.parseFrom(in2, m); in2.close(); base.setOptions(m); }
+          case 74 -> { var in2 = in.limitedView(perfio.proto.runtime.Runtime.parseLen(in)); base.addReservedRange(perfio.protoapi.DescriptorProtos.DescriptorProto.ReservedRange.parseFrom(in2)); in2.close(); }
           case 82 -> base.addReservedName(perfio.proto.runtime.Runtime.parseString(in));
           default -> parseOther(in, tag);
         }
@@ -598,13 +598,13 @@ public final class DescriptorProtos {
           int tag = (int)perfio.proto.runtime.Runtime.parseVarint(in);
           switch(tag) {
             case 8 -> base.setNumber(perfio.proto.runtime.Runtime.parseInt32(in));
-            case 10 -> { var in2 = in.delimitedView(perfio.proto.runtime.Runtime.parseLen(in)); while(in2.hasMore()) base.setNumber(perfio.proto.runtime.Runtime.parseInt32(in2));; in2.close(); }
+            case 10 -> { var in2 = in.limitedView(perfio.proto.runtime.Runtime.parseLen(in)); while(in2.hasMore()) base.setNumber(perfio.proto.runtime.Runtime.parseInt32(in2));; in2.close(); }
             case 18 -> base.setFullName(perfio.proto.runtime.Runtime.parseString(in));
             case 26 -> base.setType(perfio.proto.runtime.Runtime.parseString(in));
             case 40 -> base.setReserved(perfio.proto.runtime.Runtime.parseBoolean(in));
-            case 42 -> { var in2 = in.delimitedView(perfio.proto.runtime.Runtime.parseLen(in)); while(in2.hasMore()) base.setReserved(perfio.proto.runtime.Runtime.parseBoolean(in2));; in2.close(); }
+            case 42 -> { var in2 = in.limitedView(perfio.proto.runtime.Runtime.parseLen(in)); while(in2.hasMore()) base.setReserved(perfio.proto.runtime.Runtime.parseBoolean(in2));; in2.close(); }
             case 48 -> base.setRepeated(perfio.proto.runtime.Runtime.parseBoolean(in));
-            case 50 -> { var in2 = in.delimitedView(perfio.proto.runtime.Runtime.parseLen(in)); while(in2.hasMore()) base.setRepeated(perfio.proto.runtime.Runtime.parseBoolean(in2));; in2.close(); }
+            case 50 -> { var in2 = in.limitedView(perfio.proto.runtime.Runtime.parseLen(in)); while(in2.hasMore()) base.setRepeated(perfio.proto.runtime.Runtime.parseBoolean(in2));; in2.close(); }
             default -> parseOther(in, tag);
           }
         }
@@ -682,9 +682,9 @@ public final class DescriptorProtos {
       while(in.hasMore()) {
         int tag = (int)perfio.proto.runtime.Runtime.parseVarint(in);
         switch(tag) {
-          case 7994 -> { var in2 = in.delimitedView(perfio.proto.runtime.Runtime.parseLen(in)); base.addUninterpretedOption(perfio.protoapi.DescriptorProtos.UninterpretedOption.parseFrom(in2)); in2.close(); }
-          case 18 -> { var in2 = in.delimitedView(perfio.proto.runtime.Runtime.parseLen(in)); base.addDeclaration(perfio.protoapi.DescriptorProtos.ExtensionRangeOptions.Declaration.parseFrom(in2)); in2.close(); }
-          case 402 -> { var in2 = in.delimitedView(perfio.proto.runtime.Runtime.parseLen(in)); var m = base.getFeatures(); perfio.protoapi.DescriptorProtos.FeatureSet.parseFrom(in2, m); in2.close(); base.setFeatures(m); }
+          case 7994 -> { var in2 = in.limitedView(perfio.proto.runtime.Runtime.parseLen(in)); base.addUninterpretedOption(perfio.protoapi.DescriptorProtos.UninterpretedOption.parseFrom(in2)); in2.close(); }
+          case 18 -> { var in2 = in.limitedView(perfio.proto.runtime.Runtime.parseLen(in)); base.addDeclaration(perfio.protoapi.DescriptorProtos.ExtensionRangeOptions.Declaration.parseFrom(in2)); in2.close(); }
+          case 402 -> { var in2 = in.limitedView(perfio.proto.runtime.Runtime.parseLen(in)); var m = base.getFeatures(); perfio.protoapi.DescriptorProtos.FeatureSet.parseFrom(in2, m); in2.close(); base.setFeatures(m); }
           case 24 -> base.setVerification(perfio.protoapi.DescriptorProtos.ExtensionRangeOptions.VerificationState.valueOf(perfio.proto.runtime.Runtime.parseInt32(in)));
           default -> parseOther(in, tag);
         }
@@ -856,18 +856,18 @@ public final class DescriptorProtos {
         switch(tag) {
           case 10 -> base.setName(perfio.proto.runtime.Runtime.parseString(in));
           case 24 -> base.setNumber(perfio.proto.runtime.Runtime.parseInt32(in));
-          case 26 -> { var in2 = in.delimitedView(perfio.proto.runtime.Runtime.parseLen(in)); while(in2.hasMore()) base.setNumber(perfio.proto.runtime.Runtime.parseInt32(in2));; in2.close(); }
+          case 26 -> { var in2 = in.limitedView(perfio.proto.runtime.Runtime.parseLen(in)); while(in2.hasMore()) base.setNumber(perfio.proto.runtime.Runtime.parseInt32(in2));; in2.close(); }
           case 32 -> base.setLabel(perfio.protoapi.DescriptorProtos.FieldDescriptorProto.Label.valueOf(perfio.proto.runtime.Runtime.parseInt32(in)));
           case 40 -> base.setType(perfio.protoapi.DescriptorProtos.FieldDescriptorProto.Type.valueOf(perfio.proto.runtime.Runtime.parseInt32(in)));
           case 50 -> base.setTypeName(perfio.proto.runtime.Runtime.parseString(in));
           case 18 -> base.setExtendee(perfio.proto.runtime.Runtime.parseString(in));
           case 58 -> base.setDefaultValue(perfio.proto.runtime.Runtime.parseString(in));
           case 72 -> base.setOneofIndex(perfio.proto.runtime.Runtime.parseInt32(in));
-          case 74 -> { var in2 = in.delimitedView(perfio.proto.runtime.Runtime.parseLen(in)); while(in2.hasMore()) base.setOneofIndex(perfio.proto.runtime.Runtime.parseInt32(in2));; in2.close(); }
+          case 74 -> { var in2 = in.limitedView(perfio.proto.runtime.Runtime.parseLen(in)); while(in2.hasMore()) base.setOneofIndex(perfio.proto.runtime.Runtime.parseInt32(in2));; in2.close(); }
           case 82 -> base.setJsonName(perfio.proto.runtime.Runtime.parseString(in));
-          case 66 -> { var in2 = in.delimitedView(perfio.proto.runtime.Runtime.parseLen(in)); var m = base.getOptions(); perfio.protoapi.DescriptorProtos.FieldOptions.parseFrom(in2, m); in2.close(); base.setOptions(m); }
+          case 66 -> { var in2 = in.limitedView(perfio.proto.runtime.Runtime.parseLen(in)); var m = base.getOptions(); perfio.protoapi.DescriptorProtos.FieldOptions.parseFrom(in2, m); in2.close(); base.setOptions(m); }
           case 136 -> base.setProto3Optional(perfio.proto.runtime.Runtime.parseBoolean(in));
-          case 138 -> { var in2 = in.delimitedView(perfio.proto.runtime.Runtime.parseLen(in)); while(in2.hasMore()) base.setProto3Optional(perfio.proto.runtime.Runtime.parseBoolean(in2));; in2.close(); }
+          case 138 -> { var in2 = in.limitedView(perfio.proto.runtime.Runtime.parseLen(in)); while(in2.hasMore()) base.setProto3Optional(perfio.proto.runtime.Runtime.parseBoolean(in2));; in2.close(); }
           default -> parseOther(in, tag);
         }
       }
@@ -942,7 +942,7 @@ public final class DescriptorProtos {
         int tag = (int)perfio.proto.runtime.Runtime.parseVarint(in);
         switch(tag) {
           case 10 -> base.setName(perfio.proto.runtime.Runtime.parseString(in));
-          case 18 -> { var in2 = in.delimitedView(perfio.proto.runtime.Runtime.parseLen(in)); var m = base.getOptions(); perfio.protoapi.DescriptorProtos.OneofOptions.parseFrom(in2, m); in2.close(); base.setOptions(m); }
+          case 18 -> { var in2 = in.limitedView(perfio.proto.runtime.Runtime.parseLen(in)); var m = base.getOptions(); perfio.protoapi.DescriptorProtos.OneofOptions.parseFrom(in2, m); in2.close(); base.setOptions(m); }
           default -> parseOther(in, tag);
         }
       }
@@ -998,9 +998,9 @@ public final class DescriptorProtos {
           int tag = (int)perfio.proto.runtime.Runtime.parseVarint(in);
           switch(tag) {
             case 8 -> base.setStart(perfio.proto.runtime.Runtime.parseInt32(in));
-            case 10 -> { var in2 = in.delimitedView(perfio.proto.runtime.Runtime.parseLen(in)); while(in2.hasMore()) base.setStart(perfio.proto.runtime.Runtime.parseInt32(in2));; in2.close(); }
+            case 10 -> { var in2 = in.limitedView(perfio.proto.runtime.Runtime.parseLen(in)); while(in2.hasMore()) base.setStart(perfio.proto.runtime.Runtime.parseInt32(in2));; in2.close(); }
             case 16 -> base.setEnd(perfio.proto.runtime.Runtime.parseInt32(in));
-            case 18 -> { var in2 = in.delimitedView(perfio.proto.runtime.Runtime.parseLen(in)); while(in2.hasMore()) base.setEnd(perfio.proto.runtime.Runtime.parseInt32(in2));; in2.close(); }
+            case 18 -> { var in2 = in.limitedView(perfio.proto.runtime.Runtime.parseLen(in)); while(in2.hasMore()) base.setEnd(perfio.proto.runtime.Runtime.parseInt32(in2));; in2.close(); }
             default -> parseOther(in, tag);
           }
         }
@@ -1082,9 +1082,9 @@ public final class DescriptorProtos {
         int tag = (int)perfio.proto.runtime.Runtime.parseVarint(in);
         switch(tag) {
           case 10 -> base.setName(perfio.proto.runtime.Runtime.parseString(in));
-          case 18 -> { var in2 = in.delimitedView(perfio.proto.runtime.Runtime.parseLen(in)); base.addValue(perfio.protoapi.DescriptorProtos.EnumValueDescriptorProto.parseFrom(in2)); in2.close(); }
-          case 26 -> { var in2 = in.delimitedView(perfio.proto.runtime.Runtime.parseLen(in)); var m = base.getOptions(); perfio.protoapi.DescriptorProtos.EnumOptions.parseFrom(in2, m); in2.close(); base.setOptions(m); }
-          case 34 -> { var in2 = in.delimitedView(perfio.proto.runtime.Runtime.parseLen(in)); base.addReservedRange(perfio.protoapi.DescriptorProtos.EnumDescriptorProto.EnumReservedRange.parseFrom(in2)); in2.close(); }
+          case 18 -> { var in2 = in.limitedView(perfio.proto.runtime.Runtime.parseLen(in)); base.addValue(perfio.protoapi.DescriptorProtos.EnumValueDescriptorProto.parseFrom(in2)); in2.close(); }
+          case 26 -> { var in2 = in.limitedView(perfio.proto.runtime.Runtime.parseLen(in)); var m = base.getOptions(); perfio.protoapi.DescriptorProtos.EnumOptions.parseFrom(in2, m); in2.close(); base.setOptions(m); }
+          case 34 -> { var in2 = in.limitedView(perfio.proto.runtime.Runtime.parseLen(in)); base.addReservedRange(perfio.protoapi.DescriptorProtos.EnumDescriptorProto.EnumReservedRange.parseFrom(in2)); in2.close(); }
           case 42 -> base.addReservedName(perfio.proto.runtime.Runtime.parseString(in));
           default -> parseOther(in, tag);
         }
@@ -1154,8 +1154,8 @@ public final class DescriptorProtos {
         switch(tag) {
           case 10 -> base.setName(perfio.proto.runtime.Runtime.parseString(in));
           case 16 -> base.setNumber(perfio.proto.runtime.Runtime.parseInt32(in));
-          case 18 -> { var in2 = in.delimitedView(perfio.proto.runtime.Runtime.parseLen(in)); while(in2.hasMore()) base.setNumber(perfio.proto.runtime.Runtime.parseInt32(in2));; in2.close(); }
-          case 26 -> { var in2 = in.delimitedView(perfio.proto.runtime.Runtime.parseLen(in)); var m = base.getOptions(); perfio.protoapi.DescriptorProtos.EnumValueOptions.parseFrom(in2, m); in2.close(); base.setOptions(m); }
+          case 18 -> { var in2 = in.limitedView(perfio.proto.runtime.Runtime.parseLen(in)); while(in2.hasMore()) base.setNumber(perfio.proto.runtime.Runtime.parseInt32(in2));; in2.close(); }
+          case 26 -> { var in2 = in.limitedView(perfio.proto.runtime.Runtime.parseLen(in)); var m = base.getOptions(); perfio.protoapi.DescriptorProtos.EnumValueOptions.parseFrom(in2, m); in2.close(); base.setOptions(m); }
           default -> parseOther(in, tag);
         }
       }
@@ -1223,8 +1223,8 @@ public final class DescriptorProtos {
         int tag = (int)perfio.proto.runtime.Runtime.parseVarint(in);
         switch(tag) {
           case 10 -> base.setName(perfio.proto.runtime.Runtime.parseString(in));
-          case 18 -> { var in2 = in.delimitedView(perfio.proto.runtime.Runtime.parseLen(in)); base.addMethod(perfio.protoapi.DescriptorProtos.MethodDescriptorProto.parseFrom(in2)); in2.close(); }
-          case 26 -> { var in2 = in.delimitedView(perfio.proto.runtime.Runtime.parseLen(in)); var m = base.getOptions(); perfio.protoapi.DescriptorProtos.ServiceOptions.parseFrom(in2, m); in2.close(); base.setOptions(m); }
+          case 18 -> { var in2 = in.limitedView(perfio.proto.runtime.Runtime.parseLen(in)); base.addMethod(perfio.protoapi.DescriptorProtos.MethodDescriptorProto.parseFrom(in2)); in2.close(); }
+          case 26 -> { var in2 = in.limitedView(perfio.proto.runtime.Runtime.parseLen(in)); var m = base.getOptions(); perfio.protoapi.DescriptorProtos.ServiceOptions.parseFrom(in2, m); in2.close(); base.setOptions(m); }
           default -> parseOther(in, tag);
         }
       }
@@ -1305,11 +1305,11 @@ public final class DescriptorProtos {
           case 10 -> base.setName(perfio.proto.runtime.Runtime.parseString(in));
           case 18 -> base.setInputType(perfio.proto.runtime.Runtime.parseString(in));
           case 26 -> base.setOutputType(perfio.proto.runtime.Runtime.parseString(in));
-          case 34 -> { var in2 = in.delimitedView(perfio.proto.runtime.Runtime.parseLen(in)); var m = base.getOptions(); perfio.protoapi.DescriptorProtos.MethodOptions.parseFrom(in2, m); in2.close(); base.setOptions(m); }
+          case 34 -> { var in2 = in.limitedView(perfio.proto.runtime.Runtime.parseLen(in)); var m = base.getOptions(); perfio.protoapi.DescriptorProtos.MethodOptions.parseFrom(in2, m); in2.close(); base.setOptions(m); }
           case 40 -> base.setClientStreaming(perfio.proto.runtime.Runtime.parseBoolean(in));
-          case 42 -> { var in2 = in.delimitedView(perfio.proto.runtime.Runtime.parseLen(in)); while(in2.hasMore()) base.setClientStreaming(perfio.proto.runtime.Runtime.parseBoolean(in2));; in2.close(); }
+          case 42 -> { var in2 = in.limitedView(perfio.proto.runtime.Runtime.parseLen(in)); while(in2.hasMore()) base.setClientStreaming(perfio.proto.runtime.Runtime.parseBoolean(in2));; in2.close(); }
           case 48 -> base.setServerStreaming(perfio.proto.runtime.Runtime.parseBoolean(in));
-          case 50 -> { var in2 = in.delimitedView(perfio.proto.runtime.Runtime.parseLen(in)); while(in2.hasMore()) base.setServerStreaming(perfio.proto.runtime.Runtime.parseBoolean(in2));; in2.close(); }
+          case 50 -> { var in2 = in.limitedView(perfio.proto.runtime.Runtime.parseLen(in)); while(in2.hasMore()) base.setServerStreaming(perfio.proto.runtime.Runtime.parseBoolean(in2));; in2.close(); }
           default -> parseOther(in, tag);
         }
       }
@@ -1492,23 +1492,23 @@ public final class DescriptorProtos {
           case 10 -> base.setJavaPackage(perfio.proto.runtime.Runtime.parseString(in));
           case 66 -> base.setJavaOuterClassname(perfio.proto.runtime.Runtime.parseString(in));
           case 80 -> base.setJavaMultipleFiles(perfio.proto.runtime.Runtime.parseBoolean(in));
-          case 82 -> { var in2 = in.delimitedView(perfio.proto.runtime.Runtime.parseLen(in)); while(in2.hasMore()) base.setJavaMultipleFiles(perfio.proto.runtime.Runtime.parseBoolean(in2));; in2.close(); }
+          case 82 -> { var in2 = in.limitedView(perfio.proto.runtime.Runtime.parseLen(in)); while(in2.hasMore()) base.setJavaMultipleFiles(perfio.proto.runtime.Runtime.parseBoolean(in2));; in2.close(); }
           case 160 -> base.setJavaGenerateEqualsAndHash(perfio.proto.runtime.Runtime.parseBoolean(in));
-          case 162 -> { var in2 = in.delimitedView(perfio.proto.runtime.Runtime.parseLen(in)); while(in2.hasMore()) base.setJavaGenerateEqualsAndHash(perfio.proto.runtime.Runtime.parseBoolean(in2));; in2.close(); }
+          case 162 -> { var in2 = in.limitedView(perfio.proto.runtime.Runtime.parseLen(in)); while(in2.hasMore()) base.setJavaGenerateEqualsAndHash(perfio.proto.runtime.Runtime.parseBoolean(in2));; in2.close(); }
           case 216 -> base.setJavaStringCheckUtf8(perfio.proto.runtime.Runtime.parseBoolean(in));
-          case 218 -> { var in2 = in.delimitedView(perfio.proto.runtime.Runtime.parseLen(in)); while(in2.hasMore()) base.setJavaStringCheckUtf8(perfio.proto.runtime.Runtime.parseBoolean(in2));; in2.close(); }
+          case 218 -> { var in2 = in.limitedView(perfio.proto.runtime.Runtime.parseLen(in)); while(in2.hasMore()) base.setJavaStringCheckUtf8(perfio.proto.runtime.Runtime.parseBoolean(in2));; in2.close(); }
           case 72 -> base.setOptimizeFor(perfio.protoapi.DescriptorProtos.FileOptions.OptimizeMode.valueOf(perfio.proto.runtime.Runtime.parseInt32(in)));
           case 90 -> base.setGoPackage(perfio.proto.runtime.Runtime.parseString(in));
           case 128 -> base.setCcGenericServices(perfio.proto.runtime.Runtime.parseBoolean(in));
-          case 130 -> { var in2 = in.delimitedView(perfio.proto.runtime.Runtime.parseLen(in)); while(in2.hasMore()) base.setCcGenericServices(perfio.proto.runtime.Runtime.parseBoolean(in2));; in2.close(); }
+          case 130 -> { var in2 = in.limitedView(perfio.proto.runtime.Runtime.parseLen(in)); while(in2.hasMore()) base.setCcGenericServices(perfio.proto.runtime.Runtime.parseBoolean(in2));; in2.close(); }
           case 136 -> base.setJavaGenericServices(perfio.proto.runtime.Runtime.parseBoolean(in));
-          case 138 -> { var in2 = in.delimitedView(perfio.proto.runtime.Runtime.parseLen(in)); while(in2.hasMore()) base.setJavaGenericServices(perfio.proto.runtime.Runtime.parseBoolean(in2));; in2.close(); }
+          case 138 -> { var in2 = in.limitedView(perfio.proto.runtime.Runtime.parseLen(in)); while(in2.hasMore()) base.setJavaGenericServices(perfio.proto.runtime.Runtime.parseBoolean(in2));; in2.close(); }
           case 144 -> base.setPyGenericServices(perfio.proto.runtime.Runtime.parseBoolean(in));
-          case 146 -> { var in2 = in.delimitedView(perfio.proto.runtime.Runtime.parseLen(in)); while(in2.hasMore()) base.setPyGenericServices(perfio.proto.runtime.Runtime.parseBoolean(in2));; in2.close(); }
+          case 146 -> { var in2 = in.limitedView(perfio.proto.runtime.Runtime.parseLen(in)); while(in2.hasMore()) base.setPyGenericServices(perfio.proto.runtime.Runtime.parseBoolean(in2));; in2.close(); }
           case 184 -> base.setDeprecated(perfio.proto.runtime.Runtime.parseBoolean(in));
-          case 186 -> { var in2 = in.delimitedView(perfio.proto.runtime.Runtime.parseLen(in)); while(in2.hasMore()) base.setDeprecated(perfio.proto.runtime.Runtime.parseBoolean(in2));; in2.close(); }
+          case 186 -> { var in2 = in.limitedView(perfio.proto.runtime.Runtime.parseLen(in)); while(in2.hasMore()) base.setDeprecated(perfio.proto.runtime.Runtime.parseBoolean(in2));; in2.close(); }
           case 248 -> base.setCcEnableArenas(perfio.proto.runtime.Runtime.parseBoolean(in));
-          case 250 -> { var in2 = in.delimitedView(perfio.proto.runtime.Runtime.parseLen(in)); while(in2.hasMore()) base.setCcEnableArenas(perfio.proto.runtime.Runtime.parseBoolean(in2));; in2.close(); }
+          case 250 -> { var in2 = in.limitedView(perfio.proto.runtime.Runtime.parseLen(in)); while(in2.hasMore()) base.setCcEnableArenas(perfio.proto.runtime.Runtime.parseBoolean(in2));; in2.close(); }
           case 290 -> base.setObjcClassPrefix(perfio.proto.runtime.Runtime.parseString(in));
           case 298 -> base.setCsharpNamespace(perfio.proto.runtime.Runtime.parseString(in));
           case 314 -> base.setSwiftPrefix(perfio.proto.runtime.Runtime.parseString(in));
@@ -1516,8 +1516,8 @@ public final class DescriptorProtos {
           case 330 -> base.setPhpNamespace(perfio.proto.runtime.Runtime.parseString(in));
           case 354 -> base.setPhpMetadataNamespace(perfio.proto.runtime.Runtime.parseString(in));
           case 362 -> base.setRubyPackage(perfio.proto.runtime.Runtime.parseString(in));
-          case 402 -> { var in2 = in.delimitedView(perfio.proto.runtime.Runtime.parseLen(in)); var m = base.getFeatures(); perfio.protoapi.DescriptorProtos.FeatureSet.parseFrom(in2, m); in2.close(); base.setFeatures(m); }
-          case 7994 -> { var in2 = in.delimitedView(perfio.proto.runtime.Runtime.parseLen(in)); base.addUninterpretedOption(perfio.protoapi.DescriptorProtos.UninterpretedOption.parseFrom(in2)); in2.close(); }
+          case 402 -> { var in2 = in.limitedView(perfio.proto.runtime.Runtime.parseLen(in)); var m = base.getFeatures(); perfio.protoapi.DescriptorProtos.FeatureSet.parseFrom(in2, m); in2.close(); base.setFeatures(m); }
+          case 7994 -> { var in2 = in.limitedView(perfio.proto.runtime.Runtime.parseLen(in)); base.addUninterpretedOption(perfio.protoapi.DescriptorProtos.UninterpretedOption.parseFrom(in2)); in2.close(); }
           default -> parseOther(in, tag);
         }
       }
@@ -1641,17 +1641,17 @@ public final class DescriptorProtos {
         int tag = (int)perfio.proto.runtime.Runtime.parseVarint(in);
         switch(tag) {
           case 8 -> base.setMessageSetWireFormat(perfio.proto.runtime.Runtime.parseBoolean(in));
-          case 10 -> { var in2 = in.delimitedView(perfio.proto.runtime.Runtime.parseLen(in)); while(in2.hasMore()) base.setMessageSetWireFormat(perfio.proto.runtime.Runtime.parseBoolean(in2));; in2.close(); }
+          case 10 -> { var in2 = in.limitedView(perfio.proto.runtime.Runtime.parseLen(in)); while(in2.hasMore()) base.setMessageSetWireFormat(perfio.proto.runtime.Runtime.parseBoolean(in2));; in2.close(); }
           case 16 -> base.setNoStandardDescriptorAccessor(perfio.proto.runtime.Runtime.parseBoolean(in));
-          case 18 -> { var in2 = in.delimitedView(perfio.proto.runtime.Runtime.parseLen(in)); while(in2.hasMore()) base.setNoStandardDescriptorAccessor(perfio.proto.runtime.Runtime.parseBoolean(in2));; in2.close(); }
+          case 18 -> { var in2 = in.limitedView(perfio.proto.runtime.Runtime.parseLen(in)); while(in2.hasMore()) base.setNoStandardDescriptorAccessor(perfio.proto.runtime.Runtime.parseBoolean(in2));; in2.close(); }
           case 24 -> base.setDeprecated(perfio.proto.runtime.Runtime.parseBoolean(in));
-          case 26 -> { var in2 = in.delimitedView(perfio.proto.runtime.Runtime.parseLen(in)); while(in2.hasMore()) base.setDeprecated(perfio.proto.runtime.Runtime.parseBoolean(in2));; in2.close(); }
+          case 26 -> { var in2 = in.limitedView(perfio.proto.runtime.Runtime.parseLen(in)); while(in2.hasMore()) base.setDeprecated(perfio.proto.runtime.Runtime.parseBoolean(in2));; in2.close(); }
           case 56 -> base.setMapEntry(perfio.proto.runtime.Runtime.parseBoolean(in));
-          case 58 -> { var in2 = in.delimitedView(perfio.proto.runtime.Runtime.parseLen(in)); while(in2.hasMore()) base.setMapEntry(perfio.proto.runtime.Runtime.parseBoolean(in2));; in2.close(); }
+          case 58 -> { var in2 = in.limitedView(perfio.proto.runtime.Runtime.parseLen(in)); while(in2.hasMore()) base.setMapEntry(perfio.proto.runtime.Runtime.parseBoolean(in2));; in2.close(); }
           case 88 -> base.setDeprecatedLegacyJsonFieldConflicts(perfio.proto.runtime.Runtime.parseBoolean(in));
-          case 90 -> { var in2 = in.delimitedView(perfio.proto.runtime.Runtime.parseLen(in)); while(in2.hasMore()) base.setDeprecatedLegacyJsonFieldConflicts(perfio.proto.runtime.Runtime.parseBoolean(in2));; in2.close(); }
-          case 98 -> { var in2 = in.delimitedView(perfio.proto.runtime.Runtime.parseLen(in)); var m = base.getFeatures(); perfio.protoapi.DescriptorProtos.FeatureSet.parseFrom(in2, m); in2.close(); base.setFeatures(m); }
-          case 7994 -> { var in2 = in.delimitedView(perfio.proto.runtime.Runtime.parseLen(in)); base.addUninterpretedOption(perfio.protoapi.DescriptorProtos.UninterpretedOption.parseFrom(in2)); in2.close(); }
+          case 90 -> { var in2 = in.limitedView(perfio.proto.runtime.Runtime.parseLen(in)); while(in2.hasMore()) base.setDeprecatedLegacyJsonFieldConflicts(perfio.proto.runtime.Runtime.parseBoolean(in2));; in2.close(); }
+          case 98 -> { var in2 = in.limitedView(perfio.proto.runtime.Runtime.parseLen(in)); var m = base.getFeatures(); perfio.protoapi.DescriptorProtos.FeatureSet.parseFrom(in2, m); in2.close(); base.setFeatures(m); }
+          case 7994 -> { var in2 = in.limitedView(perfio.proto.runtime.Runtime.parseLen(in)); base.addUninterpretedOption(perfio.protoapi.DescriptorProtos.UninterpretedOption.parseFrom(in2)); in2.close(); }
           default -> parseOther(in, tag);
         }
       }
@@ -2000,24 +2000,24 @@ public final class DescriptorProtos {
         switch(tag) {
           case 8 -> base.setCtype(perfio.protoapi.DescriptorProtos.FieldOptions.CType.valueOf(perfio.proto.runtime.Runtime.parseInt32(in)));
           case 16 -> base.setPacked(perfio.proto.runtime.Runtime.parseBoolean(in));
-          case 18 -> { var in2 = in.delimitedView(perfio.proto.runtime.Runtime.parseLen(in)); while(in2.hasMore()) base.setPacked(perfio.proto.runtime.Runtime.parseBoolean(in2));; in2.close(); }
+          case 18 -> { var in2 = in.limitedView(perfio.proto.runtime.Runtime.parseLen(in)); while(in2.hasMore()) base.setPacked(perfio.proto.runtime.Runtime.parseBoolean(in2));; in2.close(); }
           case 48 -> base.setJstype(perfio.protoapi.DescriptorProtos.FieldOptions.JSType.valueOf(perfio.proto.runtime.Runtime.parseInt32(in)));
           case 40 -> base.setLazy(perfio.proto.runtime.Runtime.parseBoolean(in));
-          case 42 -> { var in2 = in.delimitedView(perfio.proto.runtime.Runtime.parseLen(in)); while(in2.hasMore()) base.setLazy(perfio.proto.runtime.Runtime.parseBoolean(in2));; in2.close(); }
+          case 42 -> { var in2 = in.limitedView(perfio.proto.runtime.Runtime.parseLen(in)); while(in2.hasMore()) base.setLazy(perfio.proto.runtime.Runtime.parseBoolean(in2));; in2.close(); }
           case 120 -> base.setUnverifiedLazy(perfio.proto.runtime.Runtime.parseBoolean(in));
-          case 122 -> { var in2 = in.delimitedView(perfio.proto.runtime.Runtime.parseLen(in)); while(in2.hasMore()) base.setUnverifiedLazy(perfio.proto.runtime.Runtime.parseBoolean(in2));; in2.close(); }
+          case 122 -> { var in2 = in.limitedView(perfio.proto.runtime.Runtime.parseLen(in)); while(in2.hasMore()) base.setUnverifiedLazy(perfio.proto.runtime.Runtime.parseBoolean(in2));; in2.close(); }
           case 24 -> base.setDeprecated(perfio.proto.runtime.Runtime.parseBoolean(in));
-          case 26 -> { var in2 = in.delimitedView(perfio.proto.runtime.Runtime.parseLen(in)); while(in2.hasMore()) base.setDeprecated(perfio.proto.runtime.Runtime.parseBoolean(in2));; in2.close(); }
+          case 26 -> { var in2 = in.limitedView(perfio.proto.runtime.Runtime.parseLen(in)); while(in2.hasMore()) base.setDeprecated(perfio.proto.runtime.Runtime.parseBoolean(in2));; in2.close(); }
           case 80 -> base.setWeak(perfio.proto.runtime.Runtime.parseBoolean(in));
-          case 82 -> { var in2 = in.delimitedView(perfio.proto.runtime.Runtime.parseLen(in)); while(in2.hasMore()) base.setWeak(perfio.proto.runtime.Runtime.parseBoolean(in2));; in2.close(); }
+          case 82 -> { var in2 = in.limitedView(perfio.proto.runtime.Runtime.parseLen(in)); while(in2.hasMore()) base.setWeak(perfio.proto.runtime.Runtime.parseBoolean(in2));; in2.close(); }
           case 128 -> base.setDebugRedact(perfio.proto.runtime.Runtime.parseBoolean(in));
-          case 130 -> { var in2 = in.delimitedView(perfio.proto.runtime.Runtime.parseLen(in)); while(in2.hasMore()) base.setDebugRedact(perfio.proto.runtime.Runtime.parseBoolean(in2));; in2.close(); }
+          case 130 -> { var in2 = in.limitedView(perfio.proto.runtime.Runtime.parseLen(in)); while(in2.hasMore()) base.setDebugRedact(perfio.proto.runtime.Runtime.parseBoolean(in2));; in2.close(); }
           case 136 -> base.setRetention(perfio.protoapi.DescriptorProtos.FieldOptions.OptionRetention.valueOf(perfio.proto.runtime.Runtime.parseInt32(in)));
           case 152 -> base.addTargets(perfio.protoapi.DescriptorProtos.FieldOptions.OptionTargetType.valueOf(perfio.proto.runtime.Runtime.parseInt32(in)));
-          case 162 -> { var in2 = in.delimitedView(perfio.proto.runtime.Runtime.parseLen(in)); base.addEditionDefaults(perfio.protoapi.DescriptorProtos.FieldOptions.EditionDefault.parseFrom(in2)); in2.close(); }
-          case 170 -> { var in2 = in.delimitedView(perfio.proto.runtime.Runtime.parseLen(in)); var m = base.getFeatures(); perfio.protoapi.DescriptorProtos.FeatureSet.parseFrom(in2, m); in2.close(); base.setFeatures(m); }
-          case 178 -> { var in2 = in.delimitedView(perfio.proto.runtime.Runtime.parseLen(in)); var m = base.getFeatureSupport(); perfio.protoapi.DescriptorProtos.FieldOptions.FeatureSupport.parseFrom(in2, m); in2.close(); base.setFeatureSupport(m); }
-          case 7994 -> { var in2 = in.delimitedView(perfio.proto.runtime.Runtime.parseLen(in)); base.addUninterpretedOption(perfio.protoapi.DescriptorProtos.UninterpretedOption.parseFrom(in2)); in2.close(); }
+          case 162 -> { var in2 = in.limitedView(perfio.proto.runtime.Runtime.parseLen(in)); base.addEditionDefaults(perfio.protoapi.DescriptorProtos.FieldOptions.EditionDefault.parseFrom(in2)); in2.close(); }
+          case 170 -> { var in2 = in.limitedView(perfio.proto.runtime.Runtime.parseLen(in)); var m = base.getFeatures(); perfio.protoapi.DescriptorProtos.FeatureSet.parseFrom(in2, m); in2.close(); base.setFeatures(m); }
+          case 178 -> { var in2 = in.limitedView(perfio.proto.runtime.Runtime.parseLen(in)); var m = base.getFeatureSupport(); perfio.protoapi.DescriptorProtos.FieldOptions.FeatureSupport.parseFrom(in2, m); in2.close(); base.setFeatureSupport(m); }
+          case 7994 -> { var in2 = in.limitedView(perfio.proto.runtime.Runtime.parseLen(in)); base.addUninterpretedOption(perfio.protoapi.DescriptorProtos.UninterpretedOption.parseFrom(in2)); in2.close(); }
           default -> parseOther(in, tag);
         }
       }
@@ -2101,8 +2101,8 @@ public final class DescriptorProtos {
       while(in.hasMore()) {
         int tag = (int)perfio.proto.runtime.Runtime.parseVarint(in);
         switch(tag) {
-          case 10 -> { var in2 = in.delimitedView(perfio.proto.runtime.Runtime.parseLen(in)); var m = base.getFeatures(); perfio.protoapi.DescriptorProtos.FeatureSet.parseFrom(in2, m); in2.close(); base.setFeatures(m); }
-          case 7994 -> { var in2 = in.delimitedView(perfio.proto.runtime.Runtime.parseLen(in)); base.addUninterpretedOption(perfio.protoapi.DescriptorProtos.UninterpretedOption.parseFrom(in2)); in2.close(); }
+          case 10 -> { var in2 = in.limitedView(perfio.proto.runtime.Runtime.parseLen(in)); var m = base.getFeatures(); perfio.protoapi.DescriptorProtos.FeatureSet.parseFrom(in2, m); in2.close(); base.setFeatures(m); }
+          case 7994 -> { var in2 = in.limitedView(perfio.proto.runtime.Runtime.parseLen(in)); base.addUninterpretedOption(perfio.protoapi.DescriptorProtos.UninterpretedOption.parseFrom(in2)); in2.close(); }
           default -> parseOther(in, tag);
         }
       }
@@ -2178,13 +2178,13 @@ public final class DescriptorProtos {
         int tag = (int)perfio.proto.runtime.Runtime.parseVarint(in);
         switch(tag) {
           case 16 -> base.setAllowAlias(perfio.proto.runtime.Runtime.parseBoolean(in));
-          case 18 -> { var in2 = in.delimitedView(perfio.proto.runtime.Runtime.parseLen(in)); while(in2.hasMore()) base.setAllowAlias(perfio.proto.runtime.Runtime.parseBoolean(in2));; in2.close(); }
+          case 18 -> { var in2 = in.limitedView(perfio.proto.runtime.Runtime.parseLen(in)); while(in2.hasMore()) base.setAllowAlias(perfio.proto.runtime.Runtime.parseBoolean(in2));; in2.close(); }
           case 24 -> base.setDeprecated(perfio.proto.runtime.Runtime.parseBoolean(in));
-          case 26 -> { var in2 = in.delimitedView(perfio.proto.runtime.Runtime.parseLen(in)); while(in2.hasMore()) base.setDeprecated(perfio.proto.runtime.Runtime.parseBoolean(in2));; in2.close(); }
+          case 26 -> { var in2 = in.limitedView(perfio.proto.runtime.Runtime.parseLen(in)); while(in2.hasMore()) base.setDeprecated(perfio.proto.runtime.Runtime.parseBoolean(in2));; in2.close(); }
           case 48 -> base.setDeprecatedLegacyJsonFieldConflicts(perfio.proto.runtime.Runtime.parseBoolean(in));
-          case 50 -> { var in2 = in.delimitedView(perfio.proto.runtime.Runtime.parseLen(in)); while(in2.hasMore()) base.setDeprecatedLegacyJsonFieldConflicts(perfio.proto.runtime.Runtime.parseBoolean(in2));; in2.close(); }
-          case 58 -> { var in2 = in.delimitedView(perfio.proto.runtime.Runtime.parseLen(in)); var m = base.getFeatures(); perfio.protoapi.DescriptorProtos.FeatureSet.parseFrom(in2, m); in2.close(); base.setFeatures(m); }
-          case 7994 -> { var in2 = in.delimitedView(perfio.proto.runtime.Runtime.parseLen(in)); base.addUninterpretedOption(perfio.protoapi.DescriptorProtos.UninterpretedOption.parseFrom(in2)); in2.close(); }
+          case 50 -> { var in2 = in.limitedView(perfio.proto.runtime.Runtime.parseLen(in)); while(in2.hasMore()) base.setDeprecatedLegacyJsonFieldConflicts(perfio.proto.runtime.Runtime.parseBoolean(in2));; in2.close(); }
+          case 58 -> { var in2 = in.limitedView(perfio.proto.runtime.Runtime.parseLen(in)); var m = base.getFeatures(); perfio.protoapi.DescriptorProtos.FeatureSet.parseFrom(in2, m); in2.close(); base.setFeatures(m); }
+          case 7994 -> { var in2 = in.limitedView(perfio.proto.runtime.Runtime.parseLen(in)); base.addUninterpretedOption(perfio.protoapi.DescriptorProtos.UninterpretedOption.parseFrom(in2)); in2.close(); }
           default -> parseOther(in, tag);
         }
       }
@@ -2269,12 +2269,12 @@ public final class DescriptorProtos {
         int tag = (int)perfio.proto.runtime.Runtime.parseVarint(in);
         switch(tag) {
           case 8 -> base.setDeprecated(perfio.proto.runtime.Runtime.parseBoolean(in));
-          case 10 -> { var in2 = in.delimitedView(perfio.proto.runtime.Runtime.parseLen(in)); while(in2.hasMore()) base.setDeprecated(perfio.proto.runtime.Runtime.parseBoolean(in2));; in2.close(); }
-          case 18 -> { var in2 = in.delimitedView(perfio.proto.runtime.Runtime.parseLen(in)); var m = base.getFeatures(); perfio.protoapi.DescriptorProtos.FeatureSet.parseFrom(in2, m); in2.close(); base.setFeatures(m); }
+          case 10 -> { var in2 = in.limitedView(perfio.proto.runtime.Runtime.parseLen(in)); while(in2.hasMore()) base.setDeprecated(perfio.proto.runtime.Runtime.parseBoolean(in2));; in2.close(); }
+          case 18 -> { var in2 = in.limitedView(perfio.proto.runtime.Runtime.parseLen(in)); var m = base.getFeatures(); perfio.protoapi.DescriptorProtos.FeatureSet.parseFrom(in2, m); in2.close(); base.setFeatures(m); }
           case 24 -> base.setDebugRedact(perfio.proto.runtime.Runtime.parseBoolean(in));
-          case 26 -> { var in2 = in.delimitedView(perfio.proto.runtime.Runtime.parseLen(in)); while(in2.hasMore()) base.setDebugRedact(perfio.proto.runtime.Runtime.parseBoolean(in2));; in2.close(); }
-          case 34 -> { var in2 = in.delimitedView(perfio.proto.runtime.Runtime.parseLen(in)); var m = base.getFeatureSupport(); perfio.protoapi.DescriptorProtos.FieldOptions.FeatureSupport.parseFrom(in2, m); in2.close(); base.setFeatureSupport(m); }
-          case 7994 -> { var in2 = in.delimitedView(perfio.proto.runtime.Runtime.parseLen(in)); base.addUninterpretedOption(perfio.protoapi.DescriptorProtos.UninterpretedOption.parseFrom(in2)); in2.close(); }
+          case 26 -> { var in2 = in.limitedView(perfio.proto.runtime.Runtime.parseLen(in)); while(in2.hasMore()) base.setDebugRedact(perfio.proto.runtime.Runtime.parseBoolean(in2));; in2.close(); }
+          case 34 -> { var in2 = in.limitedView(perfio.proto.runtime.Runtime.parseLen(in)); var m = base.getFeatureSupport(); perfio.protoapi.DescriptorProtos.FieldOptions.FeatureSupport.parseFrom(in2, m); in2.close(); base.setFeatureSupport(m); }
+          case 7994 -> { var in2 = in.limitedView(perfio.proto.runtime.Runtime.parseLen(in)); base.addUninterpretedOption(perfio.protoapi.DescriptorProtos.UninterpretedOption.parseFrom(in2)); in2.close(); }
           default -> parseOther(in, tag);
         }
       }
@@ -2345,10 +2345,10 @@ public final class DescriptorProtos {
       while(in.hasMore()) {
         int tag = (int)perfio.proto.runtime.Runtime.parseVarint(in);
         switch(tag) {
-          case 274 -> { var in2 = in.delimitedView(perfio.proto.runtime.Runtime.parseLen(in)); var m = base.getFeatures(); perfio.protoapi.DescriptorProtos.FeatureSet.parseFrom(in2, m); in2.close(); base.setFeatures(m); }
+          case 274 -> { var in2 = in.limitedView(perfio.proto.runtime.Runtime.parseLen(in)); var m = base.getFeatures(); perfio.protoapi.DescriptorProtos.FeatureSet.parseFrom(in2, m); in2.close(); base.setFeatures(m); }
           case 264 -> base.setDeprecated(perfio.proto.runtime.Runtime.parseBoolean(in));
-          case 266 -> { var in2 = in.delimitedView(perfio.proto.runtime.Runtime.parseLen(in)); while(in2.hasMore()) base.setDeprecated(perfio.proto.runtime.Runtime.parseBoolean(in2));; in2.close(); }
-          case 7994 -> { var in2 = in.delimitedView(perfio.proto.runtime.Runtime.parseLen(in)); base.addUninterpretedOption(perfio.protoapi.DescriptorProtos.UninterpretedOption.parseFrom(in2)); in2.close(); }
+          case 266 -> { var in2 = in.limitedView(perfio.proto.runtime.Runtime.parseLen(in)); while(in2.hasMore()) base.setDeprecated(perfio.proto.runtime.Runtime.parseBoolean(in2));; in2.close(); }
+          case 7994 -> { var in2 = in.limitedView(perfio.proto.runtime.Runtime.parseLen(in)); base.addUninterpretedOption(perfio.protoapi.DescriptorProtos.UninterpretedOption.parseFrom(in2)); in2.close(); }
           default -> parseOther(in, tag);
         }
       }
@@ -2438,10 +2438,10 @@ public final class DescriptorProtos {
         int tag = (int)perfio.proto.runtime.Runtime.parseVarint(in);
         switch(tag) {
           case 264 -> base.setDeprecated(perfio.proto.runtime.Runtime.parseBoolean(in));
-          case 266 -> { var in2 = in.delimitedView(perfio.proto.runtime.Runtime.parseLen(in)); while(in2.hasMore()) base.setDeprecated(perfio.proto.runtime.Runtime.parseBoolean(in2));; in2.close(); }
+          case 266 -> { var in2 = in.limitedView(perfio.proto.runtime.Runtime.parseLen(in)); while(in2.hasMore()) base.setDeprecated(perfio.proto.runtime.Runtime.parseBoolean(in2));; in2.close(); }
           case 272 -> base.setIdempotencyLevel(perfio.protoapi.DescriptorProtos.MethodOptions.IdempotencyLevel.valueOf(perfio.proto.runtime.Runtime.parseInt32(in)));
-          case 282 -> { var in2 = in.delimitedView(perfio.proto.runtime.Runtime.parseLen(in)); var m = base.getFeatures(); perfio.protoapi.DescriptorProtos.FeatureSet.parseFrom(in2, m); in2.close(); base.setFeatures(m); }
-          case 7994 -> { var in2 = in.delimitedView(perfio.proto.runtime.Runtime.parseLen(in)); base.addUninterpretedOption(perfio.protoapi.DescriptorProtos.UninterpretedOption.parseFrom(in2)); in2.close(); }
+          case 282 -> { var in2 = in.limitedView(perfio.proto.runtime.Runtime.parseLen(in)); var m = base.getFeatures(); perfio.protoapi.DescriptorProtos.FeatureSet.parseFrom(in2, m); in2.close(); base.setFeatures(m); }
+          case 7994 -> { var in2 = in.limitedView(perfio.proto.runtime.Runtime.parseLen(in)); base.addUninterpretedOption(perfio.protoapi.DescriptorProtos.UninterpretedOption.parseFrom(in2)); in2.close(); }
           default -> parseOther(in, tag);
         }
       }
@@ -2500,7 +2500,7 @@ public final class DescriptorProtos {
           switch(tag) {
             case 10 -> base.setNamePart(perfio.proto.runtime.Runtime.parseString(in));
             case 16 -> base.setIsExtension(perfio.proto.runtime.Runtime.parseBoolean(in));
-            case 18 -> { var in2 = in.delimitedView(perfio.proto.runtime.Runtime.parseLen(in)); while(in2.hasMore()) base.setIsExtension(perfio.proto.runtime.Runtime.parseBoolean(in2));; in2.close(); }
+            case 18 -> { var in2 = in.limitedView(perfio.proto.runtime.Runtime.parseLen(in)); while(in2.hasMore()) base.setIsExtension(perfio.proto.runtime.Runtime.parseBoolean(in2));; in2.close(); }
             default -> parseOther(in, tag);
           }
         }
@@ -2579,14 +2579,14 @@ public final class DescriptorProtos {
       while(in.hasMore()) {
         int tag = (int)perfio.proto.runtime.Runtime.parseVarint(in);
         switch(tag) {
-          case 18 -> { var in2 = in.delimitedView(perfio.proto.runtime.Runtime.parseLen(in)); base.addName(perfio.protoapi.DescriptorProtos.UninterpretedOption.NamePart.parseFrom(in2)); in2.close(); }
+          case 18 -> { var in2 = in.limitedView(perfio.proto.runtime.Runtime.parseLen(in)); base.addName(perfio.protoapi.DescriptorProtos.UninterpretedOption.NamePart.parseFrom(in2)); in2.close(); }
           case 26 -> base.setIdentifierValue(perfio.proto.runtime.Runtime.parseString(in));
           case 32 -> base.setPositiveIntValue(perfio.proto.runtime.Runtime.parseInt64(in));
-          case 34 -> { var in2 = in.delimitedView(perfio.proto.runtime.Runtime.parseLen(in)); while(in2.hasMore()) base.setPositiveIntValue(perfio.proto.runtime.Runtime.parseInt64(in2));; in2.close(); }
+          case 34 -> { var in2 = in.limitedView(perfio.proto.runtime.Runtime.parseLen(in)); while(in2.hasMore()) base.setPositiveIntValue(perfio.proto.runtime.Runtime.parseInt64(in2));; in2.close(); }
           case 40 -> base.setNegativeIntValue(perfio.proto.runtime.Runtime.parseInt64(in));
-          case 42 -> { var in2 = in.delimitedView(perfio.proto.runtime.Runtime.parseLen(in)); while(in2.hasMore()) base.setNegativeIntValue(perfio.proto.runtime.Runtime.parseInt64(in2));; in2.close(); }
+          case 42 -> { var in2 = in.limitedView(perfio.proto.runtime.Runtime.parseLen(in)); while(in2.hasMore()) base.setNegativeIntValue(perfio.proto.runtime.Runtime.parseInt64(in2));; in2.close(); }
           case 49 -> base.setDoubleValue(perfio.proto.runtime.Runtime.parseDouble(in));
-          case 50 -> { var in2 = in.delimitedView(perfio.proto.runtime.Runtime.parseLen(in)); while(in2.hasMore()) base.setDoubleValue(perfio.proto.runtime.Runtime.parseDouble(in2));; in2.close(); }
+          case 50 -> { var in2 = in.limitedView(perfio.proto.runtime.Runtime.parseLen(in)); while(in2.hasMore()) base.setDoubleValue(perfio.proto.runtime.Runtime.parseDouble(in2));; in2.close(); }
           case 58 -> base.setStringValue(perfio.proto.runtime.Runtime.parseBytes(in));
           case 66 -> base.setAggregateValue(perfio.proto.runtime.Runtime.parseString(in));
           default -> parseOther(in, tag);
@@ -2855,8 +2855,8 @@ public final class DescriptorProtos {
           int tag = (int)perfio.proto.runtime.Runtime.parseVarint(in);
           switch(tag) {
             case 24 -> base.setEdition(perfio.protoapi.DescriptorProtos.Edition.valueOf(perfio.proto.runtime.Runtime.parseInt32(in)));
-            case 34 -> { var in2 = in.delimitedView(perfio.proto.runtime.Runtime.parseLen(in)); var m = base.getOverridableFeatures(); perfio.protoapi.DescriptorProtos.FeatureSet.parseFrom(in2, m); in2.close(); base.setOverridableFeatures(m); }
-            case 42 -> { var in2 = in.delimitedView(perfio.proto.runtime.Runtime.parseLen(in)); var m = base.getFixedFeatures(); perfio.protoapi.DescriptorProtos.FeatureSet.parseFrom(in2, m); in2.close(); base.setFixedFeatures(m); }
+            case 34 -> { var in2 = in.limitedView(perfio.proto.runtime.Runtime.parseLen(in)); var m = base.getOverridableFeatures(); perfio.protoapi.DescriptorProtos.FeatureSet.parseFrom(in2, m); in2.close(); base.setOverridableFeatures(m); }
+            case 42 -> { var in2 = in.limitedView(perfio.proto.runtime.Runtime.parseLen(in)); var m = base.getFixedFeatures(); perfio.protoapi.DescriptorProtos.FeatureSet.parseFrom(in2, m); in2.close(); base.setFixedFeatures(m); }
             default -> parseOther(in, tag);
           }
         }
@@ -2918,7 +2918,7 @@ public final class DescriptorProtos {
       while(in.hasMore()) {
         int tag = (int)perfio.proto.runtime.Runtime.parseVarint(in);
         switch(tag) {
-          case 10 -> { var in2 = in.delimitedView(perfio.proto.runtime.Runtime.parseLen(in)); base.addDefaults(perfio.protoapi.DescriptorProtos.FeatureSetDefaults.FeatureSetEditionDefault.parseFrom(in2)); in2.close(); }
+          case 10 -> { var in2 = in.limitedView(perfio.proto.runtime.Runtime.parseLen(in)); base.addDefaults(perfio.protoapi.DescriptorProtos.FeatureSetDefaults.FeatureSetEditionDefault.parseFrom(in2)); in2.close(); }
           case 32 -> base.setMinimumEdition(perfio.protoapi.DescriptorProtos.Edition.valueOf(perfio.proto.runtime.Runtime.parseInt32(in)));
           case 40 -> base.setMaximumEdition(perfio.protoapi.DescriptorProtos.Edition.valueOf(perfio.proto.runtime.Runtime.parseInt32(in)));
           default -> parseOther(in, tag);
@@ -3005,9 +3005,9 @@ public final class DescriptorProtos {
           int tag = (int)perfio.proto.runtime.Runtime.parseVarint(in);
           switch(tag) {
             case 8 -> base.addPath(perfio.proto.runtime.Runtime.parseInt32(in));
-            case 10 -> { var in2 = in.delimitedView(perfio.proto.runtime.Runtime.parseLen(in)); base._path_initMut(); while(in2.hasMore()) base._path.add(perfio.proto.runtime.Runtime.parseInt32(in2)); in2.close(); }
+            case 10 -> { var in2 = in.limitedView(perfio.proto.runtime.Runtime.parseLen(in)); base._path_initMut(); while(in2.hasMore()) base._path.add(perfio.proto.runtime.Runtime.parseInt32(in2)); in2.close(); }
             case 16 -> base.addSpan(perfio.proto.runtime.Runtime.parseInt32(in));
-            case 18 -> { var in2 = in.delimitedView(perfio.proto.runtime.Runtime.parseLen(in)); base._span_initMut(); while(in2.hasMore()) base._span.add(perfio.proto.runtime.Runtime.parseInt32(in2)); in2.close(); }
+            case 18 -> { var in2 = in.limitedView(perfio.proto.runtime.Runtime.parseLen(in)); base._span_initMut(); while(in2.hasMore()) base._span.add(perfio.proto.runtime.Runtime.parseInt32(in2)); in2.close(); }
             case 26 -> base.setLeadingComments(perfio.proto.runtime.Runtime.parseString(in));
             case 34 -> base.setTrailingComments(perfio.proto.runtime.Runtime.parseString(in));
             case 50 -> base.addLeadingDetachedComments(perfio.proto.runtime.Runtime.parseString(in));
@@ -3064,7 +3064,7 @@ public final class DescriptorProtos {
       while(in.hasMore()) {
         int tag = (int)perfio.proto.runtime.Runtime.parseVarint(in);
         switch(tag) {
-          case 10 -> { var in2 = in.delimitedView(perfio.proto.runtime.Runtime.parseLen(in)); base.addLocation(perfio.protoapi.DescriptorProtos.SourceCodeInfo.Location.parseFrom(in2)); in2.close(); }
+          case 10 -> { var in2 = in.limitedView(perfio.proto.runtime.Runtime.parseLen(in)); base.addLocation(perfio.protoapi.DescriptorProtos.SourceCodeInfo.Location.parseFrom(in2)); in2.close(); }
           default -> parseOther(in, tag);
         }
       }
@@ -3153,12 +3153,12 @@ public final class DescriptorProtos {
           int tag = (int)perfio.proto.runtime.Runtime.parseVarint(in);
           switch(tag) {
             case 8 -> base.addPath(perfio.proto.runtime.Runtime.parseInt32(in));
-            case 10 -> { var in2 = in.delimitedView(perfio.proto.runtime.Runtime.parseLen(in)); base._path_initMut(); while(in2.hasMore()) base._path.add(perfio.proto.runtime.Runtime.parseInt32(in2)); in2.close(); }
+            case 10 -> { var in2 = in.limitedView(perfio.proto.runtime.Runtime.parseLen(in)); base._path_initMut(); while(in2.hasMore()) base._path.add(perfio.proto.runtime.Runtime.parseInt32(in2)); in2.close(); }
             case 18 -> base.setSourceFile(perfio.proto.runtime.Runtime.parseString(in));
             case 24 -> base.setBegin(perfio.proto.runtime.Runtime.parseInt32(in));
-            case 26 -> { var in2 = in.delimitedView(perfio.proto.runtime.Runtime.parseLen(in)); while(in2.hasMore()) base.setBegin(perfio.proto.runtime.Runtime.parseInt32(in2));; in2.close(); }
+            case 26 -> { var in2 = in.limitedView(perfio.proto.runtime.Runtime.parseLen(in)); while(in2.hasMore()) base.setBegin(perfio.proto.runtime.Runtime.parseInt32(in2));; in2.close(); }
             case 32 -> base.setEnd(perfio.proto.runtime.Runtime.parseInt32(in));
-            case 34 -> { var in2 = in.delimitedView(perfio.proto.runtime.Runtime.parseLen(in)); while(in2.hasMore()) base.setEnd(perfio.proto.runtime.Runtime.parseInt32(in2));; in2.close(); }
+            case 34 -> { var in2 = in.limitedView(perfio.proto.runtime.Runtime.parseLen(in)); while(in2.hasMore()) base.setEnd(perfio.proto.runtime.Runtime.parseInt32(in2));; in2.close(); }
             case 40 -> base.setSemantic(perfio.protoapi.DescriptorProtos.GeneratedCodeInfo.Annotation.Semantic.valueOf(perfio.proto.runtime.Runtime.parseInt32(in)));
             default -> parseOther(in, tag);
           }
@@ -3213,7 +3213,7 @@ public final class DescriptorProtos {
       while(in.hasMore()) {
         int tag = (int)perfio.proto.runtime.Runtime.parseVarint(in);
         switch(tag) {
-          case 10 -> { var in2 = in.delimitedView(perfio.proto.runtime.Runtime.parseLen(in)); base.addAnnotation(perfio.protoapi.DescriptorProtos.GeneratedCodeInfo.Annotation.parseFrom(in2)); in2.close(); }
+          case 10 -> { var in2 = in.limitedView(perfio.proto.runtime.Runtime.parseLen(in)); base.addAnnotation(perfio.protoapi.DescriptorProtos.GeneratedCodeInfo.Annotation.parseFrom(in2)); in2.close(); }
           default -> parseOther(in, tag);
         }
       }
