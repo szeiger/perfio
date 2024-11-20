@@ -4,17 +4,17 @@ import java.io.EOFException;
 import java.io.IOException;
 
 final class SwitchingHeapBufferedInput extends HeapBufferedInput {
-  private final BlockBufferedOutput root;
+  private final BufferIterator it;
   private int seamOverlap = 0;
 
-  SwitchingHeapBufferedInput(BlockBufferedOutput root) {
-    super(root.next.buf, root.next.start, root.next.pos, Long.MAX_VALUE, null, null, root.bigEndian);
-    this.root = root;
+  SwitchingHeapBufferedInput(BufferIterator it, boolean bigEndian) {
+    super(it.buffer(), it.start(), it.end(), Long.MAX_VALUE, null, null, bigEndian);
+    this.it = it;
   }
 
   private SwitchingHeapBufferedInput(SwitchingHeapBufferedInput parent) {
     super(null, 0, 0, 0, null, parent, parent.bigEndian);
-    this.root = parent.root;
+    this.it = parent.it;
   }
 
   @Override
@@ -24,10 +24,9 @@ final class SwitchingHeapBufferedInput extends HeapBufferedInput {
   }
 
   private void updateBuffer() {
-    var n = root.next;
-    buf = n.buf;
-    pos = n.start;
-    lim = n.pos;
+    buf = it.buffer();
+    pos = it.start();
+    lim = it.end();
     totalBuffered += (lim - pos);
   }
 
@@ -36,24 +35,29 @@ final class SwitchingHeapBufferedInput extends HeapBufferedInput {
     if(totalBuffered < totalReadLimit) {
       while(available() < count) {
         if(pos == lim) {
-          if(seamOverlap != 0) seamOverlap = 0;
-          else if(!root.nextBuffer()) break;
-          updateBuffer();
+          if(seamOverlap != 0) {
+            updateBuffer();
+            pos += seamOverlap;
+            seamOverlap = 0;
+          } else {
+            if(!it.next()) break;
+            updateBuffer();
+          }
         } else {
           if(pos + count > buf.length)
             shiftOrGrow(count);
           if(seamOverlap == 0) {
-            if(!root.nextBuffer()) break;
+            if(!it.next()) break;
             var rem = count - available();
-            var nlen = root.next.pos - root.next.start;
+            var nlen = it.length();
             if(rem < nlen) { // at least 1 byte will remain in `next` -> create a seam
               seamOverlap = rem;
-              System.arraycopy(root.next.buf, root.next.start, buf, pos, rem);
+              System.arraycopy(it.buffer(), it.start(), buf, pos, rem);
               lim += rem;
-              root.next.start += rem;
+              //root.next.start += rem;
               totalBuffered += rem;
             } else { // `next` will be exhausted -> copy without seam
-              System.arraycopy(root.next.buf, root.next.start, buf, pos, nlen);
+              System.arraycopy(it.buffer(), it.start(), buf, pos, nlen);
               lim += nlen;
               totalBuffered += nlen;
             }
@@ -62,18 +66,19 @@ final class SwitchingHeapBufferedInput extends HeapBufferedInput {
               var a = lim - pos;
               updateBuffer();
               pos -= a;
+              pos += seamOverlap;
               seamOverlap = 0;
             } else {
               var rem = count - available();
-              var nlen = root.next.pos - root.next.start;
+              var nlen = it.length();
               if(rem < nlen) { // extend the current seam
                 seamOverlap += rem;
-                System.arraycopy(root.next.buf, root.next.start, buf, pos, rem);
+                System.arraycopy(it.buffer(), it.start(), buf, pos, rem);
                 lim += rem;
-                root.next.start += rem;
+                //root.next.start += rem;
                 totalBuffered += rem;
               } else { // copy the rest of the next buffer
-                System.arraycopy(root.next.buf, root.next.start, buf, pos, nlen);
+                System.arraycopy(it.buffer(), it.start(), buf, pos, nlen);
                 lim += nlen;
                 totalBuffered += nlen;
                 seamOverlap = 0;

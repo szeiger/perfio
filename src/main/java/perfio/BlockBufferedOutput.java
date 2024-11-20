@@ -3,14 +3,12 @@ package perfio;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.ByteOrder;
-import java.util.Objects;
 
 /// A [BufferedOutput] which collects data in one or more byte array segments. The data can be
 /// accessed with [#toBufferedInput()] or [#toInputStream()] after closing the buffer.
 /// 
 /// Instances are created with [BufferedOutput#ofBlocks(int)] (and its overloads).
-public final class BlockBufferedOutput extends CacheRootBufferedOutput {
-  private boolean retrieved = false;
+final class BlockBufferedOutput extends AccumulatingBufferedOutput {
 
   BlockBufferedOutput(boolean bigEndian, int initialBufferSize) {
     super(new byte[initialBufferSize], bigEndian, 0, 0, initialBufferSize, initialBufferSize, false, Long.MAX_VALUE);
@@ -25,17 +23,6 @@ public final class BlockBufferedOutput extends CacheRootBufferedOutput {
   void flushBlocks(boolean forceFlush) throws IOException {}
 
   void flushUpstream() {}
-
-  @Override
-  void closeUpstream() throws IOException {
-    super.closeUpstream();
-    if(next.pos <= next.start && next != this) nextBuffer();
-  }
-
-  private void checkRetrievalState() throws IOException {
-    if(!closed) throw new IOException("Cannot access buffer before closing");
-    if(retrieved) throw new IOException("Buffer was already retrieved");
-  }
 
   @Override
   void flushAndGrow(int count) throws IOException {
@@ -54,97 +41,50 @@ public final class BlockBufferedOutput extends CacheRootBufferedOutput {
   }
 
   public InputStream toInputStream() throws IOException {
-    checkRetrievalState();
-    retrieved = true;
-    return new BlockBufferedInputStream(this);
+    return new BufferIteratorInputStream(bufferIterator());
   }
 
   public BufferedInput toBufferedInput() throws IOException {
-    checkRetrievalState();
-    retrieved = true;
-    return new SwitchingHeapBufferedInput(this);
+    return new SwitchingHeapBufferedInput(bufferIterator(), bigEndian);
   }
 
-  /// Advance to the next non-empty buffer (if there is one), merging and skipping SHARING_LEFT
-  /// buffers along the way.
-  /// @return true for success or false if the end of the data has been reached.
-  boolean nextBuffer() {
-    var c = next;
-    if(c == this) return false;
-    c.unlinkOnly();
-    while(true) {
-      var b = next;
-      var blen = b.pos - b.start;
-      if(blen <= 0 && b != this) {
-        b.unlinkOnly();
-      } else if(b.sharing == SHARING_LEFT) {
-        var n = b.next;
-        n.start = b.start;
-        n.totalFlushed -= blen;
-        b.unlinkOnly();
-      } else return blen > 0;
-    }
+  BufferIterator bufferIterator() throws IOException {
+    if(!closed) throw new IOException("Cannot access buffer before closing");
+    return new BlockBufferedOutputIterator(this);
   }
 }
 
 
-final class BlockBufferedInputStream extends InputStream {
-  private final BlockBufferedOutput bo;
-  private byte[] buf;
-  private int pos, lim;
+final class BlockBufferedOutputIterator extends BufferIterator {
+  private BufferedOutput block;
+  private final BufferedOutput root;
 
-  BlockBufferedInputStream(BlockBufferedOutput bo) {
-    this.bo = bo;
-    updateBuffer();
+  BlockBufferedOutputIterator(BufferedOutput root) {
+    this.root = root;
+    this.block = skipEmpty(root.next);
+    if(this.block == null) this.block = root.next;
   }
 
-  private void updateBuffer() {
-    var n = bo.next;
-    buf = n.buf;
-    pos = n.start;
-    lim = n.pos;
-  }
-
-  // Make data available in the current buffer, advancing it if necessary. Returns
-  // false if the end of the data has been reached.
-  private boolean request() {
-    if(lim - pos <= 0) {
-      if(!bo.nextBuffer()) return false;
-      updateBuffer();
+  private BufferedOutput skipEmpty(BufferedOutput b) {
+    while(true) {
+      if(b.sharing == BufferedOutput.SHARING_LEFT) {
+        var n = b.next;
+        n.start = b.start;
+      } else if(b.pos - b.start > 0) return b;
+      if(b == root) return null;
+      b = b.next;
     }
+  }
+
+  public boolean next() {
+    if(block == root) return false;
+    var b = skipEmpty(block.next);
+    if(b == null) return false;
+    block = b;
     return true;
   }
 
-  public int read() {
-    if(!request()) return -1;
-    return buf[pos++] & 0xFF;
-  }
-
-  @Override
-  public int read(byte[] b, int off, int len) {
-    Objects.checkFromIndexSize(off, len, b.length);
-    if(len == 0) return 0;
-    if(!request()) return -1;
-    var r = Math.min(len, available());
-    System.arraycopy(buf, pos, b, off, r);
-    pos += r;
-    return r;
-  }
-
-  @Override
-  public long skip(long n) {
-    long rem = n;
-    while(true) {
-      if(rem <= available()) {
-        pos += (int)rem;
-        return n;
-      } else {
-        rem -= available();
-        if(!request()) return n-rem;
-      }
-    }
-  }
-
-  @Override
-  public int available() { return lim - pos; }
-}
+  public byte[] buffer() { return block.buf; }
+  public int start() { return block.start; }
+  public int end() { return block.pos; }
+};

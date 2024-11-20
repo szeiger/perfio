@@ -58,14 +58,14 @@ public abstract sealed class BufferedOutput implements Closeable, Flushable perm
   /// after closing the BufferedOutput.
   ///
   /// @param initialBufferSize Initial buffer size. The buffer is expanded later if necessary.
-  public static BlockBufferedOutput ofBlocks(int initialBufferSize) {
+  public static AccumulatingBufferedOutput ofBlocks(int initialBufferSize) {
     return new BlockBufferedOutput(true, initialBufferSize);
   }
 
   /// Write data to an internal buffer that can be read as an [InputStream] or [BufferedInput]
   /// after closing the BufferedOutput using the default initial buffer size.
   /// @see #ofBlocks(int)
-  public static BlockBufferedOutput ofBlocks() { return ofBlocks(DefaultBufferSize); }
+  public static AccumulatingBufferedOutput ofBlocks() { return ofBlocks(DefaultBufferSize); }
 
   /// Write data to a given region of an existing byte array. The BufferedOutput is limited to the
   /// initial size.
@@ -605,7 +605,7 @@ final class NestedBufferedOutput extends BufferedOutput {
 }
 
 
-sealed abstract class CacheRootBufferedOutput extends BufferedOutput permits FlushingBufferedOutput, ArrayBufferedOutput, BlockBufferedOutput {
+sealed abstract class CacheRootBufferedOutput extends BufferedOutput permits FlushingBufferedOutput, AccumulatingBufferedOutput {
   final int initialBufferSize;
 
   CacheRootBufferedOutput(byte[] buf, boolean bigEndian, int start, int pos, int lim, int initialBufferSize, boolean fixed, long totalLimit) {

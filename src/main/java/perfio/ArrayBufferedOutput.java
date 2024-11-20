@@ -14,7 +14,7 @@ import java.util.Arrays;
 /// 
 /// Instances are created with [BufferedOutput#growing(int)] or
 /// [BufferedOutput#ofArray(byte\[\], int, int, int)] (and their overloads).
-public final class ArrayBufferedOutput extends CacheRootBufferedOutput {
+public final class ArrayBufferedOutput extends AccumulatingBufferedOutput {
 
   ArrayBufferedOutput(byte[] buf, boolean bigEndian, int start, int pos, int lim, int initialBufferSize, boolean fixed) {
     super(buf, bigEndian, start, pos, lim, initialBufferSize, fixed, Long.MAX_VALUE);
@@ -84,14 +84,14 @@ public final class ArrayBufferedOutput extends CacheRootBufferedOutput {
   /// Copy the data to a newly allocated byte array of the exact size.
   public byte[] copyToByteArray() throws IOException { return Arrays.copyOfRange(buffer(), outstart, outpos); }
 
-  /// Return the buffer. This method should be used together with [#start()] and [#length()]
+  /// Returns the buffer. This method should be used together with [#start()] and [#length()]
   /// to get the array segment that contains the data.
   public byte[] buffer() throws IOException {
     checkClosed();
     return outbuf;
   }
 
-  /// Return the first used index within the buffer. This will always be 0 for a growing buffer.
+  /// Returns the first used index within the buffer. This will always be 0 for a growing buffer.
   /// A buffer created with [BufferedOutput#ofArray(byte\[\], int, int, int)] can have a non-zero
   /// starting index.
   public int start() throws IOException {
@@ -99,7 +99,13 @@ public final class ArrayBufferedOutput extends CacheRootBufferedOutput {
     return outstart;
   }
 
-  /// Return the number of bytes in the buffer.
+  /// Returns the index after the last used index in the buffer.
+  public int end() throws IOException {
+    checkClosed();
+    return outpos;
+  }
+
+  /// Returns the number of bytes in the buffer, equivalent to `end() - start()`.
   public int length() throws IOException {
     checkClosed();
     return outpos - outstart;
