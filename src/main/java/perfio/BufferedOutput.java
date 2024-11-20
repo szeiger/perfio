@@ -255,9 +255,9 @@ public abstract sealed class BufferedOutput implements Closeable, Flushable perm
   ///
   /// The encoded data is written verbatim without a length prefix or terminator.
   public final int string(String s, Charset charset) throws IOException {
-    var b = s.getBytes(charset);
-    write(b);
-    return b.length;
+    if(charset == StandardCharsets.UTF_8) return stringUtf8(s, 0);
+    else if(charset == StandardCharsets.ISO_8859_1) return stringLatin1(s, 0);
+    return stringFallback(s, charset, 0);
   }
 
   /// Write a [String] in UTF-8 encoding.
@@ -266,17 +266,56 @@ public abstract sealed class BufferedOutput implements Closeable, Flushable perm
   /// [DataOutput] which use a non-standard variant.
   ///
   /// @see #string(String, Charset)
-  public final int string(String s) throws IOException { return string(s, StandardCharsets.UTF_8); }
+  public final int string(String s) throws IOException { return stringUtf8(s, 0); }
+
+  private int stringFallback(String s, Charset charset, int extra) throws IOException {
+    var b = s.getBytes(charset);
+    var p = fwd(b.length + extra);
+    System.arraycopy(b, 0, buf, p, b.length);
+    return b.length + extra;
+  }
+
+  private int stringLatin1(String s, int extra) throws IOException {
+    var l = s.length();
+    if(l == 0) return 0;
+    else {
+      if(StringInternals.isLatin1(s)) {
+        var p = fwd(l + extra);
+        var v = StringInternals.value(s);
+        System.arraycopy(v, 0, buf, p, v.length);
+        return l + extra;
+      } else return stringFallback(s, StandardCharsets.ISO_8859_1, extra);
+    }
+  }
+
+  private int stringUtf8(String s, int extra) throws IOException {
+    var l = s.length();
+    if(l == 0) return 0;
+    else {
+      if(StringInternals.isLatin1(s)) {
+        var v = StringInternals.value(s);
+        if(!StringInternals.hasNegatives(v, 0, v.length)) {
+          var p = fwd(l + extra);
+          System.arraycopy(v, 0, buf, p, v.length);
+          return l + extra;
+        } else return stringFallback(s, StandardCharsets.UTF_8, extra);
+      } else return stringFallback(s, StandardCharsets.UTF_8, extra);
+    }
+  }
 
   /// Write a zero-terminated [String] in the given [Charset].
   /// @see #string(String, Charset)
   public final int zstring(String s, Charset charset) throws IOException {
-    var b = s.getBytes(charset);
-    var len = b.length;
-    var p = fwd(len + 1);
-    System.arraycopy(b, 0, buf, p, b.length);
-    buf[p + len] = 0;
-    return len + 1;
+    int l = (charset == StandardCharsets.UTF_8) ? stringUtf8(s, 1)
+        : (charset == StandardCharsets.ISO_8859_1) ? stringLatin1(s, 1)
+        : stringFallback(s, charset, 1);
+    if(l == 0) {
+      int8((byte)0);
+      return 1;
+    } else {
+      buf[pos-1] = 0;
+      return l;
+    }
   }
 
   /// Write a zero-terminated [String] in UTF-8 encoding.
