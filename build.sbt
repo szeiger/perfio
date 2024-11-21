@@ -9,6 +9,8 @@ Global / version := "0.1-SNAPSHOT"
 
 //cancelable in Global := false
 
+val release = "22"
+
 val runtimeOpts = Seq(
   "--add-modules", "jdk.incubator.vector",
   "--add-opens", "java.base/jdk.internal.misc=ALL-UNNAMED",
@@ -16,10 +18,12 @@ val runtimeOpts = Seq(
 )
 val compileOpts = Seq(
   "--add-modules", "jdk.incubator.vector",
+  "--release", release,
 )
 
 javaOptions in Global ++= runtimeOpts
 javacOptions in Global ++= compileOpts
+scalacOptions in Global ++= Seq("-java-output-version", release)
 
 // javaOptions in Global += "-Djmh.blackhole.autoDetect=false"
 
@@ -33,8 +37,16 @@ Global / scalaVersion := "3.5.2"
 
 val hedgehogVersion = "0.10.1"
 
-lazy val main = (project in file("."))
-  .aggregate(LocalProject("bench"), LocalProject("test"), LocalProject("scalaApi"))
+lazy val root = (project in file("."))
+  .aggregate(LocalProject("core"), LocalProject("bench"), LocalProject("test"), LocalProject("scalaApi"))
+  .settings(
+    crossPaths := false,
+    autoScalaLibrary := false,
+    name := "perfio-root",
+    publish / skip := true,
+  )
+
+lazy val core = (project in file("core"))
   .settings(
     crossPaths := false,
     autoScalaLibrary := false,
@@ -42,9 +54,10 @@ lazy val main = (project in file("."))
   )
 
 lazy val scalaApi = (project in file("scalaapi"))
-  .dependsOn(main)
+  .dependsOn(core)
   .settings(
     name := "perfio-scala",
+    publish / skip := true,
   )
 
 lazy val bench = (project in file("bench"))
@@ -76,9 +89,10 @@ lazy val test_ = Project("test", file("test"))
   )
 
 lazy val protoRuntime = (project in file("proto-runtime"))
-  .dependsOn(main)
+  .dependsOn(core)
   .settings(
     name := "perfio-proto-runtime",
+    publish / skip := true,
   )
 
 lazy val proto = (project in file("proto"))
@@ -102,6 +116,7 @@ lazy val proto = (project in file("proto"))
       val outs = cachedCompile(srcs ++ cp.iterator.map(_.data).toSet).toSeq.sorted
       outs
     }.taskValue,
+    publish / skip := true,
   )
 
 lazy val protoBench = (project in file("proto-bench"))
