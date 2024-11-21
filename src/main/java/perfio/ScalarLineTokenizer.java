@@ -1,5 +1,7 @@
 package perfio;
 
+import perfio.internal.StringInternals;
+
 import java.io.IOException;
 import java.lang.foreign.MemorySegment;
 import java.lang.foreign.ValueLayout;

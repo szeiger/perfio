@@ -18,7 +18,7 @@ import java.nio.file.{Files, Path}
 @Measurement(iterations = 7, time = 1)
 @OutputTimeUnit(TimeUnit.MICROSECONDS)
 @State(Scope.Benchmark)
-class ParseBenchmark:
+class ReadBenchmark:
 
   private var testData: Array[Byte] = null
   private val testDataFile = Path.of("src/main/resources/CodeGeneratorRequest-pack.bin")

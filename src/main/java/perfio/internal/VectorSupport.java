@@ -1,14 +1,14 @@
-package perfio;
+package perfio.internal;
 
 import jdk.incubator.vector.ByteVector;
 import jdk.incubator.vector.VectorSpecies;
 
-class VectorSupport {
+public class VectorSupport {
   private VectorSupport() {}
 
-  static final VectorSpecies<Byte> SPECIES;
-  static final int VLEN;
-  static final long FULL_MASK;
+  public static final VectorSpecies<Byte> SPECIES;
+  public static final int VLEN;
+  public static final long FULL_MASK;
 
   static {
     var s = ByteVector.SPECIES_PREFERRED;

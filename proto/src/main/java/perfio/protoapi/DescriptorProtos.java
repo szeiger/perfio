@@ -41,7 +41,7 @@ public final class DescriptorProtos {
     }
   }
 
-  public static final class FileDescriptorSet {
+  public static final class FileDescriptorSet extends perfio.proto.runtime.GeneratedMessage {
 
     private java.util.List<perfio.protoapi.DescriptorProtos.FileDescriptorProto> _file = java.util.List.of();
     private void _file_initMut() {
@@ -88,7 +88,7 @@ public final class DescriptorProtos {
     }
   }
 
-  public static final class FileDescriptorProto {
+  public static final class FileDescriptorProto extends perfio.proto.runtime.GeneratedMessage {
 
     private int flags0;
 
@@ -266,9 +266,9 @@ public final class DescriptorProtos {
     }
   }
 
-  public static final class DescriptorProto {
+  public static final class DescriptorProto extends perfio.proto.runtime.GeneratedMessage {
 
-    public static final class ExtensionRange {
+    public static final class ExtensionRange extends perfio.proto.runtime.GeneratedMessage {
 
       private int flags0;
 
@@ -335,7 +335,7 @@ public final class DescriptorProtos {
       }
     }
 
-    public static final class ReservedRange {
+    public static final class ReservedRange extends perfio.proto.runtime.GeneratedMessage {
 
       private int flags0;
 
@@ -542,7 +542,7 @@ public final class DescriptorProtos {
     }
   }
 
-  public static final class ExtensionRangeOptions {
+  public static final class ExtensionRangeOptions extends perfio.proto.runtime.GeneratedMessage {
 
     public enum VerificationState {
       DECLARATION(0),
@@ -559,7 +559,7 @@ public final class DescriptorProtos {
       }
     }
 
-    public static final class Declaration {
+    public static final class Declaration extends perfio.proto.runtime.GeneratedMessage {
 
       private int flags0;
 
@@ -719,7 +719,7 @@ public final class DescriptorProtos {
     }
   }
 
-  public static final class FieldDescriptorProto {
+  public static final class FieldDescriptorProto extends perfio.proto.runtime.GeneratedMessage {
 
     public enum Type {
       TYPE_DOUBLE(1),
@@ -915,7 +915,7 @@ public final class DescriptorProtos {
     }
   }
 
-  public static final class OneofDescriptorProto {
+  public static final class OneofDescriptorProto extends perfio.proto.runtime.GeneratedMessage {
 
     private int flags0;
 
@@ -972,9 +972,9 @@ public final class DescriptorProtos {
     }
   }
 
-  public static final class EnumDescriptorProto {
+  public static final class EnumDescriptorProto extends perfio.proto.runtime.GeneratedMessage {
 
-    public static final class EnumReservedRange {
+    public static final class EnumReservedRange extends perfio.proto.runtime.GeneratedMessage {
 
       private int flags0;
 
@@ -1121,7 +1121,7 @@ public final class DescriptorProtos {
     }
   }
 
-  public static final class EnumValueDescriptorProto {
+  public static final class EnumValueDescriptorProto extends perfio.proto.runtime.GeneratedMessage {
 
     private int flags0;
 
@@ -1187,7 +1187,7 @@ public final class DescriptorProtos {
     }
   }
 
-  public static final class ServiceDescriptorProto {
+  public static final class ServiceDescriptorProto extends perfio.proto.runtime.GeneratedMessage {
 
     private int flags0;
 
@@ -1256,7 +1256,7 @@ public final class DescriptorProtos {
     }
   }
 
-  public static final class MethodDescriptorProto {
+  public static final class MethodDescriptorProto extends perfio.proto.runtime.GeneratedMessage {
 
     private int flags0;
 
@@ -1347,7 +1347,7 @@ public final class DescriptorProtos {
     }
   }
 
-  public static final class FileOptions {
+  public static final class FileOptions extends perfio.proto.runtime.GeneratedMessage {
 
     public enum OptimizeMode {
       SPEED(1),
@@ -1585,7 +1585,7 @@ public final class DescriptorProtos {
     }
   }
 
-  public static final class MessageOptions {
+  public static final class MessageOptions extends perfio.proto.runtime.GeneratedMessage {
 
     private int flags0;
 
@@ -1691,7 +1691,7 @@ public final class DescriptorProtos {
     }
   }
 
-  public static final class FieldOptions {
+  public static final class FieldOptions extends perfio.proto.runtime.GeneratedMessage {
 
     public enum CType {
       STRING(0),
@@ -1775,7 +1775,7 @@ public final class DescriptorProtos {
       }
     }
 
-    public static final class EditionDefault {
+    public static final class EditionDefault extends perfio.proto.runtime.GeneratedMessage {
 
       private int flags0;
 
@@ -1829,7 +1829,7 @@ public final class DescriptorProtos {
       }
     }
 
-    public static final class FeatureSupport {
+    public static final class FeatureSupport extends perfio.proto.runtime.GeneratedMessage {
 
       private int flags0;
 
@@ -2071,7 +2071,7 @@ public final class DescriptorProtos {
     }
   }
 
-  public static final class OneofOptions {
+  public static final class OneofOptions extends perfio.proto.runtime.GeneratedMessage {
 
     private int flags0;
 
@@ -2132,7 +2132,7 @@ public final class DescriptorProtos {
     }
   }
 
-  public static final class EnumOptions {
+  public static final class EnumOptions extends perfio.proto.runtime.GeneratedMessage {
 
     private int flags0;
 
@@ -2220,7 +2220,7 @@ public final class DescriptorProtos {
     }
   }
 
-  public static final class EnumValueOptions {
+  public static final class EnumValueOptions extends perfio.proto.runtime.GeneratedMessage {
 
     private int flags0;
 
@@ -2310,7 +2310,7 @@ public final class DescriptorProtos {
     }
   }
 
-  public static final class ServiceOptions {
+  public static final class ServiceOptions extends perfio.proto.runtime.GeneratedMessage {
 
     private int flags0;
 
@@ -2380,7 +2380,7 @@ public final class DescriptorProtos {
     }
   }
 
-  public static final class MethodOptions {
+  public static final class MethodOptions extends perfio.proto.runtime.GeneratedMessage {
 
     public enum IdempotencyLevel {
       IDEMPOTENCY_UNKNOWN(0),
@@ -2475,9 +2475,9 @@ public final class DescriptorProtos {
     }
   }
 
-  public static final class UninterpretedOption {
+  public static final class UninterpretedOption extends perfio.proto.runtime.GeneratedMessage {
 
-    public static final class NamePart {
+    public static final class NamePart extends perfio.proto.runtime.GeneratedMessage {
 
       private java.lang.String _namePart = "";
       public java.lang.String getNamePart() { return _namePart; }
@@ -2628,7 +2628,7 @@ public final class DescriptorProtos {
     }
   }
 
-  public static final class FeatureSet {
+  public static final class FeatureSet extends perfio.proto.runtime.GeneratedMessage {
 
     public enum FieldPresence {
       FIELD_PRESENCE_UNKNOWN(0),
@@ -2818,9 +2818,9 @@ public final class DescriptorProtos {
     }
   }
 
-  public static final class FeatureSetDefaults {
+  public static final class FeatureSetDefaults extends perfio.proto.runtime.GeneratedMessage {
 
-    public static final class FeatureSetEditionDefault {
+    public static final class FeatureSetEditionDefault extends perfio.proto.runtime.GeneratedMessage {
 
       private int flags0;
 
@@ -2952,9 +2952,9 @@ public final class DescriptorProtos {
     }
   }
 
-  public static final class SourceCodeInfo {
+  public static final class SourceCodeInfo extends perfio.proto.runtime.GeneratedMessage {
 
-    public static final class Location {
+    public static final class Location extends perfio.proto.runtime.GeneratedMessage {
 
       private int flags0;
 
@@ -3091,9 +3091,9 @@ public final class DescriptorProtos {
     }
   }
 
-  public static final class GeneratedCodeInfo {
+  public static final class GeneratedCodeInfo extends perfio.proto.runtime.GeneratedMessage {
 
-    public static final class Annotation {
+    public static final class Annotation extends perfio.proto.runtime.GeneratedMessage {
 
       public enum Semantic {
         NONE(0),

@@ -1,4 +1,4 @@
-package perfio;
+package perfio.internal;
 
 import java.lang.invoke.MethodHandle;
 import java.lang.invoke.MethodHandles;
@@ -8,7 +8,7 @@ import java.nio.charset.StandardCharsets;
 /// Accessors for private String methods for faster string encoding that can be used when running with
 /// `--add-opens java.base/java.lang=ALL-UNNAMED`. Lookup and fallback are implemented via load-time initialization
 /// of constant MethodHandles for optimal performance.
-class StringInternals {
+public class StringInternals {
   private StringInternals() {}
 
   private static final MethodHandle isLatin1MH, valueMH, hasNegativesMH, newStringMH;

@@ -1,10 +1,12 @@
 package perfio;
 
+import perfio.internal.BufferUtil;
+
 import java.io.Closeable;
 import java.io.IOException;
 import java.nio.charset.Charset;
 
-import static perfio.BufferUtil.*;
+import static perfio.internal.BufferUtil.*;
 
 sealed abstract class HeapBufferedInput extends BufferedInput permits StreamingHeapBufferedInput, SwitchingHeapBufferedInput {
   byte[] buf;

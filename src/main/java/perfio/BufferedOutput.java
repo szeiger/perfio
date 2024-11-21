@@ -1,5 +1,7 @@
 package perfio;
 
+import perfio.internal.StringInternals;
+
 import java.io.*;
 import java.nio.ByteOrder;
 import java.nio.charset.Charset;
@@ -10,7 +12,7 @@ import java.nio.file.Path;
 import java.util.Arrays;
 import java.util.Objects;
 
-import static perfio.BufferUtil.*;
+import static perfio.internal.BufferUtil.*;
 
 
 /// BufferedOutput provides buffered streaming writes to an OutputStream or similar data sink.
@@ -704,6 +706,12 @@ final class FlushingBufferedOutput extends CacheRootBufferedOutput {
   }
 
   void flushUpstream() throws IOException { out.flush(); }
+
+  @Override
+  void closeUpstream() throws IOException {
+    super.closeUpstream();
+    out.close();
+  }
 
   void flushBlocks(boolean forceFlush) throws IOException {
     while(next != this) {

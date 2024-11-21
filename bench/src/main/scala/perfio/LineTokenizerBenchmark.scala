@@ -2,6 +2,7 @@ package perfio
 
 import org.openjdk.jmh.annotations.*
 import org.openjdk.jmh.infra.*
+import perfio.internal.StringInternals
 
 import java.io.*
 import java.lang.foreign.MemorySegment

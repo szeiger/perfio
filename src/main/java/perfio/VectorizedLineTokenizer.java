@@ -3,13 +3,14 @@ package perfio;
 import jdk.incubator.vector.ByteVector;
 import jdk.incubator.vector.VectorMask;
 import jdk.incubator.vector.VectorOperators;
+import perfio.internal.StringInternals;
 
 import java.io.IOException;
 import java.lang.foreign.MemorySegment;
 import java.nio.ByteOrder;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
-import static perfio.VectorSupport.*;
+import static perfio.internal.VectorSupport.*;
 
 /// A vectorized implementation of [[LineTokenizer]].
 ///

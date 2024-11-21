@@ -1,5 +1,7 @@
 package perfio;
 
+import perfio.internal.BufferUtil;
+
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;

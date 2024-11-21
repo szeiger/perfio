@@ -1,5 +1,7 @@
 package perfio;
 
+import perfio.internal.BufferUtil;
+
 import java.io.Closeable;
 import java.io.EOFException;
 import java.io.IOException;
@@ -132,12 +134,12 @@ public abstract sealed class BufferedInput implements Closeable permits HeapBuff
   private int activeViewInitialBuffered = 0;
   private boolean detachOnClose, skipOnClose = false;
   long parentTotalOffset = 0L;
-  CloseableView closeableView= null;
+  CloseableView closeableView = null;
 
   abstract BufferedInput createEmptyView();
   abstract void clearBuffer();
   abstract void copyBufferFrom(BufferedInput b);
-  
+
   /// Fill the buffer as much as possible without blocking (starting at [#lim]), but at least
   /// until `count` bytes are available starting at [#pos] even if this requires blocking or
   /// growing the buffer. Less data may only be made available when the end of the input has been

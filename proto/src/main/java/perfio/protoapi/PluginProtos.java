@@ -6,7 +6,7 @@ package perfio.protoapi;
 public final class PluginProtos {
   private PluginProtos() {}
 
-  public static final class Version {
+  public static final class Version extends perfio.proto.runtime.GeneratedMessage {
 
     private int flags0;
 
@@ -79,7 +79,7 @@ public final class PluginProtos {
     }
   }
 
-  public static final class CodeGeneratorRequest {
+  public static final class CodeGeneratorRequest extends perfio.proto.runtime.GeneratedMessage {
 
     private int flags0;
 
@@ -172,7 +172,7 @@ public final class PluginProtos {
     }
   }
 
-  public static final class CodeGeneratorResponse {
+  public static final class CodeGeneratorResponse extends perfio.proto.runtime.GeneratedMessage {
 
     public enum Feature {
       FEATURE_NONE(0),
@@ -191,7 +191,7 @@ public final class PluginProtos {
       }
     }
 
-    public static final class File {
+    public static final class File extends perfio.proto.runtime.GeneratedMessage {
 
       private int flags0;
 

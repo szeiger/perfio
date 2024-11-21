@@ -99,21 +99,21 @@ class BufferedOutputStringBenchmark extends BenchUtil:
     bh.consume(bout.getBuffer)
 
   @Benchmark
-  def array_FullyBufferedOutput_growing(bh: Blackhole): Unit =
+  def array_ArrayBufferedOutput_growing(bh: Blackhole): Unit =
     val out = BufferedOutput.growing()
     writeTo(out)
     bh.consume(out.buffer)
     bh.consume(out.length)
 
   @Benchmark
-  def array_FullyBufferedOutput_growing_preallocated(bh: Blackhole): Unit =
+  def array_ArrayBufferedOutput_growing_preallocated(bh: Blackhole): Unit =
     val out = BufferedOutput.growing(totalLength)
     writeTo(out)
     bh.consume(out.buffer)
     bh.consume(out.length)
 
   @Benchmark
-  def array_FullyBufferedOutput_fixed(bh: Blackhole): Unit =
+  def array_ArrayBufferedOutput_fixed(bh: Blackhole): Unit =
     val out = BufferedOutput.ofArray(new Array[Byte](totalLength))
     writeTo(out)
     bh.consume(out.buffer)

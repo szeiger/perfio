@@ -1,7 +1,7 @@
 package perfio.proto
 
 import perfio.protoapi.DescriptorProtos.DescriptorProto
-import perfio.proto.runtime.Runtime
+import perfio.proto.runtime.{GeneratedMessage, Runtime}
 import perfio.scalaapi.*
 import perfio.{BufferedInput, BufferedOutput}
 
@@ -40,7 +40,7 @@ class MessageNode(desc: DescriptorProto, val parent: ParentNode) extends ParentN
 
   def emit(using toc: TextOutputContext): Printed =
     pm"""
-        |public static final class ${className} {
+        |public static final class ${className} extends ${classOf[GeneratedMessage]} {
         >  ${Printed(enums)(_.emit)}
         >  ${Printed(messages)(_.emit)}
         >  ${Printed(if(flagFields.nonEmpty || oneOfs.nonEmpty) pm"")}

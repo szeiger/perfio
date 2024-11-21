@@ -1,12 +1,14 @@
 package perfio;
 
+import perfio.internal.BufferUtil;
+
 import java.io.Closeable;
 import java.io.IOException;
 import java.lang.foreign.MemorySegment;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.charset.Charset;
-import static perfio.BufferUtil.*;
+import static perfio.internal.BufferUtil.*;
 
 // This could be a lot simpler if we didn't have to do pagination but ByteBuffer is limited
 // to 2 GB and direct MemorySegment access is much, much slower as of JDK 22.

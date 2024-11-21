@@ -2,6 +2,7 @@ package perfio
 
 import org.openjdk.jmh.annotations.*
 import org.openjdk.jmh.infra.*
+import perfio.internal.BufferUtil
 
 import java.io.*
 import java.nio.ByteBuffer

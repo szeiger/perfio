@@ -2,6 +2,7 @@ package perfio.proto.runtime;
 
 import perfio.BufferedInput;
 import perfio.BufferedOutput;
+import perfio.internal.StringInternals;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -103,12 +104,26 @@ public class Runtime {
   public static void writeDouble(BufferedOutput out, double d) throws IOException { out.float64(d); }
   public static void writeSInt32(BufferedOutput out, int i) throws IOException { writeVarint(out, sint32ToVarint(i)); }
   public static void writeSInt64(BufferedOutput out, long l) throws IOException { writeVarint(out, sint64ToVarint(l)); }
+  public static void writeLen(BufferedOutput out, long l) throws IOException { writeVarint(out, l); }
+
   public static void writeBytes(BufferedOutput out, byte[] bytes) throws IOException {
     writeLen(out, bytes.length);
     out.write(bytes);
   }
-  public static void writeString(BufferedOutput out, String s) throws IOException { writeBytes(out, s.getBytes(StandardCharsets.UTF_8)); }
-  public static void writeLen(BufferedOutput out, long l) throws IOException { writeVarint(out, l); }
+
+  public static void writeString(BufferedOutput out, String s) throws IOException {
+    var l = s.length();
+    if(l == 0) out.int8((byte)0);
+    else {
+      if(StringInternals.isLatin1(s)) {
+        var v = StringInternals.value(s);
+        if(!StringInternals.hasNegatives(v, 0, v.length)) {
+          writeLen(out, v.length);
+          out.write(v);
+        } else writeBytes(out, s.getBytes(StandardCharsets.UTF_8));
+      } else writeBytes(out, s.getBytes(StandardCharsets.UTF_8));
+    }
+  }
 
   public static void writePackedInt32(BufferedOutput out, IntList l) throws IOException {
     int lenMin = varintSize(l.len), lenMax = varintSize(l.len*10);

@@ -1,5 +1,7 @@
 package perfio;
 
+import perfio.internal.StringInternals;
+
 import java.io.Closeable;
 import java.io.EOFException;
 import java.io.Flushable;
