@@ -1,0 +1,56 @@
+name: PerfIO Release
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    name: Release
+    steps:
+    - uses: actions/checkout@v4
+    - name: Set up Java
+      uses: actions/setup-java@v4
+      with:
+        java-version: |
+          21
+          23
+        distribution: 'temurin'
+        cache: 'sbt'
+    - name: Set up sbt
+      uses: sbt/setup-sbt@v1
+    - name: Set up GPG keys
+      env:
+        SIGNING_KEY_PRIVATE: ${{ secrets.SIGNING_KEY_PRIVATE }}
+        SIGNING_KEY_PUBLIC: ${{ secrets.SIGNING_KEY_PUBLIC }}
+      run: |
+        echo "$SIGNING_KEY_PUBLIC" | gpg --import
+        mkdir -p ~/.gnupg/private-keys-v1.d # workaround for a gpg bug
+        echo "$SIGNING_KEY_PRIVATE" | gpg --passphrase=${{ secrets.SIGNING_KEY_PASSPHRASE }} --pinentry-mode=loopback --batch --import
+    - name: Publish
+      env:
+        PGP_PASSPHRASE: ${{ secrets.SIGNING_KEY_PASSPHRASE }}
+        SONATYPE_USER: ${{ secrets.SONATYPE_USER }}
+        SONATYPE_PASSWORD: ${{ secrets.SONATYPE_PASSWORD }}
+      run: |
+        # Publish binaries with Java 21 (because we can't use --enable-preview for 21 from 23)
+        PATH=$JAVA_HOME_21_X64/bin:$PATH JAVA_HOME=$JAVA_HOME_21_X64 JAVA_OPTS=--enable-preview sbt \
+          "set core/Compile/packageDoc/publishArtifact := false" \
+          core/publishSigned
+        ls -lR target/sonatype-staging
+        # Publish javadoc with Java 23 (because we need Markdown support)
+        PATH=$JAVA_HOME_23_X64/bin:$PATH JAVA_HOME=$JAVA_HOME_23_X64 sbt \
+          "set core/Compile/packageSrc/publishArtifact := false" \
+          "set core/Compile/packageBin/publishArtifact := false" \
+          core/publishSigned
+        ls -lR target/sonatype-staging
+        sbt sonatypeCentralUpload

@@ -2,32 +2,59 @@ import java.nio.file.{Files, Path}
 import scala.jdk.CollectionConverters._
 
 val PROTOBUF_HOME = sys.env.getOrElse("PROTOBUF_HOME", s"${sys.props("user.home")}/protobuf")
+val protobufVersion = "4.29.0-RC2"
 
-Global / organization := "com.novocode"
-
-Global / version := "0.1-SNAPSHOT"
-
-//cancelable in Global := false
-
-val release = "22"
+val javaVersion = sys.props("java.specification.version").toInt
+val release = if(javaVersion >= 22) 22 else javaVersion
 
 val runtimeOpts = Seq(
   "--add-modules", "jdk.incubator.vector",
   "--add-opens", "java.base/jdk.internal.misc=ALL-UNNAMED",
   "--add-opens", "java.base/java.lang=ALL-UNNAMED",
-)
+) ++ (if(release >= 22) Nil else Seq(
+  "--enable-preview",
+))
+
 val compileOpts = Seq(
   "--add-modules", "jdk.incubator.vector",
-  "--release", release,
-)
+) ++ (if(release >= 22) Seq(
+  "--release", release.toString,
+) else Seq(
+  "--release", javaVersion.toString,
+  "--enable-preview",
+))
 
 javaOptions in Global ++= runtimeOpts
 javacOptions in Global ++= compileOpts
-scalacOptions in Global ++= Seq("-java-output-version", release)
+scalacOptions in Global ++= Seq("-java-output-version", release.toString)
 
 // javaOptions in Global += "-Djmh.blackhole.autoDetect=false"
 
 scalacOptions ++= Seq("-feature")
+
+val baseVersion = "0.1.0"
+val releaseVersion: String = {
+  import scala.sys.process._
+  lazy val hash = "git rev-parse HEAD".!!.substring(0, 10)
+  sys.env.get("GITHUB_REF") match {
+    case Some(ref) if ref.startsWith("refs/tags/v") && ref.length >= 14 => ref.substring(11)
+    case Some(_) => s"$baseVersion-$hash"
+    case None => s"$baseVersion-$hash-SNAPSHOT"
+  }
+}
+
+ThisBuild / publishTo := sonatypePublishToBundle.value
+ThisBuild / sonatypeCredentialHost := xerial.sbt.Sonatype.sonatypeCentralHost
+ThisBuild / credentials +=
+  Credentials("Sonatype Nexus Repository Manager", (ThisBuild / sonatypeCredentialHost).value,
+    sys.env.getOrElse("SONATYPE_USER", ""), sys.env.getOrElse("SONATYPE_PASSWORD", ""))
+ThisBuild / versionScheme := Some("semver-spec")
+ThisBuild / version := releaseVersion
+ThisBuild / organization := "com.novocode"
+ThisBuild / licenses += ("Apache-2.0", url("https://www.apache.org/licenses/LICENSE-2.0.html"))
+ThisBuild / homepage := Some(url("http://github.com/szeiger/perfio/"))
+ThisBuild / scmInfo := Some(ScmInfo(url("https://github.com/szeiger/perfio"), "scm:git@github.com:szeiger/perfio.git"))
+ThisBuild / developers := List(Developer("szeiger", "Stefan Zeiger", "szeiger@novocode.com", url("http://szeiger.de")))
 
 ThisBuild / Test / fork := true
 ThisBuild / run / fork := true
@@ -98,7 +125,7 @@ lazy val protoRuntime = (project in file("proto-runtime"))
 lazy val proto = (project in file("proto"))
   .dependsOn(protoRuntime, scalaApi)
   .settings(
-    libraryDependencies += "com.google.protobuf" % "protobuf-java" % "4.29.0-RC2" % "test",
+    libraryDependencies += "com.google.protobuf" % "protobuf-java" % "4.29.0-RC3" % "test",
     libraryDependencies += "com.github.sbt" % "junit-interface" % "0.13.2" % "test",
     testOptions += Tests.Argument(TestFrameworks.JUnit, "-a", "-v"),
     name := "perfio-proto",
@@ -124,7 +151,7 @@ lazy val protoBench = (project in file("proto-bench"))
   .enablePlugins(JmhPlugin)
   .settings(
     scalacOptions ++= Seq("-feature", "-opt:l:inline"),
-    libraryDependencies += "com.google.protobuf" % "protobuf-java" % "4.29.0-RC2",
+    libraryDependencies += "com.google.protobuf" % "protobuf-java" % protobufVersion,
     name := "perfio-proto-bench",
     publish / skip := true,
   )

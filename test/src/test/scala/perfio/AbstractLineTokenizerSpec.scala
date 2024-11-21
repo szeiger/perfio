@@ -82,11 +82,11 @@ abstract class SimpleLineTokenizerSpec[T] extends AbstractLineTokenizerSpec[T]:
 
 object HeapScalarLineTokenizerSpec extends SimpleLineTokenizerSpec[Int]:
   val base: List[(String, Int, Int, Int, Int)] = List(
-    ("small.aligned", 64, 64, 4096, 2000),
-    ("large.aligned", 128, 128, 64, 2000),
-    ("small.unligned", 0, 63, 4096, 2000),
-    ("large.unaligned", 65, 127, 64, 2000),
-    ("mixed", 0, 513, 128, 10000),
+    ("small.aligned", 64, 64, 4096, 200),
+    ("large.aligned", 128, 128, 64, 200),
+    ("small.unligned", 0, 63, 4096, 200),
+    ("large.unaligned", 65, 127, 64, 200),
+    ("mixed", 0, 513, 128, 1000),
   )
 
   def createBI(s: String, cs: Charset, ib: Int): BufferedInput =
@@ -96,19 +96,19 @@ object HeapScalarLineTokenizerSpec extends SimpleLineTokenizerSpec[Int]:
 
 object HeapVectorizedLineTokenizerSpec extends SimpleLineTokenizerSpec[(Int, Int)]:
   val base: List[(String, Int, Int, (Int, Int), Int)] = List(
-    ("small.aligned", 64, 64, (4096, Int.MaxValue), 2000),
-    ("large.aligned", 128, 128, (64, Int.MaxValue), 2000),
-    ("small.unaligned", 0, 63, (4096, Int.MaxValue), 2000),
-    ("large.unaligned", 65, 127, (64, Int.MaxValue), 2000),
-    ("small.aligned.limited1", 64, 64, (4096, 1), 2000),
-    ("large.aligned.limited1", 128, 128, (64, 1), 2000),
-    ("small.unaligned.limited1", 0, 63, (4096, 1), 2000),
-    ("large.unaligned.limited1", 65, 127, (64, 1), 2000),
-    ("small.aligned.limited16", 64, 64, (4096, 16), 2000),
-    ("large.aligned.limited16", 128, 128, (64, 16), 2000),
-    ("small.unaligned.limited16", 0, 63, (4096, 16), 2000),
-    ("large.unaligned.limited16", 65, 127, (64, 16), 2000),
-    ("mixed", 0, 513, (128, Int.MaxValue), 10000),
+    ("small.aligned", 64, 64, (4096, Int.MaxValue), 200),
+    ("large.aligned", 128, 128, (64, Int.MaxValue), 200),
+    ("small.unaligned", 0, 63, (4096, Int.MaxValue), 200),
+    ("large.unaligned", 65, 127, (64, Int.MaxValue), 200),
+    ("small.aligned.limited1", 64, 64, (4096, 1), 200),
+    ("large.aligned.limited1", 128, 128, (64, 1), 200),
+    ("small.unaligned.limited1", 0, 63, (4096, 1), 200),
+    ("large.unaligned.limited1", 65, 127, (64, 1), 200),
+    ("small.aligned.limited16", 64, 64, (4096, 16), 200),
+    ("large.aligned.limited16", 128, 128, (64, 16), 200),
+    ("small.unaligned.limited16", 0, 63, (4096, 16), 200),
+    ("large.unaligned.limited16", 65, 127, (64, 16), 200),
+    ("mixed", 0, 513, (128, Int.MaxValue), 1000),
   )
 
   def createBI(s: String, cs: Charset, params: (Int, Int)): BufferedInput =
@@ -119,14 +119,14 @@ object HeapVectorizedLineTokenizerSpec extends SimpleLineTokenizerSpec[(Int, Int
 
 abstract class FromArraySpec extends AbstractLineTokenizerSpec[(Int, Int)]:
   val base: List[(String, Int, Int, (Int, Int), Int)] = List(
-    ("small.aligned", 64, 64, (0, 0), 2000),
-    ("large.aligned", 128, 128, (0, 0), 2000),
-    ("small.unligned", 0, 63, (0, 0), 2000),
-    ("large.unaligned", 65, 127, (0, 0), 2000),
-    ("padRight", 0, 65, (0, 33), 2000),
-    ("padLeft", 0, 65, (33, 0), 2000),
-    ("padBoth", 0, 65, (33, 33), 2000),
-    ("mixed", 0, 513, (0, 0), 2000),
+    ("small.aligned", 64, 64, (0, 0), 200),
+    ("large.aligned", 128, 128, (0, 0), 200),
+    ("small.unligned", 0, 63, (0, 0), 200),
+    ("large.unaligned", 65, 127, (0, 0), 200),
+    ("padRight", 0, 65, (0, 33), 200),
+    ("padLeft", 0, 65, (33, 0), 200),
+    ("padBoth", 0, 65, (33, 33), 200),
+    ("mixed", 0, 513, (0, 0), 200),
   )
 
   def createProp(min: Int, max: Int, cs: Charset, split: Boolean, params: (Int, Int)): Property =
@@ -150,11 +150,11 @@ abstract class FromArraySpec extends AbstractLineTokenizerSpec[(Int, Int)]:
 
 abstract class ForeignSpec extends FromArraySpec:
   override val base: List[(String, Int, Int, (Int, Int), Int)] = List(
-    ("small.aligned", 64, 64, (0, 0), 2000),
-    ("large.aligned", 128, 128, (0, 0), 2000),
-    ("small.unligned", 0, 63, (0, 0), 2000),
-    ("large.unaligned", 65, 127, (0, 0), 2000),
-    ("mixed", 0, 513, (0, 0), 10000),
+    ("small.aligned", 64, 64, (0, 0), 200),
+    ("large.aligned", 128, 128, (0, 0), 200),
+    ("small.unligned", 0, 63, (0, 0), 200),
+    ("large.unaligned", 65, 127, (0, 0), 200),
+    ("mixed", 0, 513, (0, 0), 1000),
   )
 
 

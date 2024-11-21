@@ -1,0 +1,55 @@
+name: PerfIO CI
+
+on:
+  push:
+    branches: [ "master" ]
+  pull_request:
+    branches: [ "master" ]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            java: 21
+          - os: ubuntu-latest
+            java: 23
+          - os: macos-latest
+            java: 23
+    runs-on: ${{matrix.os}}
+    name: Test
+    steps:
+    - uses: actions/checkout@v4
+    - name: Set up Java
+      uses: actions/setup-java@v4
+      with:
+        java-version: ${{ matrix.java }}
+        distribution: 'temurin'
+        cache: 'sbt'
+    - name: Set up sbt
+      uses: sbt/setup-sbt@v1
+    - name: Set up protobuf
+      run: |
+        mkdir ~/protobuf
+        if [[ "$RUNNER_OS" = "macOS" ]]; then
+          PB_URL=https://github.com/protocolbuffers/protobuf/releases/download/v29.0-rc3/protoc-29.0-rc-3-osx-aarch_64.zip
+        else
+          PB_URL=https://github.com/protocolbuffers/protobuf/releases/download/v29.0-rc3/protoc-29.0-rc-3-linux-x86_64.zip
+        fi
+        (cd ~/protobuf && curl -Lo pb.zip $PB_URL && unzip pb.zip)
+    - name: Run tests
+      run: |
+        if [[ "${{ matrix.java }}" = "21" ]]; then
+          export JAVA_OPTS=--enable-preview
+        fi
+        sbt test bootstrapProto proto/test

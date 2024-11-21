@@ -1,3 +1,3 @@
 #!/bin/bash
 
-java -Xlog:disable -XX:+DisplayVMOutputToStderr -cp "$PERFIO_CLASSPATH" perfio.proto.Main
+java $JAVA_OPTS -Xlog:disable -XX:+DisplayVMOutputToStderr -cp "$PERFIO_CLASSPATH" perfio.proto.Main
