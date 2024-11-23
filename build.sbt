@@ -93,7 +93,8 @@ lazy val bench = (project in file("bench"))
   .settings(
     scalacOptions ++= Seq("-feature", "-opt:l:inline", "-opt-inline-from:perfio.*"),
     libraryDependencies ++= Seq(
-      "com.google.guava" % "guava" % "33.3.0-jre"
+      "com.google.guava" % "guava" % "33.3.0-jre",
+      "com.esotericsoftware" % "kryo" % "5.6.2",
     ),
     name := "perfio-bench",
     publish / skip := true,

@@ -1,5 +1,7 @@
 package perfio
 
+import com.esotericsoftware.kryo.io.{ByteBufferOutput, Output}
+import com.esotericsoftware.kryo.unsafe.UnsafeByteBufferOutput
 import org.openjdk.jmh.annotations.*
 import org.openjdk.jmh.infra.*
 import perfio.internal.BufferUtil
@@ -10,7 +12,10 @@ import java.nio.file.Paths
 import java.util.concurrent.TimeUnit
 
 @BenchmarkMode(Array(Mode.AverageTime))
-@Fork(value = 1, jvmArgsAppend = Array("-Xmx12g", "-Xss32M", "-XX:+UnlockExperimentalVMOptions", "-XX:+UseZGC", "--enable-native-access=ALL-UNNAMED", "--add-modules", "jdk.incubator.vector"))
+@Fork(value = 1, jvmArgsAppend = Array("-Xmx12g", "-Xss32M", "-XX:+UnlockExperimentalVMOptions", "-XX:+UseZGC",
+  "--enable-native-access=ALL-UNNAMED", "--add-modules", "jdk.incubator.vector",
+  "--add-opens", "java.base/sun.nio.ch=ALL-UNNAMED" // for KryoUnsafe
+))
 @Threads(1)
 @Warmup(iterations = 15, time = 1)
 @Measurement(iterations = 15, time = 1)
@@ -21,7 +26,18 @@ class BufferedOutputNumBenchmark extends BenchUtil:
   val count = 20000000
   val byteSize = count * 13
 
+  // JDK: always big endian
   private def writeTo(out: DataOutputStream): Unit =
+    var i = 0
+    while i < count do
+      out.writeByte(i)
+      out.writeInt(i+100)
+      out.writeLong(i+101)
+      i += 1
+    out.close()
+
+  // Kryo: little endian (safe) or native endian (unsafe)
+  private def writeTo(out: Output): Unit =
     var i = 0
     while i < count do
       out.writeByte(i)
@@ -64,6 +80,36 @@ class BufferedOutputNumBenchmark extends BenchUtil:
     writeTo(out)
     bh.consume(bout.getSize)
     bh.consume(bout.getBuffer)
+
+  @Benchmark
+  def array_Kryo_growing(bh: Blackhole): Unit =
+    val bout = new MyByteArrayOutputStream
+    val out = new ByteBufferOutput(bout)
+    writeTo(out)
+    bh.consume(bout.getSize)
+    bh.consume(bout.getBuffer)
+
+  @Benchmark
+  def array_Kryo_preallocated(bh: Blackhole): Unit =
+    val bb = ByteBuffer.allocate(count * 13)
+    val out = new ByteBufferOutput(bb)
+    writeTo(out)
+    bh.consume(out.position())
+
+  @Benchmark
+  def array_KryoUnsafe_growing(bh: Blackhole): Unit =
+    val bout = new MyByteArrayOutputStream
+    val out = new UnsafeByteBufferOutput(bout)
+    writeTo(out)
+    bh.consume(bout.getSize)
+    bh.consume(bout.getBuffer)
+
+  @Benchmark
+  def array_KryoUnsafe_preallocated(bh: Blackhole): Unit =
+    val bb = ByteBuffer.allocate(count * 13)
+    val out = new UnsafeByteBufferOutput(count * 13)
+    writeTo(out)
+    bh.consume(out.position())
 
   @Benchmark
   def array_FlushingBufferedOutput_growing(bh: Blackhole): Unit =

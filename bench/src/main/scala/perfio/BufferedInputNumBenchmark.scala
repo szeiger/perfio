@@ -1,5 +1,7 @@
 package perfio
 
+import com.esotericsoftware.kryo.io.{ByteBufferInput, Input}
+import com.esotericsoftware.kryo.unsafe.UnsafeByteBufferInput
 import org.openjdk.jmh.annotations.*
 import org.openjdk.jmh.infra.*
 
@@ -8,7 +10,10 @@ import java.nio.{ByteBuffer, ByteOrder}
 import java.util.concurrent.TimeUnit
 
 @BenchmarkMode(Array(Mode.AverageTime))
-@Fork(value = 1, jvmArgsAppend = Array("-Xmx12g", "-Xss32M", "-XX:+UnlockExperimentalVMOptions", "-XX:+UseZGC", "--enable-native-access=ALL-UNNAMED", "--add-modules", "jdk.incubator.vector"))
+@Fork(value = 1, jvmArgsAppend = Array("-Xmx12g", "-Xss32M", "-XX:+UnlockExperimentalVMOptions", "-XX:+UseZGC",
+  "--enable-native-access=ALL-UNNAMED", "--add-modules", "jdk.incubator.vector",
+  "--add-opens", "java.base/sun.nio.ch=ALL-UNNAMED" // for KryoUnsafe
+))
 @Threads(1)
 @Warmup(iterations = 7, time = 1)
 @Measurement(iterations = 7, time = 1)
@@ -47,7 +52,20 @@ class BufferedInputNumBenchmark extends BenchUtil {
     bin.close()
   }
 
+  // JDK: always big endian
   def run(bh: Blackhole, din: DataInputStream): Unit = {
+    var i = 0
+    while(i < count) {
+      bh.consume(din.readByte())
+      bh.consume(din.readInt())
+      bh.consume(din.readLong())
+      i += 1
+    }
+    din.close()
+  }
+
+  // Kryo: little endian (safe) or native endian (unsafe)
+  def run(bh: Blackhole, din: Input): Unit = {
     var i = 0
     while(i < count) {
       bh.consume(din.readByte())
@@ -71,6 +89,10 @@ class BufferedInputNumBenchmark extends BenchUtil {
 
   @Benchmark
   def array_DataInputStream(bh: Blackhole): Unit = run(bh, new DataInputStream(new ByteArrayInputStream(testData)))
+  @Benchmark
+  def array_Kryo(bh: Blackhole): Unit = run(bh, new ByteBufferInput(testData))
+  @Benchmark
+  def array_KryoUnsafe(bh: Blackhole): Unit = run(bh, new UnsafeByteBufferInput(testData))
   @Benchmark
   def array_ByteBuffer(bh: Blackhole): Unit = run(bh, ByteBuffer.wrap(testData))
   @Benchmark
