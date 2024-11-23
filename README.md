@@ -46,6 +46,26 @@ Another source of performance is not just making the available abstractions fast
 
 - Binary formats often use length-prefixed blocks. perfIO provides length-limited views for reading them (at essentially zero cost), and advanced buffer management for writing a length prefix after the content without double buffering or manual buffer management.
 
+## Setup
+
+Add the dependency to your project. Check the [Maven Central page](https://central.sonatype.com/artifact/com.novocode/perfio) for the latest versions and other dependency formats.
+
+```
+<dependency>
+    <groupId>com.novocode</groupId>
+    <artifactId>perfio</artifactId>
+    <version>0.1.0</version>
+</dependency>
+```
+
+The minimum required JDK version is 21 with `--enable-preview` (for the FFM API), or 22 without. There are no other dependencies.
+
+- The Vector incubator API will be used automatically if it has been enabled with `--add-modules jdk.incubator.vector` and the JDK and CPU have appropriate support. Use of the Vector API can be disabled with `-Dperfio.disableVectorized=true`.
+
+- JDK-internal String features will be used automatically if the `java.lang` package has been made accessible with `--add-opens java.base/java.lang=ALL-UNNAMED`. This can be disabled with `-Dperfio.disableStringInternals=true`.
+
+- Unsafe memory access is disabled by default. It can improve the performance in some cases but result in less optimized code in others. Both `-Dperfio.enableUnsafe=true` and `--enable-native-access=ALL-UNNAMED` are required to enable it.
+
 ## Usage
 
 A top-level `BufferedInput` or `BufferedOutput` object is instantiated by calling one of the static factory methods in the respective class. It should be closed after use by calling `close()`.
@@ -76,7 +96,9 @@ Since Java does not have unsigned integers, the main methods for reading and wri
 | float32 | 32 bits floating-point | float                    |
 | float64 | 64 bits floating-point | double                   |
 
-The methods for reading and writing multi-byte numeric values require a byte order. All factory methods set it to `BIG_ENDIAN` by default, but it can be changed at any time with the `order` method. This is consistent with `ByteBuffer` but different from the FFM API (which is mostly intended for interacting with native code and consequently uses the native byte order by default).
+The methods for reading and writing multi-byte numeric values require a byte order. Most factory methods set it to `BIG_ENDIAN` by default, but it can be changed at any time with the `order` method. This is consistent with `ByteBuffer` but different from the FFM API (which is mostly intended for interacting with native code and consequently uses the native byte order by default).
+
+All methods except `int8` have additional variants ending in `n` (e.g. `int32n`), `b` and `l` for native, big endian and little endian byte order respectively. These methods are independent of the `BufferedInput`'s or `BufferedOutput`'s current byte order and slightly faster.
 
 ### Views
 

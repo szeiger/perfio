@@ -1,5 +1,6 @@
 package perfio;
 
+import perfio.internal.MemoryAccessor;
 import perfio.internal.StringInternals;
 
 import java.io.*;
@@ -12,7 +13,7 @@ import java.nio.file.Path;
 import java.util.Arrays;
 import java.util.Objects;
 
-import static perfio.internal.BufferUtil.*;
+import static perfio.internal.BufferUtil.growBuffer;
 
 
 /// BufferedOutput provides buffered streaming writes to an OutputStream or similar data sink.
@@ -197,56 +198,177 @@ public abstract sealed class BufferedOutput implements Closeable, Flushable perm
 
   /// Write a signed 8-bit integer (`byte`).
   public final BufferedOutput int8(byte b) throws IOException {
+//    if(pos >= lim) {
+//      flushAndGrow(1);
+//      if(pos >= lim) throw new EOFException();
+//    }
+//    MemoryAccessor.INSTANCE.int8(buf, pos++, b);
+//    return this;
+
     var p = fwd(1);
-    buf[p] = b;
+    MemoryAccessor.INSTANCE.int8(buf, p, b);
     return this;
   }
 
   /// Write the lower 8 bits of the given `int` as an unsigned 8-bit integer.
   public final BufferedOutput uint8(int b) throws IOException { return int8((byte)b); }
 
-  /// Write a signed 16-bit integer (`short`) in the current [#order()].
+  /// Write a signed 16-bit integer (`short`) in the current byte [#order()].
   public final BufferedOutput int16(short s) throws IOException {
     var p = fwd(2);
-    (bigEndian ? BA_SHORT_BIG : BA_SHORT_LITTLE).set(buf, p, s);
+    MemoryAccessor.INSTANCE.int16(buf, p, s, bigEndian);
+    return this;
+  }
+  /// Write a signed 16-bit integer (`short`) in the native byte order.
+  public final BufferedOutput int16n(short s) throws IOException {
+    var p = fwd(2);
+    MemoryAccessor.INSTANCE.int16n(buf, p, s);
+    return this;
+  }
+  /// Write a signed 16-bit integer (`short`) in big endian byte order.
+  public final BufferedOutput int16b(short s) throws IOException {
+    var p = fwd(2);
+    MemoryAccessor.INSTANCE.int16b(buf, p, s);
+    return this;
+  }
+  /// Write a signed 16-bit integer (`short`) in little endian byte order.
+  public final BufferedOutput int16l(short s) throws IOException {
+    var p = fwd(2);
+    MemoryAccessor.INSTANCE.int16l(buf, p, s);
     return this;
   }
 
-  /// Write an unsigned 16-bit integer (`char`) in the current [#order()].
+  /// Write an unsigned 16-bit integer (`char`) in the current byte [#order()].
   public final BufferedOutput uint16(char c) throws IOException {
     var p = fwd(2);
-    (bigEndian ? BA_CHAR_BIG : BA_CHAR_LITTLE).set(buf, p, c);
+    MemoryAccessor.INSTANCE.uint16(buf, p, c, bigEndian);
+    return this;
+  }
+  /// Write an unsigned 16-bit integer (`char`) in the native byte order.
+  public final BufferedOutput uint16n(char c) throws IOException {
+    var p = fwd(2);
+    MemoryAccessor.INSTANCE.uint16n(buf, p, c);
+    return this;
+  }
+  /// Write an unsigned 16-bit integer (`char`) in big endian byte order.
+  public final BufferedOutput uint16b(char c) throws IOException {
+    var p = fwd(2);
+    MemoryAccessor.INSTANCE.uint16b(buf, p, c);
+    return this;
+  }
+  /// Write an unsigned 16-bit integer (`char`) in little endian byte order.
+  public final BufferedOutput uint16l(char c) throws IOException {
+    var p = fwd(2);
+    MemoryAccessor.INSTANCE.uint16l(buf, p, c);
     return this;
   }
 
-  /// Write a signed 32-bit integer (`int`) in the current [#order()].
+  /// Write a signed 32-bit integer (`int`) in the current byte [#order()].
   public final BufferedOutput int32(int i) throws IOException {
     var p = fwd(4);
-    (bigEndian ? BA_INT_BIG : BA_INT_LITTLE).set(buf, p, i);
+    MemoryAccessor.INSTANCE.int32(buf, p, i, bigEndian);
+    return this;
+  }
+  /// Write a signed 32-bit integer (`int`) in the native byte order.
+  public final BufferedOutput int32n(int i) throws IOException {
+    var p = fwd(4);
+    MemoryAccessor.INSTANCE.int32n(buf, p, i);
+    return this;
+  }
+  /// Write a signed 32-bit integer (`int`) in big endian byte order.
+  public final BufferedOutput int32b(int i) throws IOException {
+    var p = fwd(4);
+    MemoryAccessor.INSTANCE.int32b(buf, p, i);
+    return this;
+  }
+  /// Write a signed 32-bit integer (`int`) in little endian byte order.
+  public final BufferedOutput int32l(int i) throws IOException {
+    var p = fwd(4);
+    MemoryAccessor.INSTANCE.int32l(buf, p, i);
     return this;
   }
 
-  /// Write the lower 32 bits of the given `long` as an unsigned 32-bit integer in the current [#order()].
+  /// Write the lower 32 bits of the given `long` as an unsigned 32-bit integer in the current byte [#order()].
   public final BufferedOutput uint32(long i) throws IOException { return int32((int)i); }
+  /// Write the lower 32 bits of the given `long` as an unsigned 32-bit integer in the native byte order.
+  public final BufferedOutput uint32n(long i) throws IOException { return int32n((int)i); }
+  /// Write the lower 32 bits of the given `long` as an unsigned 32-bit integer in big endian byte order.
+  public final BufferedOutput uint32b(long i) throws IOException { return int32b((int)i); }
+  /// Write the lower 32 bits of the given `long` as an unsigned 32-bit integer in little endian byte order.
+  public final BufferedOutput uint32l(long i) throws IOException { return int32l((int)i); }
 
-  /// Write a signed 64-bit integer (`long`) in the current [#order()].
+  /// Write a signed 64-bit integer (`long`) in the current byte [#order()].
   public final BufferedOutput int64(long l) throws IOException {
     var p = fwd(8);
-    (bigEndian ? BA_LONG_BIG : BA_LONG_LITTLE).set(buf, p, l);
+    MemoryAccessor.INSTANCE.int64(buf, p, l, bigEndian);
+    return this;
+  }
+  /// Write a signed 64-bit integer (`long`) in the native byte order.
+  public final BufferedOutput int64n(long l) throws IOException {
+    var p = fwd(8);
+    MemoryAccessor.INSTANCE.int64n(buf, p, l);
+    return this;
+  }
+  /// Write a signed 64-bit integer (`long`) in big endian byte order.
+  public final BufferedOutput int64b(long l) throws IOException {
+    var p = fwd(8);
+    MemoryAccessor.INSTANCE.int64b(buf, p, l);
+    return this;
+  }
+  /// Write a signed 64-bit integer (`long`) in little endian byte order.
+  public final BufferedOutput int64l(long l) throws IOException {
+    var p = fwd(8);
+    MemoryAccessor.INSTANCE.int64l(buf, p, l);
     return this;
   }
 
-  /// Write a 32-bit IEEE-754 floating point value (`float`) in the current [#order()].
+  /// Write a 32-bit IEEE-754 floating point value (`float`) in the current byte [#order()].
   public final BufferedOutput float32(float f) throws IOException {
     var p = fwd(4);
-    (bigEndian ? BA_FLOAT_BIG : BA_FLOAT_LITTLE).set(buf, p, f);
+    MemoryAccessor.INSTANCE.float32(buf, p, f, bigEndian);
+    return this;
+  }
+  /// Write a 32-bit IEEE-754 floating point value (`float`) in the native byte order.
+  public final BufferedOutput float32n(float f) throws IOException {
+    var p = fwd(4);
+    MemoryAccessor.INSTANCE.float32n(buf, p, f);
+    return this;
+  }
+  /// Write a 32-bit IEEE-754 floating point value (`float`) in big endian byte order.
+  public final BufferedOutput float32b(float f) throws IOException {
+    var p = fwd(4);
+    MemoryAccessor.INSTANCE.float32b(buf, p, f);
+    return this;
+  }
+  /// Write a 32-bit IEEE-754 floating point value (`float`) in little endian byte order.
+  public final BufferedOutput float32l(float f) throws IOException {
+    var p = fwd(4);
+    MemoryAccessor.INSTANCE.float32l(buf, p, f);
     return this;
   }
 
-  /// Write a 64-bit IEEE-754 floating point value (`double`) in the current [#order()].
+  /// Write a 64-bit IEEE-754 floating point value (`double`) in the current byte [#order()].
   public final BufferedOutput float64(double d) throws IOException {
     var p = fwd(8);
-    (bigEndian ? BA_DOUBLE_BIG : BA_DOUBLE_LITTLE).set(buf, p, d);
+    MemoryAccessor.INSTANCE.float64(buf, p, d, bigEndian);
+    return this;
+  }
+  /// Write a 64-bit IEEE-754 floating point value (`double`) in the native byte order.
+  public final BufferedOutput float64n(double d) throws IOException {
+    var p = fwd(8);
+    MemoryAccessor.INSTANCE.float64n(buf, p, d);
+    return this;
+  }
+  /// Write a 64-bit IEEE-754 floating point value (`double`) in big endian byte order.
+  public final BufferedOutput float64b(double d) throws IOException {
+    var p = fwd(8);
+    MemoryAccessor.INSTANCE.float64b(buf, p, d);
+    return this;
+  }
+  /// Write a 64-bit IEEE-754 floating point value (`double`) in little endian byte order.
+  public final BufferedOutput float64l(double d) throws IOException {
+    var p = fwd(8);
+    MemoryAccessor.INSTANCE.float64l(buf, p, d);
     return this;
   }
 
@@ -714,7 +836,17 @@ final class FlushingBufferedOutput extends CacheRootBufferedOutput {
   }
 
   void flushBlocks(boolean forceFlush) throws IOException {
-    while(next != this) {
+    if(next != this) flushPrefix(forceFlush);
+    var len = pos-start;
+    if((forceFlush && len > 0) || len > initialBufferSize/2) {
+      writeToOutput(buf, start, len);
+      totalFlushed += len;
+      pos = start;
+    }
+  }
+
+  private void flushPrefix(boolean forceFlush) throws IOException {
+    do {
       var b = next;
       var blen = b.pos - b.start;
       if(!b.closed) {
@@ -739,13 +871,7 @@ final class FlushingBufferedOutput extends CacheRootBufferedOutput {
         else if(blen > 0) writeToOutput(b.buf, b.start, blen);
       }
       b.unlinkAndReturn();
-    }
-    var len = pos-start;
-    if((forceFlush && len > 0) || len > initialBufferSize/2) {
-      writeToOutput(buf, start, len);
-      totalFlushed += len;
-      pos = start;
-    }
+    } while(next != this);
   }
 
   private boolean maybeMergeToRight(BufferedOutput b) {

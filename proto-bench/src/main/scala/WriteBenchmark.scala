@@ -66,11 +66,11 @@ class WriteBenchmark:
     pMessage.writeTo(out)
     out.close()
 
-  @Benchmark
-  def array_google(bh: Blackhole): Unit =
-    val baos = new ByteArrayOutputStream()
-    writeGoogle(baos)
-    bh.consume(baos.size())
+//  @Benchmark
+//  def array_google(bh: Blackhole): Unit =
+//    val baos = new ByteArrayOutputStream()
+//    writeGoogle(baos)
+//    bh.consume(baos.size())
 
   @Benchmark
   def array_perfio(bh: Blackhole): Unit =
@@ -78,14 +78,14 @@ class WriteBenchmark:
     writePerfio(bo)
     bh.consume(bo.length())
 
-  @Benchmark
-  def file_google(bh: Blackhole): Unit =
-    val out = new BufferedOutputStream(new FileOutputStream("/dev/null"))
-    writeGoogle(out)
-    out.close()
-
-  @Benchmark
-  def file_perfio(bh: Blackhole): Unit =
-    val bo = BufferedOutput.ofFile(Path.of("/dev/null"), 8192)
-    writePerfio(bo)
-    bo.close()
+//  @Benchmark
+//  def file_google(bh: Blackhole): Unit =
+//    val out = new BufferedOutputStream(new FileOutputStream("/dev/null"))
+//    writeGoogle(out)
+//    out.close()
+//
+//  @Benchmark
+//  def file_perfio(bh: Blackhole): Unit =
+//    val bo = BufferedOutput.ofFile(Path.of("/dev/null"), 8192)
+//    writePerfio(bo)
+//    bo.close()

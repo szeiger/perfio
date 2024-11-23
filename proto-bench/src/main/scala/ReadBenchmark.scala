@@ -28,12 +28,12 @@ class ReadBenchmark:
     testData = Files.readAllBytes(testDataFile)
     assert(testData.length == 159366, s"testData.length ${testData.length}")
 
-  @Benchmark
-  def array_google(bh: Blackhole): Unit =
-    val p = GPluginProtos.CodeGeneratorRequest.parseFrom(testData)
-    assert(p.getFileToGenerateList.size() == 2)
-    assert(p.getSourceFileDescriptorsList.size() == 2)
-    bh.consume(p)
+//  @Benchmark
+//  def array_google(bh: Blackhole): Unit =
+//    val p = GPluginProtos.CodeGeneratorRequest.parseFrom(testData)
+//    assert(p.getFileToGenerateList.size() == 2)
+//    assert(p.getSourceFileDescriptorsList.size() == 2)
+//    bh.consume(p)
 
   @Benchmark
   def array_perfio(bh: Blackhole): Unit =
@@ -42,27 +42,27 @@ class ReadBenchmark:
     assert(p.getSourceFileDescriptorsList.size() == 2)
     bh.consume(p)
 
-  @Benchmark
-  def file_google(bh: Blackhole): Unit =
-    val in = new BufferedInputStream(new FileInputStream(testDataFile.toFile))
-    val p = GPluginProtos.CodeGeneratorRequest.parseFrom(in)
-    assert(p.getFileToGenerateList.size() == 2)
-    assert(p.getSourceFileDescriptorsList.size() == 2)
-    bh.consume(p)
-    in.close()
-
-  @Benchmark
-  def file_perfio(bh: Blackhole): Unit =
-    val in = BufferedInput.of(new FileInputStream(testDataFile.toFile)).order(ByteOrder.LITTLE_ENDIAN)
-    val p = PPluginProtos.CodeGeneratorRequest.parseFrom(in)
-    assert(p.getFileToGenerateList.size() == 2)
-    assert(p.getSourceFileDescriptorsList.size() == 2)
-    bh.consume(p)
-    in.close()
-
-  @Benchmark
-  def file_perfio_mapped(bh: Blackhole): Unit =
-    val p = PPluginProtos.CodeGeneratorRequest.parseFrom(BufferedInput.ofMappedFile(testDataFile).order(ByteOrder.LITTLE_ENDIAN))
-    assert(p.getFileToGenerateList.size() == 2)
-    assert(p.getSourceFileDescriptorsList.size() == 2)
-    bh.consume(p)
+//  @Benchmark
+//  def file_google(bh: Blackhole): Unit =
+//    val in = new BufferedInputStream(new FileInputStream(testDataFile.toFile))
+//    val p = GPluginProtos.CodeGeneratorRequest.parseFrom(in)
+//    assert(p.getFileToGenerateList.size() == 2)
+//    assert(p.getSourceFileDescriptorsList.size() == 2)
+//    bh.consume(p)
+//    in.close()
+//
+//  @Benchmark
+//  def file_perfio(bh: Blackhole): Unit =
+//    val in = BufferedInput.of(new FileInputStream(testDataFile.toFile)).order(ByteOrder.LITTLE_ENDIAN)
+//    val p = PPluginProtos.CodeGeneratorRequest.parseFrom(in)
+//    assert(p.getFileToGenerateList.size() == 2)
+//    assert(p.getSourceFileDescriptorsList.size() == 2)
+//    bh.consume(p)
+//    in.close()
+//
+//  @Benchmark
+//  def file_perfio_mapped(bh: Blackhole): Unit =
+//    val p = PPluginProtos.CodeGeneratorRequest.parseFrom(BufferedInput.ofMappedFile(testDataFile).order(ByteOrder.LITTLE_ENDIAN))
+//    assert(p.getFileToGenerateList.size() == 2)
+//    assert(p.getSourceFileDescriptorsList.size() == 2)
+//    bh.consume(p)

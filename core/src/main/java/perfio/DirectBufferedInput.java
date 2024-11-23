@@ -1,6 +1,7 @@
 package perfio;
 
 import perfio.internal.BufferUtil;
+import perfio.internal.MemoryAccessor;
 
 import java.io.Closeable;
 import java.io.IOException;
@@ -8,7 +9,6 @@ import java.lang.foreign.MemorySegment;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.charset.Charset;
-import static perfio.internal.BufferUtil.*;
 
 // This could be a lot simpler if we didn't have to do pagination but ByteBuffer is limited
 // to 2 GB and direct MemorySegment access is much, much slower as of JDK 22.
@@ -73,40 +73,37 @@ final class DirectBufferedInput extends BufferedInput {
     return new String(lb, 0, len, charset);
   }
 
-  public byte int8() throws IOException {
-    var p = fwd(1);
-    return bb.get(p);
-  }
+  public byte int8() throws IOException { var p = fwd(1); return MemoryAccessor.INSTANCE.int8(bb, p); }
 
-  public short int16() throws IOException {
-    var p = fwd(2);
-    return (short)(bigEndian ? BB_SHORT_BIG : BB_SHORT_LITTLE).get(bb, p);
-  }
+  public short int16()  throws IOException { var p = fwd(2); return MemoryAccessor.INSTANCE.int16(bb, p, bigEndian); }
+  public short int16n() throws IOException { var p = fwd(2); return MemoryAccessor.INSTANCE.int16n(bb, p); }
+  public short int16b() throws IOException { var p = fwd(2); return MemoryAccessor.INSTANCE.int16b(bb, p); }
+  public short int16l() throws IOException { var p = fwd(2); return MemoryAccessor.INSTANCE.int16l(bb, p); }
 
-  public char uint16() throws IOException {
-    var p = fwd(2);
-    return (char)(bigEndian ? BB_CHAR_BIG : BB_CHAR_LITTLE).get(bb, p);
-  }
+  public char uint16()  throws IOException { var p = fwd(2); return MemoryAccessor.INSTANCE.uint16(bb, p, bigEndian); }
+  public char uint16n() throws IOException { var p = fwd(2); return MemoryAccessor.INSTANCE.uint16n(bb, p); }
+  public char uint16b() throws IOException { var p = fwd(2); return MemoryAccessor.INSTANCE.uint16b(bb, p); }
+  public char uint16l() throws IOException { var p = fwd(2); return MemoryAccessor.INSTANCE.uint16l(bb, p); }
 
-  public int int32() throws IOException {
-    var p = fwd(4);
-    return (int)(bigEndian ? BB_INT_BIG : BB_INT_LITTLE).get(bb, p);
-  }
+  public int int32()  throws IOException { var p = fwd(4); return MemoryAccessor.INSTANCE.int32(bb, p, bigEndian); }
+  public int int32n() throws IOException { var p = fwd(4); return MemoryAccessor.INSTANCE.int32n(bb, p); }
+  public int int32b() throws IOException { var p = fwd(4); return MemoryAccessor.INSTANCE.int32b(bb, p); }
+  public int int32l() throws IOException { var p = fwd(4); return MemoryAccessor.INSTANCE.int32l(bb, p); }
 
-  public long int64() throws IOException {
-    var p = fwd(8);
-    return (long)(bigEndian ? BB_LONG_BIG : BB_LONG_LITTLE).get(bb, p);
-  }
+  public long int64()  throws IOException { var p = fwd(8); return MemoryAccessor.INSTANCE.int64(bb, p, bigEndian); }
+  public long int64n() throws IOException { var p = fwd(8); return MemoryAccessor.INSTANCE.int64n(bb, p); }
+  public long int64b() throws IOException { var p = fwd(8); return MemoryAccessor.INSTANCE.int64b(bb, p); }
+  public long int64l() throws IOException { var p = fwd(8); return MemoryAccessor.INSTANCE.int64l(bb, p); }
 
-  public float float32() throws IOException {
-    var p = fwd(4);
-    return (float)(bigEndian ? BB_FLOAT_BIG : BB_FLOAT_LITTLE).get(bb, p);
-  }
+  public float float32()  throws IOException { var p = fwd(4); return MemoryAccessor.INSTANCE.float32(bb, p, bigEndian); }
+  public float float32n() throws IOException { var p = fwd(4); return MemoryAccessor.INSTANCE.float32n(bb, p); }
+  public float float32b() throws IOException { var p = fwd(4); return MemoryAccessor.INSTANCE.float32b(bb, p); }
+  public float float32l() throws IOException { var p = fwd(4); return MemoryAccessor.INSTANCE.float32l(bb, p); }
 
-  public double float64() throws IOException {
-    var p = fwd(8);
-    return (double)(bigEndian ? BB_DOUBLE_BIG : BB_DOUBLE_LITTLE).get(bb, p);
-  }
+  public double float64()  throws IOException { var p = fwd(8); return MemoryAccessor.INSTANCE.float64(bb, p, bigEndian); }
+  public double float64n() throws IOException { var p = fwd(8); return MemoryAccessor.INSTANCE.float64n(bb, p); }
+  public double float64b() throws IOException { var p = fwd(8); return MemoryAccessor.INSTANCE.float64b(bb, p); }
+  public double float64l() throws IOException { var p = fwd(8); return MemoryAccessor.INSTANCE.float64l(bb, p); }
 
   public String string(int len, Charset charset) throws IOException {
     if(len == 0) {

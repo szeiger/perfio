@@ -1,12 +1,11 @@
 package perfio;
 
 import perfio.internal.BufferUtil;
+import perfio.internal.MemoryAccessor;
 
 import java.io.Closeable;
 import java.io.IOException;
 import java.nio.charset.Charset;
-
-import static perfio.internal.BufferUtil.*;
 
 sealed abstract class HeapBufferedInput extends BufferedInput permits StreamingHeapBufferedInput, SwitchingHeapBufferedInput {
   byte[] buf;
@@ -24,40 +23,37 @@ sealed abstract class HeapBufferedInput extends BufferedInput permits StreamingH
     buf = null;
   }
 
-  public byte int8() throws IOException {
-    var p = fwd(1);
-    return buf[p];
-  }
+  public byte int8() throws IOException { var p = fwd(1); return MemoryAccessor.INSTANCE.int8(buf, p); }
 
-  public short int16() throws IOException {
-    var p = fwd(2);
-    return (short)(bigEndian ? BA_SHORT_BIG : BA_SHORT_LITTLE).get(buf, p);
-  }
+  public short int16()  throws IOException { var p = fwd(2); return MemoryAccessor.INSTANCE.int16(buf, p, bigEndian); }
+  public short int16n() throws IOException { var p = fwd(2); return MemoryAccessor.INSTANCE.int16n(buf, p); }
+  public short int16b() throws IOException { var p = fwd(2); return MemoryAccessor.INSTANCE.int16b(buf, p); }
+  public short int16l() throws IOException { var p = fwd(2); return MemoryAccessor.INSTANCE.int16l(buf, p); }
 
-  public char uint16() throws IOException {
-    var p = fwd(2);
-    return (char)(bigEndian ? BA_CHAR_BIG : BA_CHAR_LITTLE).get(buf, p);
-  }
+  public char uint16()  throws IOException { var p = fwd(2); return MemoryAccessor.INSTANCE.uint16(buf, p, bigEndian); }
+  public char uint16n() throws IOException { var p = fwd(2); return MemoryAccessor.INSTANCE.uint16n(buf, p); }
+  public char uint16b() throws IOException { var p = fwd(2); return MemoryAccessor.INSTANCE.uint16b(buf, p); }
+  public char uint16l() throws IOException { var p = fwd(2); return MemoryAccessor.INSTANCE.uint16l(buf, p); }
 
-  public int int32() throws IOException {
-    var p = fwd(4);
-    return (int)(bigEndian ? BA_INT_BIG : BA_INT_LITTLE).get(buf, p);
-  }
+  public int int32()  throws IOException { var p = fwd(4); return MemoryAccessor.INSTANCE.int32(buf, p, bigEndian); }
+  public int int32n() throws IOException { var p = fwd(4); return MemoryAccessor.INSTANCE.int32n(buf, p); }
+  public int int32b() throws IOException { var p = fwd(4); return MemoryAccessor.INSTANCE.int32b(buf, p); }
+  public int int32l() throws IOException { var p = fwd(4); return MemoryAccessor.INSTANCE.int32l(buf, p); }
 
-  public long int64() throws IOException {
-    var p = fwd(8);
-    return (long)(bigEndian ? BA_LONG_BIG : BA_LONG_LITTLE).get(buf, p);
-  }
+  public long int64()  throws IOException { var p = fwd(8); return MemoryAccessor.INSTANCE.int64(buf, p, bigEndian); }
+  public long int64n() throws IOException { var p = fwd(8); return MemoryAccessor.INSTANCE.int64n(buf, p); }
+  public long int64b() throws IOException { var p = fwd(8); return MemoryAccessor.INSTANCE.int64b(buf, p); }
+  public long int64l() throws IOException { var p = fwd(8); return MemoryAccessor.INSTANCE.int64l(buf, p); }
 
-  public float float32() throws IOException {
-    var p = fwd(4);
-    return (float)(bigEndian ? BA_FLOAT_BIG : BA_FLOAT_LITTLE).get(buf, p);
-  }
+  public float float32()  throws IOException { var p = fwd(4); return MemoryAccessor.INSTANCE.float32(buf, p, bigEndian); }
+  public float float32n() throws IOException { var p = fwd(4); return MemoryAccessor.INSTANCE.float32n(buf, p); }
+  public float float32b() throws IOException { var p = fwd(4); return MemoryAccessor.INSTANCE.float32b(buf, p); }
+  public float float32l() throws IOException { var p = fwd(4); return MemoryAccessor.INSTANCE.float32l(buf, p); }
 
-  public double float64() throws IOException {
-    var p = fwd(8);
-    return (double)(bigEndian ? BA_DOUBLE_BIG : BA_DOUBLE_LITTLE).get(buf, p);
-  }
+  public double float64()  throws IOException { var p = fwd(8); return MemoryAccessor.INSTANCE.float64(buf, p, bigEndian); }
+  public double float64n() throws IOException { var p = fwd(8); return MemoryAccessor.INSTANCE.float64n(buf, p); }
+  public double float64b() throws IOException { var p = fwd(8); return MemoryAccessor.INSTANCE.float64b(buf, p); }
+  public double float64l() throws IOException { var p = fwd(8); return MemoryAccessor.INSTANCE.float64l(buf, p); }
 
   public String string(int len, Charset charset) throws IOException {
     if(len == 0) {
