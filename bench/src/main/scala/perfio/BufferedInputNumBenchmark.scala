@@ -1,7 +1,7 @@
 package perfio
 
 import com.esotericsoftware.kryo.io.{ByteBufferInput, Input}
-import com.esotericsoftware.kryo.unsafe.UnsafeByteBufferInput
+import com.esotericsoftware.kryo.unsafe.{UnsafeByteBufferInput, UnsafeInput}
 import org.openjdk.jmh.annotations.*
 import org.openjdk.jmh.infra.*
 
@@ -90,9 +90,13 @@ class BufferedInputNumBenchmark extends BenchUtil {
   @Benchmark
   def array_DataInputStream(bh: Blackhole): Unit = run(bh, new DataInputStream(new ByteArrayInputStream(testData)))
   @Benchmark
-  def array_Kryo(bh: Blackhole): Unit = run(bh, new ByteBufferInput(testData))
+  def array_Kryo(bh: Blackhole): Unit = run(bh, new Input(testData))
   @Benchmark
-  def array_KryoUnsafe(bh: Blackhole): Unit = run(bh, new UnsafeByteBufferInput(testData))
+  def array_KryoUnsafe(bh: Blackhole): Unit = run(bh, new UnsafeInput(testData))
+  @Benchmark
+  def array_KryoBB(bh: Blackhole): Unit = run(bh, new ByteBufferInput(testData))
+  @Benchmark
+  def array_KryoBBUnsafe(bh: Blackhole): Unit = run(bh, new UnsafeByteBufferInput(testData))
   @Benchmark
   def array_ByteBuffer(bh: Blackhole): Unit = run(bh, ByteBuffer.wrap(testData))
   @Benchmark
