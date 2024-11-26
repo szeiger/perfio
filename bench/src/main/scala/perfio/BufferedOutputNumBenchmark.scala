@@ -23,61 +23,22 @@ import java.util.concurrent.TimeUnit
 @State(Scope.Benchmark)
 class BufferedOutputNumBenchmark extends BenchUtil:
 
-  val count = 20000000
-  val byteSize = count * 13
-
-  // JDK: always big endian
-  private def writeTo(out: DataOutputStream): Unit =
-    var i = 0
-    while i < count do
-      out.writeByte(i)
-      out.writeInt(i+100)
-      out.writeLong(i+101)
-      i += 1
-    out.close()
-
-  // Kryo: little endian (safe) or native endian (unsafe)
-  private def writeTo(out: Output): Unit =
-    var i = 0
-    while i < count do
-      out.writeByte(i)
-      out.writeInt(i+100)
-      out.writeLong(i+101)
-      i += 1
-    out.close()
-
-  private def writeTo(out: BufferedOutput): Unit =
-    var i = 0
-    while i < count do
-      out.int8(i.toByte)
-      out.int32(i+100)
-      out.int64(i+101)
-      i += 1
-    out.close()
-
-  private def writeInternalTo(out: BufferedOutput): Unit =
-    var i = 0
-    while i < count do
-      val p = out.fwd(13)
-      out.buf(p) = i.toByte
-      BufferUtil.BA_INT_BIG.set(out.buf, p+1, i+100)
-      BufferUtil.BA_LONG_BIG.set(out.buf, p+5, (i+101).toLong)
-      i += 1
-    out.close()
+  @Param(Array("num"))
+  var dataSet: String = null
+  final lazy val data = BenchmarkDataSet.forName(dataSet)
+  import data._
 
   @Benchmark
   def array_DataOutputStream_growing(bh: Blackhole): Unit =
     val bout = new MyByteArrayOutputStream
-    val out = new DataOutputStream(bout)
-    writeTo(out)
+    writeTo(bout)
     bh.consume(bout.getSize)
     bh.consume(bout.getBuffer)
 
   @Benchmark
   def array_DataOutputStream_preallocated(bh: Blackhole): Unit =
-    val bout = new MyByteArrayOutputStream(count * 13)
-    val out = new DataOutputStream(bout)
-    writeTo(out)
+    val bout = new MyByteArrayOutputStream(byteSize)
+    writeTo(bout)
     bh.consume(bout.getSize)
     bh.consume(bout.getBuffer)
 
@@ -91,7 +52,7 @@ class BufferedOutputNumBenchmark extends BenchUtil:
 
   @Benchmark
   def array_Kryo_preallocated(bh: Blackhole): Unit =
-    val out = new Output(count * 13)
+    val out = new Output(byteSize)
     writeTo(out)
     bh.consume(out.position())
 
@@ -105,8 +66,8 @@ class BufferedOutputNumBenchmark extends BenchUtil:
 
   @Benchmark
   def array_KryoUnsafe_preallocated(bh: Blackhole): Unit =
-    val bb = ByteBuffer.allocate(count * 13)
-    val out = new UnsafeOutput(count * 13)
+    val bb = ByteBuffer.allocate(byteSize)
+    val out = new UnsafeOutput(byteSize)
     writeTo(out)
     bh.consume(out.position())
 
@@ -120,7 +81,7 @@ class BufferedOutputNumBenchmark extends BenchUtil:
 
   @Benchmark
   def array_KryoBB_preallocated(bh: Blackhole): Unit =
-    val bb = ByteBuffer.allocate(count * 13)
+    val bb = ByteBuffer.allocate(byteSize)
     val out = new ByteBufferOutput(bb)
     writeTo(out)
     bh.consume(out.position())
@@ -135,8 +96,8 @@ class BufferedOutputNumBenchmark extends BenchUtil:
 
   @Benchmark
   def array_KryoBBUnsafe_preallocated(bh: Blackhole): Unit =
-    val bb = ByteBuffer.allocate(count * 13)
-    val out = new UnsafeByteBufferOutput(count * 13)
+    val bb = ByteBuffer.allocate(byteSize)
+    val out = new UnsafeByteBufferOutput(byteSize)
     writeTo(out)
     bh.consume(out.position())
 
@@ -150,17 +111,9 @@ class BufferedOutputNumBenchmark extends BenchUtil:
 
   @Benchmark
   def array_FlushingBufferedOutput_fixed(bh: Blackhole): Unit =
-    val bout = new MyByteArrayOutputStream(count * 13)
+    val bout = new MyByteArrayOutputStream(byteSize)
     val out = BufferedOutput.of(bout)
     writeTo(out)
-    bh.consume(bout.getSize)
-    bh.consume(bout.getBuffer)
-
-  @Benchmark
-  def array_FlushingBufferedOutput_internal_fixed(bh: Blackhole): Unit =
-    val bout = new MyByteArrayOutputStream(count * 13)
-    val out = BufferedOutput.of(bout)
-    writeInternalTo(out)
     bh.consume(bout.getSize)
     bh.consume(bout.getBuffer)
 
@@ -173,36 +126,29 @@ class BufferedOutputNumBenchmark extends BenchUtil:
 
   @Benchmark
   def array_FullyBufferedOutput_growing_preallocated(bh: Blackhole): Unit =
-    val out = BufferedOutput.growing(count*13)
+    val out = BufferedOutput.growing(byteSize)
     writeTo(out)
     bh.consume(out.buffer)
     bh.consume(out.length)
 
   @Benchmark
   def array_FullyBufferedOutput_fixed(bh: Blackhole): Unit =
-    val out = BufferedOutput.ofArray(new Array[Byte](count*13))
+    val out = BufferedOutput.ofArray(new Array[Byte](byteSize))
     writeTo(out)
     bh.consume(out.buffer)
     bh.consume(out.length)
 
   @Benchmark
   def array_ByteBuffer(bh: Blackhole): Unit =
-    val out = ByteBuffer.allocate(count*13)
-    var i = 0
-    while i < count do
-      out.put(i.toByte)
-      out.putInt(i+100)
-      out.putLong(i+101)
-      i += 1
+    val out = ByteBuffer.allocate(byteSize)
+    writeTo(out)
     bh.consume(out)
 
   @Benchmark
   def file_DataOutputStream(bh: Blackhole): Unit =
     val fout = new FileOutputStream("/dev/null")
     val bout = new BufferedOutputStream(fout)
-    val out = new DataOutputStream(bout)
-    writeTo(out)
-    out.close()
+    writeTo(bout)
 
   @Benchmark
   def file_FlushingBufferedOutput(bh: Blackhole): Unit =

@@ -6,9 +6,10 @@ import java.io.IOException;
 final class SwitchingHeapBufferedInput extends HeapBufferedInput {
   private final BufferIterator it;
   private int seamOverlap = 0;
+  private Object bufferId1, bufferId2;
 
   SwitchingHeapBufferedInput(BufferIterator it, boolean bigEndian) {
-    super(it.buffer(), it.start(), it.end(), Long.MAX_VALUE, null, null, bigEndian);
+    super(new byte[0], 0, 0, Long.MAX_VALUE, null, null, bigEndian);
     this.it = it;
   }
 
@@ -35,19 +36,29 @@ final class SwitchingHeapBufferedInput extends HeapBufferedInput {
     if(totalBuffered < totalReadLimit) {
       while(available() < count) {
         if(pos == lim) {
-          if(seamOverlap != 0) {
+          if(seamOverlap == 0) {
+            //assert(bufferId2 == null);
+            if(bufferId1 != null) it.returnBuffer(bufferId1);
+            if((bufferId1 = it.next()) == null) break;
+            updateBuffer();
+          } else {
+            //assert(bufferId1 != null);
+            //assert(bufferId2 != null);
+            it.returnBuffer(bufferId1);
+            bufferId1 = bufferId2;
+            bufferId2 = null;
             updateBuffer();
             pos += seamOverlap;
             seamOverlap = 0;
-          } else {
-            if(!it.next()) break;
-            updateBuffer();
           }
         } else {
           if(pos + count > buf.length)
             shiftOrGrow(count);
           if(seamOverlap == 0) {
-            if(!it.next()) break;
+            //assert(bufferId1 != null);
+            //assert(bufferId2 == null);
+            it.returnBuffer(bufferId1);
+            if((bufferId1 = it.next()) == null) break;
             var rem = count - available();
             var nlen = it.length();
             if(rem < nlen) { // at least 1 byte will remain in `next` -> create a seam
@@ -62,8 +73,13 @@ final class SwitchingHeapBufferedInput extends HeapBufferedInput {
               totalBuffered += nlen;
             }
           } else { // existing seam
+            //assert(bufferId1 != null);
+            //assert(bufferId2 != null);
             if(lim - pos <= seamOverlap) { // pos is in the seam -> switch to next buffer
               var a = lim - pos;
+              it.returnBuffer(bufferId1);
+              bufferId1 = bufferId2;
+              bufferId2 = null;
               updateBuffer();
               pos -= a;
               pos += seamOverlap;
@@ -82,6 +98,8 @@ final class SwitchingHeapBufferedInput extends HeapBufferedInput {
                 lim += nlen;
                 totalBuffered += nlen;
                 seamOverlap = 0;
+                it.returnBuffer(bufferId2);
+                bufferId2 = null;
               }
             }
           }

@@ -70,6 +70,25 @@ public abstract sealed class BufferedOutput implements Closeable, Flushable perm
   /// @see #ofBlocks(int)
   public static AccumulatingBufferedOutput ofBlocks() { return ofBlocks(DefaultBufferSize); }
 
+  /// Write data to a buffered pipe that can be read concurrently from another thread as an
+  /// [InputStream] or [BufferedInput]. Blocks of data are buffered and then transferred to the
+  /// reader. Note that this BufferedOutput and the opposing BufferedInput or InputStream are not
+  /// thread-safe, just like any other BufferedOutput/BufferedInput. Only their communication is.
+  /// This allows you to use one thread for writing and one thread for reading. Doing both from
+  /// the same thread is not recommended as it may deadlock when the internal buffer runs full or
+  /// empty.
+  ///
+  /// @param initialBufferSize Initial buffer size. The buffer is expanded later if necessary.
+  public static PipeBufferedOutput pipe(int initialBufferSize) {
+    return new PipeBufferedOutput(true, initialBufferSize, 2);
+  }
+
+  /// Write data to a buffered pipe that can be read concurrently from another thread as an
+  /// [InputStream] or [BufferedInput] using the default initial buffer size.
+  /// @see #pipe(int)
+  public static PipeBufferedOutput pipe() { return pipe(DefaultBufferSize); }
+
+
   /// Write data to a given region of an existing byte array. The BufferedOutput is limited to the
   /// initial size.
   ///
@@ -768,7 +787,7 @@ final class NestedBufferedOutput extends BufferedOutput {
 }
 
 
-sealed abstract class CacheRootBufferedOutput extends BufferedOutput permits FlushingBufferedOutput, AccumulatingBufferedOutput {
+sealed abstract class CacheRootBufferedOutput extends BufferedOutput permits FlushingBufferedOutput, AccumulatingBufferedOutput, PipeBufferedOutput {
   final int initialBufferSize;
 
   CacheRootBufferedOutput(byte[] buf, boolean bigEndian, int start, int pos, int lim, int initialBufferSize, boolean fixed, long totalLimit) {
@@ -797,9 +816,11 @@ sealed abstract class CacheRootBufferedOutput extends BufferedOutput permits Flu
 
   /// Get a cached or new exclusive block.
   NestedBufferedOutput getExclusiveBlock() {
-    if(cachedExclusive == null)
+    if(cachedExclusive == null) {
+      //System.out.println("New exclusive block");
       return new NestedBufferedOutput(new byte[cacheRoot.initialBufferSize], false, cacheRoot);
-    else {
+    } else {
+      //System.out.println("Cached exclusive block");
       var b = cachedExclusive;
       cachedExclusive = b.next;
       return (NestedBufferedOutput)b;
@@ -808,9 +829,11 @@ sealed abstract class CacheRootBufferedOutput extends BufferedOutput permits Flu
 
   /// Get a cached or new shared block.
   NestedBufferedOutput getSharedBlock() {
-    if(cachedShared == null)
+    if(cachedShared == null) {
+      //System.out.println("New shared block");
       return new NestedBufferedOutput(null, true, cacheRoot);
-    else {
+    } else {
+      //System.out.println("Cached shared block");
       var b = cachedShared;
       cachedShared = b.next;
       return (NestedBufferedOutput)b;

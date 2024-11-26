@@ -5,6 +5,8 @@ import org.junit.Assert
 import java.io.{ByteArrayInputStream, ByteArrayOutputStream, DataInputStream, DataOutputStream, File, FileOutputStream, InputStream}
 import java.lang.foreign.{Arena, MemorySegment, ValueLayout}
 import java.nio.{ByteBuffer, ByteOrder}
+import scala.concurrent.duration.Duration
+import scala.concurrent.{Await, ExecutionContext, Future}
 import scala.reflect.ClassTag
 
 trait TestUtil:
@@ -79,6 +81,14 @@ class TestData(val bytes: Array[Byte], val name: String, owner: Class[?]):
       bo.close()
       val in = bo.toInputStream
       Assert.assertArrayEquals(bytes, in.readAllBytes())
+    (bo, checker)
+
+  def createPipeBufferedOutput(initialBufferSize: Int = 64): (BufferedOutput, () => Unit) =
+    val bo = BufferedOutput.pipe(initialBufferSize)
+    val res = Future { bo.toInputStream.readAllBytes() }(ExecutionContext.global)
+    val checker = () =>
+      bo.close()
+      Assert.assertArrayEquals(bytes, Await.result(res, Duration.Inf))
     (bo, checker)
 
   def createFixedBufferedOutput(buf: Array[Byte], start: Int = 0, len: Int = -1): (BufferedOutput, () => Unit) =

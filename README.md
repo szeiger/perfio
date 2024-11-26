@@ -9,6 +9,7 @@ perfIO provides buffered streaming I/O abstractions for both binary and text dat
 | BufferedInput              | BufferedInputStream, ByteArrayInputStream, DataInputStream, LimitedInputStream* |
 | BufferedOutput             | BufferedOutputStream, DataOutputStream                                          |
 | AccumulatingBufferedOutput | -                                                                               |
+| PipeBufferedOutput         | PipeOutputStream                                                                |
 | ArrayBufferedOutput        | ByteArrayOutputStream                                                           |
 | LineTokenizer              | BufferedReader + InputStreamReader                                              |
 | TextOutput                 | PrintWriter + BufferedWriter + OutputStreamWriter                               |

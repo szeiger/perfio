@@ -59,11 +59,7 @@ final class BlockBufferedOutputIterator extends BufferIterator {
   private BufferedOutput block;
   private final BufferedOutput root;
 
-  BlockBufferedOutputIterator(BufferedOutput root) {
-    this.root = root;
-    this.block = skipEmpty(root.next);
-    if(this.block == null) this.block = root.next;
-  }
+  BlockBufferedOutputIterator(BufferedOutput root) { this.root = root; }
 
   private BufferedOutput skipEmpty(BufferedOutput b) {
     while(true) {
@@ -76,13 +72,15 @@ final class BlockBufferedOutputIterator extends BufferIterator {
     }
   }
 
-  public boolean next() {
-    if(block == root) return false;
-    var b = skipEmpty(block.next);
+  public Object next() {
+    if(block == root) return null;
+    var b = skipEmpty(block == null ? root.next : block.next);
     if(b == null) return false;
     block = b;
-    return true;
+    return b;
   }
+
+  public void returnBuffer(Object id) {}
 
   public byte[] buffer() { return block.buf; }
   public int start() { return block.start; }

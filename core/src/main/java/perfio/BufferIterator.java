@@ -1,65 +1,67 @@
 package perfio;
 
+import java.io.IOException;
 import java.io.InputStream;
 import java.util.Objects;
 
-/// An iterator over a list of byte array buffers. It is initially positioned
-/// on the first buffer upon creation. Calling [#next()] advances it to the next
-/// buffer. An empty iterator consists of a single empty buffer, otherwise all
-/// buffers are non-empty.
+/// An iterator over a list of byte array buffers. It is initially positioned before the first
+/// buffer. Calling [#next()] advances it to the next buffer. All buffers must be non-empty. An
+/// empty iterator contains no buffers.
 abstract class BufferIterator {
 
-  /// Advance to the next non-empty buffer and return `true`, or return `false`
-  /// if the end of the list has been reached.
-  public abstract boolean next();
+  /// Advance to the next non-empty buffer and return a buffer id, or null if the end of the list
+  /// has been reached.
+  public abstract Object next() throws IOException;
 
-  /// The current buffer
+  /// The current buffer.
+  /// The behavior is undefined before successfully retrieving a buffer with [#next()].
   public abstract byte[] buffer();
   
-  /// The first used index in the current buffer
+  /// The first used index in the current buffer.
+  /// The behavior is undefined before successfully retrieving a buffer with [#next()].
   public abstract int start();
   
-  /// The index after the last used index in the current buffer
+  /// The index after the last used index in the current buffer.
+  /// The behavior is undefined before successfully retrieving a buffer with [#next()].
   public abstract int end();
   
   /// The number of bytes in the current buffer, equivalent to `end() - start()`
+  /// The behavior is undefined before successfully retrieving a buffer with [#next()].
   public int length() { return end() - start(); }
+
+  /// Return the buffer with the given id so it can be reused.
+  public abstract void returnBuffer(Object id);
 }
 
 
 final class BufferIteratorInputStream extends InputStream {
   private final BufferIterator it;
   private byte[] buf;
+  private Object bufferId;
   private int pos, lim;
 
-  BufferIteratorInputStream(BufferIterator it) {
-    this.it = it;
-    updateBuffer();
-  }
-
-  private void updateBuffer() {
-    buf = it.buffer();
-    pos = it.start();
-    lim = it.end();
-  }
+  BufferIteratorInputStream(BufferIterator it) { this.it = it; }
 
   // Make data available in the current buffer, advancing it if necessary. Returns
   // false if the end of the data has been reached.
-  private boolean request() {
+  private boolean request() throws IOException {
     if(lim - pos <= 0) {
-      if(!it.next()) return false;
-      updateBuffer();
+      if(bufferId != null) it.returnBuffer(bufferId);
+      if((bufferId = it.next()) == null) return false;
+      buf = it.buffer();
+      pos = it.start();
+      lim = it.end();
     }
     return true;
   }
 
-  public int read() {
+  public int read() throws IOException {
     if(!request()) return -1;
     return buf[pos++] & 0xFF;
   }
 
   @Override
-  public int read(byte[] b, int off, int len) {
+  public int read(byte[] b, int off, int len) throws IOException {
     Objects.checkFromIndexSize(off, len, b.length);
     if(len == 0) return 0;
     if(!request()) return -1;
@@ -70,7 +72,7 @@ final class BufferIteratorInputStream extends InputStream {
   }
 
   @Override
-  public long skip(long n) {
+  public long skip(long n) throws IOException {
     long rem = n;
     while(true) {
       if(rem <= available()) {

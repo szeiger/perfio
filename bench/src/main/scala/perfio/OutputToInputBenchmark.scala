@@ -17,79 +17,62 @@ import java.util.concurrent.TimeUnit
 @State(Scope.Benchmark)
 class OutputToInputBenchmark extends BenchUtil:
 
-  val count = 20000000
-  val byteSize = count * 13
-
-  private def writeTo(out: DataOutputStream): Unit =
-    var i = 0
-    while i < count do
-      out.writeByte(i)
-      out.writeInt(i+100)
-      out.writeLong(i+101)
-      i += 1
-    out.close()
-
-  private def writeTo(out: BufferedOutput): Unit =
-    var i = 0
-    while i < count do
-      out.int8(i.toByte)
-      out.int32(i+100)
-      out.int64(i+101)
-      i += 1
-    out.close()
-
-  private def readFrom(bh: Blackhole, bin: BufferedInput): Unit = {
-    var i = 0
-    while(i < count) {
-      bh.consume(bin.int8())
-      bh.consume(bin.int32())
-      bh.consume(bin.int64())
-      i += 1
-    }
-    bin.close()
-  }
-
-  def readFrom(bh: Blackhole, din: DataInputStream): Unit = {
-    var i = 0
-    while(i < count) {
-      bh.consume(din.readByte())
-      bh.consume(din.readInt())
-      bh.consume(din.readLong())
-      i += 1
-    }
-    din.close()
-  }
+  @Param(Array("num"))
+  var dataSet: String = null
+  final lazy val data = BenchmarkDataSet.forName(dataSet)
+  import data._
 
   @Benchmark
-  def num_DataOutputStream_growing(bh: Blackhole): Unit =
+  def jdk_ByteArrayOutputStream_growing(bh: Blackhole): Unit =
     val bout = new MyByteArrayOutputStream
-    val out = new DataOutputStream(bout)
-    writeTo(out)
-    val in = new DataInputStream(new ByteArrayInputStream(bout.getBuffer, 0, bout.getSize))
+    writeTo(bout)
+    val in = new ByteArrayInputStream(bout.getBuffer, 0, bout.getSize)
     readFrom(bh, in)
 
   @Benchmark
-  def num_DataOutputStream_preallocated(bh: Blackhole): Unit =
-    val bout = new MyByteArrayOutputStream(count * 13)
-    val out = new DataOutputStream(bout)
-    writeTo(out)
-    val in = new DataInputStream(new ByteArrayInputStream(bout.getBuffer, 0, bout.getSize))
+  def jdk_ByteArrayOutputStream_preallocated(bh: Blackhole): Unit =
+    val bout = new MyByteArrayOutputStream(byteSize)
+    writeTo(bout)
+    val in = new ByteArrayInputStream(bout.getBuffer, 0, bout.getSize)
     readFrom(bh, in)
 
   @Benchmark
-  def num_FullyBufferedOutput_growing(bh: Blackhole): Unit =
+  def jdk_PipeOutputStream(bh: Blackhole): Unit =
+    // This works best. Adding a BufferedOutputStream or BufferedInputStream only makes it slower.
+    val pout = new PipedOutputStream()
+    val pin = new PipedInputStream(pout)
+    val t1 = new Thread(() => writeTo(pout))
+    val t2 = new Thread(() => readFrom(bh, pin))
+    t1.start()
+    t2.start()
+    t1.join()
+    t2.join()
+
+  @Benchmark
+  def perfIO_ArrayBufferedOutput_growing(bh: Blackhole): Unit =
     val out = BufferedOutput.growing()
     writeTo(out)
     readFrom(bh, out.toBufferedInput)
 
   @Benchmark
-  def num_FullyBufferedOutput_preallocated(bh: Blackhole): Unit =
-    val out = BufferedOutput.growing(count * 13)
+  def perfIO_ArrayBufferedOutput_preallocated(bh: Blackhole): Unit =
+    val out = BufferedOutput.growing(byteSize)
     writeTo(out)
     readFrom(bh, out.toBufferedInput)
 
   @Benchmark
-  def num_BlockBufferedOutput(bh: Blackhole): Unit =
+  def perfIO_BlockBufferedOutput(bh: Blackhole): Unit =
     val out = BufferedOutput.ofBlocks()
     writeTo(out)
     readFrom(bh, out.toBufferedInput)
+
+  @Benchmark
+  def perfIO_PipeBufferedOutput(bh: Blackhole): Unit =
+    val out = BufferedOutput.pipe()
+    val in = out.toBufferedInput
+    val t1 = new Thread(() => writeTo(out))
+    val t2 = new Thread(() => readFrom(bh, in))
+    t1.start()
+    t2.start()
+    t1.join()
+    t2.join()
