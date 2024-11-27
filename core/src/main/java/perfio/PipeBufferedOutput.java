@@ -11,7 +11,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 /// A [BufferedOutput] which makes its data available for concurrent reading from another thread
 /// via [#toBufferedInput()]  or [#toInputStream()].
 public final class PipeBufferedOutput extends CacheRootBufferedOutput {
-  private AtomicBoolean connected = new AtomicBoolean(false);
+  private final AtomicBoolean connected = new AtomicBoolean(false);
   private final BlockingQueue<BufferedOutput> queue;
   private final BlockingQueue<BufferedOutput> returnQueue = new LinkedBlockingQueue<>();
 
@@ -48,27 +48,9 @@ public final class PipeBufferedOutput extends CacheRootBufferedOutput {
   private void put(BufferedOutput b) throws IOException {
     BufferedOutput r;
     while((r = returnQueue.poll()) != null)
-      if(r != this) cacheRoot.returnToCache(r);
+      if(r != this) returnToCache(r);
     try { queue.put(b); }
     catch(InterruptedException ex) { throw new IOException("Pipe transfer interrupted", ex); }
-  }
-
-  @Override
-  void flushAndGrow(int count) throws IOException {
-    // switch to a new buffer if this one is sufficiently filled
-    if(lim-pos <= initialBufferSize/2) {
-      var pre = this.prev;
-      checkState();
-      var b = cacheRoot.getExclusiveBlock();
-      totalFlushed += (pos-start);
-      buf = b.reinit(buf, bigEndian, start, pos, lim, sharing, 0L, 0L, true, root, null);
-      b.closed = true;
-      b.insertBefore(this);
-      start = 0;
-      pos = 0;
-      lim = buf.length;
-      if(pre == root) root.flushBlocks(false);
-    } else super.flushAndGrow(count);
   }
 
   @Override
@@ -77,7 +59,7 @@ public final class PipeBufferedOutput extends CacheRootBufferedOutput {
     put(QueuedBufferIterator.END_MARKER);
   }
 
-  void flushUpstream() {}
+  boolean preferSplit() { return true; }
 
   /// Create a new [InputStream] that reads the data as it is written. This method is
   /// thread-safe. Only one call to [#toInputStream()] or [#toBufferedInput()] is allowed.

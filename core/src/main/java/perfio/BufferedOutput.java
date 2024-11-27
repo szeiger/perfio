@@ -144,7 +144,7 @@ public abstract sealed class BufferedOutput implements Closeable, Flushable perm
   final boolean fixed;
   long totalLimit;
 
-  BufferedOutput(byte[] buf, boolean bigEndian, int start, int pos, int lim, boolean fixed, long totalLimit) {
+  BufferedOutput(byte[] buf, boolean bigEndian, int start, int pos, int lim, boolean fixed, long totalLimit, CacheRootBufferedOutput cacheRoot) {
     this.buf = buf;
     this.bigEndian = bigEndian;
     this.start = start;
@@ -152,6 +152,7 @@ public abstract sealed class BufferedOutput implements Closeable, Flushable perm
     this.lim = lim;
     this.fixed = fixed;
     this.totalLimit = totalLimit;
+    this.cacheRoot = cacheRoot == null ? (CacheRootBufferedOutput) this : cacheRoot;
   }
 
   long totalFlushed = 0L;
@@ -160,7 +161,7 @@ public abstract sealed class BufferedOutput implements Closeable, Flushable perm
   boolean closed = false;
   boolean truncate = true;
   BufferedOutput root = this;
-  CacheRootBufferedOutput cacheRoot = null;
+  final CacheRootBufferedOutput cacheRoot;
   byte sharing = SHARING_EXCLUSIVE;
 
   /// Change the byte order of this BufferedOutput.
@@ -465,18 +466,28 @@ public abstract sealed class BufferedOutput implements Closeable, Flushable perm
   /// @see #string(String, Charset)
   public final int zstring(String s) throws IOException { return zstring(s, StandardCharsets.UTF_8); }
 
-  void flushAndGrow(int count) throws IOException {
+  private void flushAndGrow(int count) throws IOException {
     checkState();
-    if(!fixed) {
-      //println(s"$show.flushAndGrow($count)")
-      if(prev == root) {
-        root.flushBlocks(true);
-        if(lim < pos + count) {
-          if(pos == start) growBufferClear(count);
-          else growBufferCopy(count);
-        }
-      } else growBufferCopy(count);
-    }
+    if(fixed) return;
+    if(preferSplit() && lim-pos <= cacheRoot.initialBufferSize/2) {
+      // switch to a new buffer if this one is sufficiently filled
+      var pre = this.prev;
+      var b = cacheRoot.getExclusiveBlock();
+      totalFlushed += (pos-start);
+      buf = b.reinit(buf, bigEndian, start, pos, lim, sharing, 0L, 0L, true, root, null);
+      b.closed = true;
+      b.insertBefore(this);
+      start = 0;
+      pos = 0;
+      lim = buf.length;
+      if(pre == root) root.flushBlocks(false);
+    } else  if(prev == root) {
+      root.flushBlocks(true);
+      if(lim < pos + count) {
+        if(pos == start) growBufferClear(count);
+        else growBufferCopy(count);
+      }
+    } else growBufferCopy(count);
   }
 
   private IOException underflow(long len, long exp) {
@@ -567,10 +578,13 @@ public abstract sealed class BufferedOutput implements Closeable, Flushable perm
   abstract void flushBlocks(boolean forceFlush) throws IOException;
 
   /// Force flush to the upstream after flushBlocks. Must only be called on the root block.
-  abstract void flushUpstream() throws IOException;
+  void flushUpstream() throws IOException {}
 
   /// Called at the end of the first [#close()].
   void closeUpstream() throws IOException {}
+
+  /// Prefer splitting the current block over growing if it's sufficiently filled
+  abstract boolean preferSplit();
 
   /// Flush the written data as far as possible. Note that not all data may be flushed if there is a previous
   /// BufferedOutput created with [#reserve(long)] that has not been fully written and closed yet.
@@ -753,8 +767,7 @@ final class NestedBufferedOutput extends BufferedOutput {
   private BufferedOutput parent = null;
 
   NestedBufferedOutput(byte[] buf, boolean fixed, CacheRootBufferedOutput cacheRoot) {
-    super(buf, false, 0, 0, 0, fixed, Long.MAX_VALUE);
-    this.cacheRoot = cacheRoot;
+    super(buf, false, 0, 0, 0, fixed, Long.MAX_VALUE, cacheRoot);
   }
 
   /// Re-initialize this block and return its old buffer.
@@ -778,7 +791,7 @@ final class NestedBufferedOutput extends BufferedOutput {
 
   void flushBlocks(boolean forceFlush) {}
 
-  void flushUpstream() {}
+  boolean preferSplit() { return parent.preferSplit(); }
 
   @Override
   void closeUpstream() throws IOException {
@@ -791,9 +804,8 @@ sealed abstract class CacheRootBufferedOutput extends BufferedOutput permits Flu
   final int initialBufferSize;
 
   CacheRootBufferedOutput(byte[] buf, boolean bigEndian, int start, int pos, int lim, int initialBufferSize, boolean fixed, long totalLimit) {
-    super(buf, bigEndian, start, pos, lim, fixed, totalLimit);
+    super(buf, bigEndian, start, pos, lim, fixed, totalLimit, null);
     this.initialBufferSize = initialBufferSize;
-    this.cacheRoot = this;
   }
 
   private BufferedOutput cachedExclusive, cachedShared = null; // single-linked lists (via `next`) of blocks cached for reuse
@@ -818,7 +830,7 @@ sealed abstract class CacheRootBufferedOutput extends BufferedOutput permits Flu
   NestedBufferedOutput getExclusiveBlock() {
     if(cachedExclusive == null) {
       //System.out.println("New exclusive block");
-      return new NestedBufferedOutput(new byte[cacheRoot.initialBufferSize], false, cacheRoot);
+      return new NestedBufferedOutput(new byte[initialBufferSize], false, this);
     } else {
       //System.out.println("Cached exclusive block");
       var b = cachedExclusive;
@@ -831,7 +843,7 @@ sealed abstract class CacheRootBufferedOutput extends BufferedOutput permits Flu
   NestedBufferedOutput getSharedBlock() {
     if(cachedShared == null) {
       //System.out.println("New shared block");
-      return new NestedBufferedOutput(null, true, cacheRoot);
+      return new NestedBufferedOutput(null, true, this);
     } else {
       //System.out.println("Cached shared block");
       var b = cachedShared;
@@ -850,6 +862,9 @@ final class FlushingBufferedOutput extends CacheRootBufferedOutput {
     this.out = out;
   }
 
+  boolean preferSplit() { return false; }
+
+  @Override
   void flushUpstream() throws IOException { out.flush(); }
 
   @Override

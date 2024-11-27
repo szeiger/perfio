@@ -22,23 +22,7 @@ final class BlockBufferedOutput extends AccumulatingBufferedOutput {
 
   void flushBlocks(boolean forceFlush) throws IOException {}
 
-  void flushUpstream() {}
-
-  @Override
-  void flushAndGrow(int count) throws IOException {
-    // switch to a new buffer if this one is sufficiently filled
-    if(lim-pos <= initialBufferSize/2) {
-      checkState();
-      var b = cacheRoot.getExclusiveBlock();
-      totalFlushed += (pos-start);
-      buf = b.reinit(buf, bigEndian, start, pos, lim, sharing, 0L, 0L, true, root, null);
-      b.closed = true;
-      b.insertBefore(this);
-      start = 0;
-      pos = 0;
-      lim = buf.length;
-    } else super.flushAndGrow(count);
-  }
+  boolean preferSplit() { return true; }
 
   public InputStream toInputStream() throws IOException {
     return new BufferIteratorInputStream(bufferIterator());

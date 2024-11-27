@@ -71,13 +71,13 @@ public final class ArrayBufferedOutput extends AccumulatingBufferedOutput {
     if(buflen > outbuf.length) outbuf = Arrays.copyOf(outbuf, buflen);
   }
 
+  boolean preferSplit() { return false; }
+
   @Override
   void closeUpstream() throws IOException {
     flushSingle(this, false);
     super.closeUpstream();
   }
-
-  void flushUpstream() {}
 
   private void checkClosed() throws IOException {
     if(!closed) throw new IOException("Cannot access buffer before closing");
