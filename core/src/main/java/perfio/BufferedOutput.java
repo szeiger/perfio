@@ -158,11 +158,11 @@ public abstract sealed class BufferedOutput implements Closeable, Flushable perm
   long totalFlushed = 0L;
   BufferedOutput next = this; // prefix list as a double-linked ring
   BufferedOutput prev = this;
-  boolean closed = false;
   boolean truncate = true;
   BufferedOutput root = this;
   final CacheRootBufferedOutput cacheRoot;
   byte sharing = SHARING_EXCLUSIVE;
+  boolean closed = false;
 
   /// Change the byte order of this BufferedOutput.
   public BufferedOutput order(ByteOrder order) {
@@ -482,7 +482,7 @@ public abstract sealed class BufferedOutput implements Closeable, Flushable perm
       lim = buf.length;
       if(pre == root) root.flushBlocks(false);
     } else  if(prev == root) {
-      root.flushBlocks(true);
+      root.flushBlocks(root == cacheRoot);
       if(lim < pos + count) {
         if(pos == start) growBufferClear(count);
         else growBufferCopy(count);
@@ -590,7 +590,7 @@ public abstract sealed class BufferedOutput implements Closeable, Flushable perm
   /// BufferedOutput created with [#reserve(long)] that has not been fully written and closed yet.
   public final void flush() throws IOException {
     checkState();
-    if(prev == root) {
+    if(root == cacheRoot) {
       root.flushBlocks(true);
       root.flushUpstream();
     }
@@ -620,7 +620,7 @@ public abstract sealed class BufferedOutput implements Closeable, Flushable perm
             b.closed = true;
           }
         }
-        flushBlocks(true);
+        if(this == cacheRoot) flushBlocks(true);
       } else {
         if(prev == root) root.flushBlocks(false);
       }
@@ -785,7 +785,7 @@ final class NestedBufferedOutput extends BufferedOutput {
     this.truncate = truncate;
     this.root = root;
     this.parent = parent;
-    closed = false;
+    this.closed = false;
     return b;
   }
 
