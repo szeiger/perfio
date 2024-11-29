@@ -5,7 +5,7 @@ import java.io.InputStream;
 
 /// A [BufferedOutput] which accumulates all data written to it. After closing, the data can be
 /// retrieved repeatedly with [#toBufferedInput()]  or [#toInputStream()].
-sealed public abstract class AccumulatingBufferedOutput extends CacheRootBufferedOutput permits ArrayBufferedOutput, BlockBufferedOutput {
+public abstract class AccumulatingBufferedOutput extends CacheRootBufferedOutput {
 
   AccumulatingBufferedOutput(byte[] buf, boolean bigEndian, int start, int pos, int lim, int initialBufferSize, boolean fixed, long totalLimit) {
     super(buf, bigEndian, start, pos, lim, initialBufferSize, fixed, totalLimit);

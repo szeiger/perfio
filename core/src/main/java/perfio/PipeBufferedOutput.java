@@ -10,13 +10,13 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 /// A [BufferedOutput] which makes its data available for concurrent reading from another thread
 /// via [#toBufferedInput()]  or [#toInputStream()].
-public final class PipeBufferedOutput extends CacheRootBufferedOutput {
+public final class PipeBufferedOutput extends BlockFlushingBufferedOutput {
   private final AtomicBoolean connected = new AtomicBoolean(false);
   private final BlockingQueue<BufferedOutput> queue;
   private final BlockingQueue<BufferedOutput> returnQueue = new LinkedBlockingQueue<>();
 
   PipeBufferedOutput(boolean bigEndian, int initialBufferSize, int blockDepth) {
-    super(new byte[initialBufferSize], bigEndian, 0, 0, initialBufferSize, initialBufferSize, false, Long.MAX_VALUE);
+    super(bigEndian, initialBufferSize, blockDepth);
     queue = new ArrayBlockingQueue<>(blockDepth);
   }
 
@@ -26,26 +26,7 @@ public final class PipeBufferedOutput extends CacheRootBufferedOutput {
     return this;
   }
 
-  void flushBlocks(boolean forceFlush) throws IOException {
-    //TODO split buffer to forceFlush
-    while(next != this) {
-      var b = next;
-      if(!b.closed) return;
-      var blen = b.pos - b.start;
-      if(b.sharing == SHARING_LEFT) {
-        var n = b.next;
-        n.start = b.start;
-        n.totalFlushed -= blen;
-        b.unlinkAndReturn();
-      } else if(blen != 0) {
-        b.unlinkOnly();
-        put(b);
-      } else b.unlinkAndReturn();
-    }
-    if(closed) put(this);
-  }
-
-  private void put(BufferedOutput b) throws IOException {
+  void put(BufferedOutput b) throws IOException {
     BufferedOutput r;
     while((r = returnQueue.poll()) != null)
       if(r != this) returnToCache(r);
@@ -58,8 +39,6 @@ public final class PipeBufferedOutput extends CacheRootBufferedOutput {
     super.closeUpstream();
     put(QueuedBufferIterator.END_MARKER);
   }
-
-  boolean preferSplit() { return true; }
 
   /// Create a new [InputStream] that reads the data as it is written. This method is
   /// thread-safe. Only one call to [#toInputStream()] or [#toBufferedInput()] is allowed.

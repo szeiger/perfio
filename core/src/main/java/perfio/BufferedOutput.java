@@ -24,7 +24,7 @@ import static perfio.internal.BufferUtil.growBuffer;
 ///
 /// A freshly created BufferedOutput always uses [ByteOrder#BIG_ENDIAN]. This can be changed with
 /// [#order(ByteOrder)]. Unless specified explicitly, the initial buffer size is 32768.
-public abstract sealed class BufferedOutput implements Closeable, Flushable permits CacheRootBufferedOutput, NestedBufferedOutput {
+public abstract class BufferedOutput implements Closeable, Flushable {
 
   /// Write data to an [OutputStream].
   ///
@@ -155,7 +155,7 @@ public abstract sealed class BufferedOutput implements Closeable, Flushable perm
     this.cacheRoot = cacheRoot == null ? (CacheRootBufferedOutput) this : cacheRoot;
   }
 
-  long totalFlushed = 0L;
+  long totalFlushed = 0L; // Bytes already flushed upstream or held in prefix blocks
   BufferedOutput next = this; // prefix list as a double-linked ring
   BufferedOutput prev = this;
   boolean truncate = true;
@@ -469,25 +469,30 @@ public abstract sealed class BufferedOutput implements Closeable, Flushable perm
   private void flushAndGrow(int count) throws IOException {
     checkState();
     if(fixed) return;
-    if(preferSplit() && lim-pos <= cacheRoot.initialBufferSize/2) {
+    if(cacheRoot.preferSplit() && lim-pos <= cacheRoot.initialBufferSize/2) {
       // switch to a new buffer if this one is sufficiently filled
-      var pre = this.prev;
-      var b = cacheRoot.getExclusiveBlock();
-      totalFlushed += (pos-start);
-      buf = b.reinit(buf, bigEndian, start, pos, lim, sharing, 0L, 0L, true, root, null);
-      b.closed = true;
-      b.insertBefore(this);
-      start = 0;
-      pos = 0;
-      lim = buf.length;
-      if(pre == root) root.flushBlocks(false);
-    } else  if(prev == root) {
+      newBuffer();
+    } else if(prev == root) {
       root.flushBlocks(root == cacheRoot);
       if(lim < pos + count) {
         if(pos == start) growBufferClear(count);
         else growBufferCopy(count);
       }
     } else growBufferCopy(count);
+  }
+
+  /// Switch to a new buffer, moving the current one into the prefix list
+  private void newBuffer() throws IOException {
+    var pre = this.prev;
+    var b = cacheRoot.getExclusiveBlock();
+    totalFlushed += (pos-start);
+    buf = b.reinit(buf, bigEndian, start, pos, lim, sharing, 0L, 0L, true, root, null);
+    b.closed = true;
+    b.insertBefore(this);
+    start = 0;
+    pos = 0;
+    lim = buf.length;
+    if(pre == root) root.flushBlocks(false);
   }
 
   private IOException underflow(long len, long exp) {
@@ -582,9 +587,6 @@ public abstract sealed class BufferedOutput implements Closeable, Flushable perm
 
   /// Called at the end of the first [#close()].
   void closeUpstream() throws IOException {}
-
-  /// Prefer splitting the current block over growing if it's sufficiently filled
-  abstract boolean preferSplit();
 
   /// Flush the written data as far as possible. Note that not all data may be flushed if there is a previous
   /// BufferedOutput created with [#reserve(long)] that has not been fully written and closed yet.
@@ -691,36 +693,58 @@ public abstract sealed class BufferedOutput implements Closeable, Flushable perm
   public final BufferedOutput defer() throws IOException { return defer(Long.MAX_VALUE); }
 
   /// Append a nested root block.
-  void appendNested(BufferedOutput b) throws IOException {
-    var btot = b.totalBytesWritten();
-    var rem = totalLimit - btot;
-    if(btot > rem) throw new EOFException();
-    if(fixed || b.totalBytesWritten() <= available()) mergeNested(b);
-    else {
-      var tmpbuf = buf;
-      var tmpstart = start;
-      var tmppos = pos;
-      var tmpsharing = sharing;
-      var len = tmppos - tmpstart;
+  void appendNested(BufferedOutput r) throws IOException {
+    if(!appendNestedMerge(r)) appendNestedSwap(r);
+  }
+
+  private boolean appendNestedMerge(BufferedOutput r) throws IOException {
+    while(r.next != r) {
+      var b = r.next;
       var blen = b.pos - b.start;
-      totalFlushed += b.totalFlushed + len;
-      b.totalFlushed += blen - len;
-      buf = b.buf;
-      start = b.start;
-      pos = b.pos;
-      lim = buf.length;
-      sharing = b.sharing;
-      b.buf = tmpbuf;
-      b.start = tmpstart;
-      b.pos = tmppos;
-      b.lim = tmppos;
-      b.closed = true;
-      b.sharing = tmpsharing;
-      var bp = b.prev;
-      bp.insertAllBefore(this);
-      if(bp.prev == this) flushBlocks(false);
-      //System.out.println("root.numBlocks: "+root.numBlocks());
+      if(b.sharing == SHARING_LEFT) {
+        var n = b.next;
+        n.start = b.start;
+        n.totalFlushed -= blen;
+      } else {
+        if(lim - pos < blen) return false;
+        System.arraycopy(b.buf, b.start, buf, pos, blen);
+        pos += blen;
+        r.totalFlushed -= blen;
+      }
+      b.unlinkAndReturn();
     }
+    var blen = r.pos - r.start;
+    if(lim - pos < blen) return false;
+    System.arraycopy(r.buf, r.start, buf, pos, blen);
+    pos += blen;
+    cacheRoot.returnToCache(r);
+    return true;
+  }
+
+  private void appendNestedSwap(BufferedOutput b) throws IOException {
+    var tmpbuf = buf;
+    var tmpstart = start;
+    var tmppos = pos;
+    var tmpsharing = sharing;
+    var len = tmppos - tmpstart;
+    var blen = b.pos - b.start;
+    totalFlushed += b.totalFlushed + len;
+    b.totalFlushed += blen - len;
+    buf = b.buf;
+    start = b.start;
+    pos = b.pos;
+    lim = buf.length;
+    sharing = b.sharing;
+    b.buf = tmpbuf;
+    b.start = tmpstart;
+    b.pos = tmppos;
+    b.lim = tmppos;
+    b.closed = true;
+    b.sharing = tmpsharing;
+    var bp = b.prev;
+    bp.insertAllBefore(this);
+    if(bp.prev == this) flushBlocks(false);
+    //System.out.println("root.numBlocks: "+root.numBlocks());
   }
 
   private int numBlocks() {
@@ -731,20 +755,6 @@ public abstract sealed class BufferedOutput implements Closeable, Flushable perm
       b = b.next;
     }
     return i;
-  }
-
-  private void mergeNested(BufferedOutput r) throws IOException {
-    for(var b = r.next; true;) {
-      var blen = b.pos - b.start;
-      if(blen > 0) {
-        var p = fwd(blen);
-        System.arraycopy(b.buf, b.start, buf, p, blen);
-      }
-      var bn = b.next;
-      cacheRoot.returnToCache(b);
-      if(b == r) return;
-      b = bn;
-    }
   }
 
   /// Create a TextOutput for reading text from this BufferedOutput.
@@ -791,8 +801,6 @@ final class NestedBufferedOutput extends BufferedOutput {
 
   void flushBlocks(boolean forceFlush) {}
 
-  boolean preferSplit() { return parent.preferSplit(); }
-
   @Override
   void closeUpstream() throws IOException {
     if(parent != null) parent.appendNested(this);
@@ -800,7 +808,7 @@ final class NestedBufferedOutput extends BufferedOutput {
 }
 
 
-sealed abstract class CacheRootBufferedOutput extends BufferedOutput permits FlushingBufferedOutput, AccumulatingBufferedOutput, PipeBufferedOutput {
+abstract class CacheRootBufferedOutput extends BufferedOutput {
   final int initialBufferSize;
 
   CacheRootBufferedOutput(byte[] buf, boolean bigEndian, int start, int pos, int lim, int initialBufferSize, boolean fixed, long totalLimit) {
@@ -809,6 +817,9 @@ sealed abstract class CacheRootBufferedOutput extends BufferedOutput permits Flu
   }
 
   private BufferedOutput cachedExclusive, cachedShared = null; // single-linked lists (via `next`) of blocks cached for reuse
+
+  /// Prefer splitting the current block over growing if it's sufficiently filled
+  abstract boolean preferSplit();
 
   void closeUpstream() throws IOException {
     cachedExclusive = null;
