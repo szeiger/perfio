@@ -218,13 +218,6 @@ public abstract class BufferedOutput implements Closeable, Flushable {
 
   /// Write a signed 8-bit integer (`byte`).
   public final BufferedOutput int8(byte b) throws IOException {
-//    if(pos >= lim) {
-//      flushAndGrow(1);
-//      if(pos >= lim) throw new EOFException();
-//    }
-//    MemoryAccessor.INSTANCE.int8(buf, pos++, b);
-//    return this;
-
     var p = fwd(1);
     MemoryAccessor.INSTANCE.int8(buf, p, b);
     return this;
@@ -492,6 +485,7 @@ public abstract class BufferedOutput implements Closeable, Flushable {
     start = 0;
     pos = 0;
     lim = buf.length;
+    sharing = SHARING_EXCLUSIVE;
     if(pre == root) root.flushBlocks(false);
   }
 
@@ -623,7 +617,6 @@ public abstract class BufferedOutput implements Closeable, Flushable {
         n.totalFlushed -= (pos - start);
         var pre = prev;
         unlinkAndReturn();
-        assert(root != this);
         if(pre == root) root.flushBlocks(false);
       } else {
         if(root == this) {
@@ -716,21 +709,21 @@ public abstract class BufferedOutput implements Closeable, Flushable {
   }
 
   private boolean appendNestedMerge(BufferedOutput r) throws IOException {
-    while(r.next != r) {
-      var b = r.next;
+    var b = r.next;
+    while(true) {
       var blen = b.pos - b.start;
       if(lim - pos < blen) return false;
       System.arraycopy(b.buf, b.start, buf, pos, blen);
       pos += blen;
-      r.totalFlushed -= blen;
+      var bn = b.next;
+      if(b == r) {
+        cacheRoot.returnToCache(r);
+        return true;
+      }
       b.unlinkAndReturn();
+      r.totalFlushed -= blen;
+      b = bn;
     }
-    var blen = r.pos - r.start;
-    if(lim - pos < blen) return false;
-    System.arraycopy(r.buf, r.start, buf, pos, blen);
-    pos += blen;
-    cacheRoot.returnToCache(r);
-    return true;
   }
 
   private void appendNestedSwap(BufferedOutput b) throws IOException {
@@ -897,36 +890,38 @@ final class FlushingBufferedOutput extends CacheRootBufferedOutput {
   }
 
   void flushBlocks(boolean forceFlush) throws IOException {
-    if(next != this) flushPrefix(forceFlush);
-    var len = pos-start;
-    if((forceFlush && len > 0) || len > initialBufferSize/2) {
-      writeToOutput(buf, start, len);
-      totalFlushed += len;
-      pos = start;
-    }
-  }
-
-  private void flushPrefix(boolean forceFlush) throws IOException {
-    do {
-      var b = next;
+    var b = next;
+    while(true) {
+      var bn = b.next;
       var blen = b.pos - b.start;
       if(!b.closed) {
-        if((forceFlush && blen > 0) || blen > initialBufferSize/2) {
+        if((forceFlush && blen > 0) || !b.fixed && blen > initialBufferSize/2) {
           writeToOutput(b.buf, b.start, blen);
           b.totalFlushed += blen;
-          if(b.sharing == SHARING_LEFT) b.start = b.pos;
+          if(b.fixed) b.start = b.pos;
           else {
             b.pos = 0;
             b.start = 0;
-            b.lim -= blen;
+            // `b.lim -= blen` would be the conservative choice, but we can immediately extend
+            // the limit as long as we're under the totalLimit so we don't have to leave the inner
+            // loop again to grow it later.
+            b.lim = (int)Math.min(b.totalLimit - b.totalFlushed, b.lim);
           }
+        }
+        return;
+      }
+      if(b == this) {
+        if(blen > 0) {
+          writeToOutput(b.buf, b.start, blen);
+          totalFlushed += blen;
         }
         return;
       }
       if(blen < initialBufferSize/2 && maybeMergeToRight(b)) {}
       else if(blen > 0) writeToOutput(b.buf, b.start, blen);
-      b.unlinkAndReturn();
-    } while(next != this);
+      b.unlinkAndReturn();      
+      b = bn;
+    }
   }
 
   private boolean maybeMergeToRight(BufferedOutput b) {
