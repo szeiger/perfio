@@ -47,10 +47,7 @@ final class BlockBufferedOutputIterator extends BufferIterator {
 
   private BufferedOutput skipEmpty(BufferedOutput b) {
     while(true) {
-      if(b.sharing == BufferedOutput.SHARING_LEFT) {
-        var n = b.next;
-        n.start = b.start;
-      } else if(b.pos - b.start > 0) return b;
+      if(b.pos - b.start > 0) return b;
       if(b == root) return null;
       b = b.next;
     }

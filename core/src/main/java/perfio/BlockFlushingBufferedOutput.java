@@ -14,12 +14,7 @@ abstract class BlockFlushingBufferedOutput extends CacheRootBufferedOutput {
       var b = next;
       if(!b.closed) return;
       var blen = b.pos - b.start;
-      if(b.sharing == SHARING_LEFT) {
-        var n = b.next;
-        n.start = b.start;
-        n.totalFlushed -= blen;
-        b.unlinkAndReturn();
-      } else if(blen != 0) {
+      if(blen != 0) {
         b.unlinkOnly();
         put(b);
       } else b.unlinkAndReturn();

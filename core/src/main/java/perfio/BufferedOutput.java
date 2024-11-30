@@ -612,34 +612,37 @@ public abstract class BufferedOutput implements Closeable, Flushable {
   /// closed when closing this BufferedOutput.
   public final void close() throws IOException {
     if(!closed) {
+      if(!truncate) checkUnderflow();
+      closed = true;
+      lim = pos;
+      // We always unlink SHARING_LEFT when closing so we don't have to merge blocks later when
+      // flushing. They are always created by reserveShort() and they cannot be root blocks.
       if(sharing == SHARING_LEFT) {
-        // Shortcut to unlink SHARING_LEFT early. These are always created by reserveShort(),
-        // they cannot be root blocks, and they would be merged upon flushing anyway.
-        if(!truncate) checkUnderflow(); // this can only be true for SHARING_LEFT
         var n = next;
         n.start = start;
         n.totalFlushed -= (pos - start);
-        closed = true;
-        lim = pos;
         var pre = prev;
         unlinkAndReturn();
         assert(root != this);
         if(pre == root) root.flushBlocks(false);
       } else {
-        //if(!truncate) checkUnderflow();
-        closed = true;
-        lim = pos;
         if(root == this) {
-          for(var b = next; b != this; b = b.next) {
+          for(var b = next; b != this;) {
+            var bn = b.next;
             if(!b.closed) {
               if(!b.truncate) b.checkUnderflow();
+              if(b.sharing == SHARING_LEFT) {
+                bn.start = b.start;
+                bn.totalFlushed -= (b.pos - b.start);
+                bn.unlinkAndReturn();
+              }
+              b.lim = b.pos;
               b.closed = true;
             }
+            b = bn;
           }
           if(this == cacheRoot) flushBlocks(true);
-        } else {
-          if(prev == root) root.flushBlocks(false);
-        }
+        } else if(prev == root) root.flushBlocks(false);
         closeUpstream();
       }
     }
@@ -716,16 +719,10 @@ public abstract class BufferedOutput implements Closeable, Flushable {
     while(r.next != r) {
       var b = r.next;
       var blen = b.pos - b.start;
-      if(b.sharing == SHARING_LEFT) {
-        var n = b.next;
-        n.start = b.start;
-        n.totalFlushed -= blen;
-      } else {
-        if(lim - pos < blen) return false;
-        System.arraycopy(b.buf, b.start, buf, pos, blen);
-        pos += blen;
-        r.totalFlushed -= blen;
-      }
+      if(lim - pos < blen) return false;
+      System.arraycopy(b.buf, b.start, buf, pos, blen);
+      pos += blen;
+      r.totalFlushed -= blen;
       b.unlinkAndReturn();
     }
     var blen = r.pos - r.start;
@@ -926,14 +923,8 @@ final class FlushingBufferedOutput extends CacheRootBufferedOutput {
         }
         return;
       }
-      if(b.sharing == SHARING_LEFT) {
-        var n = b.next;
-        n.start = b.start;
-        n.totalFlushed -= blen;
-      } else {
-        if(blen < initialBufferSize/2 && maybeMergeToRight(b)) {}
-        else if(blen > 0) writeToOutput(b.buf, b.start, blen);
-      }
+      if(blen < initialBufferSize/2 && maybeMergeToRight(b)) {}
+      else if(blen > 0) writeToOutput(b.buf, b.start, blen);
       b.unlinkAndReturn();
     } while(next != this);
   }

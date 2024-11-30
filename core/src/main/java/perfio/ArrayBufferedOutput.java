@@ -36,14 +36,8 @@ public final class ArrayBufferedOutput extends AccumulatingBufferedOutput {
       var b = next;
       if(!b.closed) return;
       var blen = b.pos - b.start;
-      if(blen > 0) {
-        if(b.sharing == SHARING_LEFT) {
-          var n = b.next;
-          n.start = b.start;
-          n.totalFlushed -= blen;
-          b.unlinkAndReturn();
-        } else flushSingle(b, true);
-      } else b.unlinkAndReturn();
+      if(blen > 0) flushSingle(b, true);
+      else b.unlinkAndReturn();
     }
   }
 
