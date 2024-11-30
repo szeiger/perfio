@@ -612,21 +612,36 @@ public abstract class BufferedOutput implements Closeable, Flushable {
   /// closed when closing this BufferedOutput.
   public final void close() throws IOException {
     if(!closed) {
-      if(!truncate) checkUnderflow();
-      closed = true;
-      lim = pos;
-      if(root == this) {
-        for(var b = next; b != this; b = b.next) {
-          if(!b.closed) {
-            if(!b.truncate) b.checkUnderflow();
-            b.closed = true;
-          }
-        }
-        if(this == cacheRoot) flushBlocks(true);
+      if(sharing == SHARING_LEFT) {
+        // Shortcut to unlink SHARING_LEFT early. These are always created by reserveShort(),
+        // they cannot be root blocks, and they would be merged upon flushing anyway.
+        if(!truncate) checkUnderflow(); // this can only be true for SHARING_LEFT
+        var n = next;
+        n.start = start;
+        n.totalFlushed -= (pos - start);
+        closed = true;
+        lim = pos;
+        var pre = prev;
+        unlinkAndReturn();
+        assert(root != this);
+        if(pre == root) root.flushBlocks(false);
       } else {
-        if(prev == root) root.flushBlocks(false);
+        //if(!truncate) checkUnderflow();
+        closed = true;
+        lim = pos;
+        if(root == this) {
+          for(var b = next; b != this; b = b.next) {
+            if(!b.closed) {
+              if(!b.truncate) b.checkUnderflow();
+              b.closed = true;
+            }
+          }
+          if(this == cacheRoot) flushBlocks(true);
+        } else {
+          if(prev == root) root.flushBlocks(false);
+        }
+        closeUpstream();
       }
-      closeUpstream();
     }
   }
 
