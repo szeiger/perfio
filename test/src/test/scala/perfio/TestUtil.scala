@@ -58,50 +58,44 @@ class TestData(val bytes: Array[Byte], val name: String, owner: Class[?]):
 
   def createBufferedInputFromArray(): BufferedInput = BufferedInput.ofArray(bytes)
 
-  def createBufferedOutputToOutputStream(initialBufferSize: Int = 64): (BufferedOutput, () => Unit) =
+  def createBufferedOutputToOutputStream(initialBufferSize: Int = 64): OutputTester =
     val bout = new ByteArrayOutputStream()
     val bo = BufferedOutput.of(bout, initialBufferSize)
-    val checker = () =>
-      bo.close()
-      val a = bout.toByteArray
-      Assert.assertArrayEquals(bytes, a)
-    (bo, checker)
+    OutputTester(this, bo)(bout.toByteArray)
 
-  def createGrowingBufferedOutput(initialBufferSize: Int = 64): (BufferedOutput, () => Unit) =
+  def createGrowingBufferedOutput(initialBufferSize: Int = 64): OutputTester =
     val bo = BufferedOutput.growing(initialBufferSize)
-    val checker = () =>
-      bo.close()
-      val a = bo.copyToByteArray
-      Assert.assertArrayEquals(bytes, a)
-    (bo, checker)
+    OutputTester(this, bo)(bo.copyToByteArray)
 
-  def createBlockBufferedOutput(initialBufferSize: Int = 64): (BufferedOutput, () => Unit) =
+  def createBlockBufferedOutput(initialBufferSize: Int = 64): OutputTester =
     val bo = BufferedOutput.ofBlocks(initialBufferSize)
-    val checker = () =>
-      bo.close()
-      val in = bo.toInputStream
-      Assert.assertArrayEquals(bytes, in.readAllBytes())
-    (bo, checker)
+    OutputTester(this, bo)(bo.toInputStream.readAllBytes())
 
-  def createPipeBufferedOutput(initialBufferSize: Int = 64): (BufferedOutput, () => Unit) =
+  def createPipeBufferedOutput(initialBufferSize: Int = 64): OutputTester =
     val bo = BufferedOutput.pipe(initialBufferSize)
     val res = Future { bo.toInputStream.readAllBytes() }(ExecutionContext.global)
-    val checker = () =>
-      bo.close()
-      Assert.assertArrayEquals(bytes, Await.result(res, Duration.Inf))
-    (bo, checker)
+    OutputTester(this, bo)(Await.result(res, Duration.Inf))
 
-  def createFixedBufferedOutput(buf: Array[Byte], start: Int = 0, len: Int = -1): (BufferedOutput, () => Unit) =
+  def createFixedBufferedOutput(buf: Array[Byte], start: Int = 0, len: Int = -1): OutputTester =
     val bo = BufferedOutput.ofArray(buf, start, if(len == -1) buf.length-start else len)
-    val checker = () =>
-      bo.close()
-      val checkLen = bo.totalBytesWritten.toInt
-      Assert.assertArrayEquals("Array slice should match", bytes, buf.slice(start, start+checkLen))
-      Assert.assertArrayEquals("Array prefix should be empty", new Array[Byte](start), buf.slice(0, start))
-      Assert.assertArrayEquals("Array suffix should be empty", new Array[Byte](buf.length-start-checkLen), buf.slice(start + checkLen, buf.length))
-    (bo, checker)
+    new OutputTester(this, bo)(buf.slice(start, start+bo.totalBytesWritten.toInt)):
+      override def check(): Unit =
+        super.check()
+        val checkLen = this.bo.totalBytesWritten.toInt
+        Assert.assertArrayEquals("Array prefix should be empty", new Array[Byte](start), buf.slice(0, start))
+        Assert.assertArrayEquals("Array suffix should be empty", new Array[Byte](buf.length-start-checkLen), buf.slice(start + checkLen, buf.length))
 
 
 class LimitedInputStream(in: InputStream, limit: Int) extends InputStream:
   def read(): Int = in.read()
   override def read(b: Array[Byte], off: Int, len: Int): Int = in.read(b, off, len min limit)
+
+
+class OutputTester(td: TestData, var bo: BufferedOutput)(extract: => Array[Byte]):
+  var decoder: Array[Byte] => Array[Byte] = identity
+  def check(): Unit =
+    bo.close()
+    Assert.assertArrayEquals(td.bytes, decoder(extract))
+  def apply(f: BufferedOutput => Unit): Unit =
+    f(bo)
+    check()

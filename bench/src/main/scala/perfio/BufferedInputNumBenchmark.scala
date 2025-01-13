@@ -87,27 +87,27 @@ class BufferedInputNumBenchmark extends BenchUtil {
     }
   }
 
-  @Benchmark
-  def array_DataInputStream(bh: Blackhole): Unit = run(bh, new DataInputStream(new ByteArrayInputStream(testData)))
-  @Benchmark
-  def array_Kryo(bh: Blackhole): Unit = run(bh, new Input(testData))
-  @Benchmark
-  def array_KryoUnsafe(bh: Blackhole): Unit = run(bh, new UnsafeInput(testData))
-  @Benchmark
-  def array_KryoBB(bh: Blackhole): Unit = run(bh, new ByteBufferInput(testData))
-  @Benchmark
-  def array_KryoBBUnsafe(bh: Blackhole): Unit = run(bh, new UnsafeByteBufferInput(testData))
-  @Benchmark
-  def array_ByteBuffer(bh: Blackhole): Unit = run(bh, ByteBuffer.wrap(testData))
-  @Benchmark
-  def array_BufferedInput(bh: Blackhole): Unit = run(bh, BufferedInput.of(new ByteArrayInputStream(testData)))
-  @Benchmark
-  def array_BufferedInput_fromArray(bh: Blackhole): Unit = run(bh, BufferedInput.ofArray(testData))
-
-  @Benchmark
-  def mediumFile_DataInputStream(bh: Blackhole): Unit = run(bh, new DataInputStream(new BufferedInputStream(new FileInputStream(diskTestDataMedium))))
-  @Benchmark
-  def mediumFile_BufferedInput(bh: Blackhole): Unit = run(bh, BufferedInput.of(new FileInputStream(diskTestDataMedium)))
+//  @Benchmark
+//  def array_DataInputStream(bh: Blackhole): Unit = run(bh, new DataInputStream(new ByteArrayInputStream(testData)))
+//  @Benchmark
+//  def array_Kryo(bh: Blackhole): Unit = run(bh, new Input(testData))
+//  @Benchmark
+//  def array_KryoUnsafe(bh: Blackhole): Unit = run(bh, new UnsafeInput(testData))
+//  @Benchmark
+//  def array_KryoBB(bh: Blackhole): Unit = run(bh, new ByteBufferInput(testData))
+//  @Benchmark
+//  def array_KryoBBUnsafe(bh: Blackhole): Unit = run(bh, new UnsafeByteBufferInput(testData))
+//  @Benchmark
+//  def array_ByteBuffer(bh: Blackhole): Unit = run(bh, ByteBuffer.wrap(testData))
+//  @Benchmark
+//  def array_BufferedInput(bh: Blackhole): Unit = run(bh, BufferedInput.of(new ByteArrayInputStream(testData)))
+//  @Benchmark
+//  def array_BufferedInput_fromArray(bh: Blackhole): Unit = run(bh, BufferedInput.ofArray(testData))
+//
+//  @Benchmark
+//  def mediumFile_DataInputStream(bh: Blackhole): Unit = run(bh, new DataInputStream(new BufferedInputStream(new FileInputStream(diskTestDataMedium))))
+//  @Benchmark
+//  def mediumFile_BufferedInput(bh: Blackhole): Unit = run(bh, BufferedInput.of(new FileInputStream(diskTestDataMedium)))
   @Benchmark
   def mediumFile_BufferedInput_mapped(bh: Blackhole): Unit = run(bh, BufferedInput.ofMappedFile(diskTestDataMedium.toPath))
 }

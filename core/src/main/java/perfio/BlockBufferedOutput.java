@@ -33,7 +33,7 @@ final class BlockBufferedOutput extends AccumulatingBufferedOutput {
   }
 
   BufferIterator bufferIterator() throws IOException {
-    if(!closed) throw new IOException("Cannot access buffer before closing");
+    if(state != BufferedOutput.STATE_CLOSED) throw new IOException("Cannot access buffer before closing");
     return new BlockBufferedOutputIterator(this);
   }
 }
@@ -41,9 +41,9 @@ final class BlockBufferedOutput extends AccumulatingBufferedOutput {
 
 final class BlockBufferedOutputIterator extends BufferIterator {
   private BufferedOutput block;
-  private final BufferedOutput root;
+  private final BlockBufferedOutput root;
 
-  BlockBufferedOutputIterator(BufferedOutput root) { this.root = root; }
+  BlockBufferedOutputIterator(BlockBufferedOutput root) { this.root = root; }
 
   private BufferedOutput skipEmpty(BufferedOutput b) {
     while(true) {
@@ -53,7 +53,7 @@ final class BlockBufferedOutputIterator extends BufferIterator {
     }
   }
 
-  public Object next() {
+  public Object next() throws IOException {
     if(block == root) return null;
     var b = skipEmpty(block == null ? root.next : block.next);
     if(b == null) return false;

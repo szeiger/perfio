@@ -134,6 +134,10 @@ public abstract class BufferedOutput implements Closeable, Flushable {
   static final byte SHARING_EXCLUSIVE = (byte)0; // buffer is not shared
   static final byte SHARING_LEFT      = (byte)1; // buffer is shared with next block
   static final byte SHARING_RIGHT     = (byte)2; // buffer is shared with previous blocks only
+  
+  static final byte STATE_OPEN        = (byte)0;
+  static final byte STATE_PROCESSING  = (byte)1;
+  static final byte STATE_CLOSED      = (byte)2;
 
 
   // ======================================================= non-static parts:
@@ -144,7 +148,7 @@ public abstract class BufferedOutput implements Closeable, Flushable {
   final boolean fixed;
   long totalLimit;
 
-  BufferedOutput(byte[] buf, boolean bigEndian, int start, int pos, int lim, boolean fixed, long totalLimit, CacheRootBufferedOutput cacheRoot) {
+  BufferedOutput(byte[] buf, boolean bigEndian, int start, int pos, int lim, boolean fixed, long totalLimit, TopLevelBufferedOutput topLevel) {
     this.buf = buf;
     this.bigEndian = bigEndian;
     this.start = start;
@@ -152,17 +156,25 @@ public abstract class BufferedOutput implements Closeable, Flushable {
     this.lim = lim;
     this.fixed = fixed;
     this.totalLimit = totalLimit;
-    this.cacheRoot = cacheRoot == null ? (CacheRootBufferedOutput) this : cacheRoot;
+    this.topLevel = topLevel == null ? (TopLevelBufferedOutput) this : topLevel;
   }
 
   long totalFlushed = 0L; // Bytes already flushed upstream or held in prefix blocks
   BufferedOutput next = this; // prefix list as a double-linked ring
   BufferedOutput prev = this;
   boolean truncate = true;
-  BufferedOutput root = this;
-  final CacheRootBufferedOutput cacheRoot;
+
+  /// The root block of the prefix ring. This is either the same as [#topLevel]
+  /// or a [NestedBufferedOutput] created with [#defer()].
+  BufferedOutput rootBlock = this;
+
+  /// The top-level BufferedOutput which is responsible for flushing the written data.
+  final TopLevelBufferedOutput topLevel;
+
+  Object filterState;
+
   byte sharing = SHARING_EXCLUSIVE;
-  boolean closed = false;
+  byte state = STATE_OPEN;
 
   /// Change the byte order of this BufferedOutput.
   public BufferedOutput order(ByteOrder order) {
@@ -174,7 +186,7 @@ public abstract class BufferedOutput implements Closeable, Flushable {
   public final ByteOrder order() { return bigEndian ? ByteOrder.BIG_ENDIAN : ByteOrder.LITTLE_ENDIAN; }
 
   void checkState() throws IOException {
-    if(closed) throw new IOException("BufferedOutput has already been closed");
+    if(state != STATE_OPEN) throw new IOException("BufferedOutput has already been closed");
   }
 
   private int available() { return lim - pos; }
@@ -462,11 +474,11 @@ public abstract class BufferedOutput implements Closeable, Flushable {
   private void flushAndGrow(int count) throws IOException {
     checkState();
     if(fixed) return;
-    if(cacheRoot.preferSplit() && lim-pos <= cacheRoot.initialBufferSize/2) {
+    if(topLevel.preferSplit() && lim-pos <= topLevel.initialBufferSize/2) {
       // switch to a new buffer if this one is sufficiently filled
       newBuffer();
-    } else if(prev == root) {
-      root.flushBlocks(root == cacheRoot);
+    } else if(prev == rootBlock) {
+      rootBlock.flushBlocks(rootBlock == topLevel);
       if(lim < pos + count) {
         if(pos == start) growBufferClear(count);
         else growBufferCopy(count);
@@ -477,16 +489,16 @@ public abstract class BufferedOutput implements Closeable, Flushable {
   /// Switch to a new buffer, moving the current one into the prefix list
   private void newBuffer() throws IOException {
     var pre = this.prev;
-    var b = cacheRoot.getExclusiveBlock();
+    var b = topLevel.getExclusiveBlock();
     totalFlushed += (pos-start);
-    buf = b.reinit(buf, bigEndian, start, pos, lim, sharing, 0L, 0L, true, root, null);
-    b.closed = true;
+    buf = b.reinit(buf, bigEndian, start, pos, lim, sharing, 0L, 0L, true, rootBlock, null);
+    topLevel.processAndClose(b);
     b.insertBefore(this);
     start = 0;
     pos = 0;
     lim = buf.length;
     sharing = SHARING_EXCLUSIVE;
-    if(pre == root) root.flushBlocks(false);
+    if(pre == rootBlock) rootBlock.flushBlocks(false);
   }
 
   private IOException underflow(long len, long exp) {
@@ -564,7 +576,7 @@ public abstract class BufferedOutput implements Closeable, Flushable {
   void unlinkAndReturn() {
     prev.next = next;
     next.prev = prev;
-    cacheRoot.returnToCache(this);
+    topLevel.returnToCache(this);
   }
 
   /// Unlink this block.
@@ -586,9 +598,9 @@ public abstract class BufferedOutput implements Closeable, Flushable {
   /// BufferedOutput created with [#reserve(long)] that has not been fully written and closed yet.
   public final void flush() throws IOException {
     checkState();
-    if(root == cacheRoot) {
-      root.flushBlocks(true);
-      root.flushUpstream();
+    if(rootBlock == topLevel) {
+      rootBlock.flushBlocks(true);
+      rootBlock.flushUpstream();
     }
   }
 
@@ -605,9 +617,14 @@ public abstract class BufferedOutput implements Closeable, Flushable {
   /// In all cases any nested BufferedOutputs that have not been closed yet are implicitly
   /// closed when closing this BufferedOutput.
   public final void close() throws IOException {
-    if(!closed) {
+    if(closeImpl()) closeUpstream();
+  }
+
+  /// Close this block. Returns `true` if [#closeUpstream()] should be called.
+  boolean closeImpl() throws IOException {
+    if(state == STATE_OPEN) {
       if(!truncate) checkUnderflow();
-      closed = true;
+      topLevel.processAndClose(this);
       lim = pos;
       // We always unlink SHARING_LEFT when closing so we don't have to merge blocks later when
       // flushing. They are always created by reserveShort() and they cannot be root blocks.
@@ -617,36 +634,38 @@ public abstract class BufferedOutput implements Closeable, Flushable {
         n.totalFlushed -= (pos - start);
         var pre = prev;
         unlinkAndReturn();
-        if(pre == root) root.flushBlocks(false);
+        if(pre == rootBlock) rootBlock.flushBlocks(false);
       } else {
-        if(root == this) {
+        if(rootBlock == this) {
           for(var b = next; b != this;) {
             var bn = b.next;
-            if(!b.closed) {
+            if(b.state == STATE_OPEN) {
               if(!b.truncate) b.checkUnderflow();
               if(b.sharing == SHARING_LEFT) {
                 bn.start = b.start;
                 bn.totalFlushed -= (b.pos - b.start);
-                bn.unlinkAndReturn();
+                b.unlinkAndReturn();
+              } else {
+                b.lim = b.pos;
+                topLevel.processAndClose(b);
               }
-              b.lim = b.pos;
-              b.closed = true;
             }
             b = bn;
           }
-          if(this == cacheRoot) flushBlocks(true);
-        } else if(prev == root) root.flushBlocks(false);
-        closeUpstream();
+          if(this == topLevel) flushBlocks(true);
+        } else if(prev == rootBlock) rootBlock.flushBlocks(false);
+        return true;
       }
     }
+    return false;
   }
 
   /// Reserve a short block (fully allocated) by splitting this block into two shared blocks.
   private BufferedOutput reserveShort(int length) throws IOException {
     var p = fwd(length);
     var len = p - start;
-    var b = cacheRoot.getSharedBlock();
-    b.reinit(buf, bigEndian, start, p, pos, SHARING_LEFT, length, -len, false, root, null);
+    var b = topLevel.getSharedBlock();
+    b.reinit(buf, bigEndian, start, p, pos, SHARING_LEFT, length, -len, false, rootBlock, null);
     b.insertBefore(this);
     totalFlushed += (pos - start);
     start = pos;
@@ -657,10 +676,10 @@ public abstract class BufferedOutput implements Closeable, Flushable {
   /// Reserve a long block (flushed on demand) by allocating a new block. Must not be called on a shared block.
   private BufferedOutput reserveLong(long max) throws IOException {
     var len = pos - start;
-    var b = cacheRoot.getExclusiveBlock();
+    var b = topLevel.getExclusiveBlock();
     var l = lim;
     if(l - pos > max) l = (int)(max + pos);
-    buf = b.reinit(buf, bigEndian, start, pos, l, sharing, max-len, -len, false, root, null);
+    buf = b.reinit(buf, bigEndian, start, pos, l, sharing, max-len, -len, false, rootBlock, null);
     b.insertBefore(this);
     totalFlushed = totalFlushed + len + max;
     sharing = SHARING_EXCLUSIVE;
@@ -680,7 +699,7 @@ public abstract class BufferedOutput implements Closeable, Flushable {
   public final BufferedOutput reserve(long length) throws IOException {
     checkState();
     if(fixed) return reserveShort((int)Math.min(length, available()));
-    else if(length < cacheRoot.initialBufferSize) return reserveShort((int)length);
+    else if(length < topLevel.initialBufferSize) return reserveShort((int)length);
     else return reserveLong(length);
   }
 
@@ -692,7 +711,7 @@ public abstract class BufferedOutput implements Closeable, Flushable {
   /// @return    A new BufferedOutput
   public final BufferedOutput defer(long max) throws IOException {
     checkState();
-    var b = cacheRoot.getExclusiveBlock();
+    var b = topLevel.getExclusiveBlock();
     b.reinit(b.buf, bigEndian, 0, 0, b.buf.length, SHARING_EXCLUSIVE, max, 0L, true, b, this);
     b.next = b;
     b.prev = b;
@@ -717,7 +736,7 @@ public abstract class BufferedOutput implements Closeable, Flushable {
       pos += blen;
       var bn = b.next;
       if(b == r) {
-        cacheRoot.returnToCache(r);
+        topLevel.returnToCache(r);
         return true;
       }
       b.unlinkAndReturn();
@@ -744,10 +763,11 @@ public abstract class BufferedOutput implements Closeable, Flushable {
     b.start = tmpstart;
     b.pos = tmppos;
     b.lim = tmppos;
-    b.closed = true;
     b.sharing = tmpsharing;
+    b.rootBlock = rootBlock;
     var bp = b.prev;
     bp.insertAllBefore(this);
+    topLevel.processAndClose(b);
     if(bp.prev == this) flushBlocks(false);
     //System.out.println("root.numBlocks: "+root.numBlocks());
   }
@@ -775,19 +795,61 @@ public abstract class BufferedOutput implements Closeable, Flushable {
   /// Same as `text(StandardCharsets.UTF_8, System.lineSeparator())`
   /// @see #text(Charset, String)
   public TextOutput text() { return text(StandardCharsets.UTF_8, System.lineSeparator()); }
+
+  String showThis() {
+    var b = new StringBuilder();
+    if(this == topLevel) b.append('*');
+    if(this == rootBlock) b.append('+');
+    return b.append(System.identityHashCode(this))
+      .append(':').append(showSharing())
+      .append(':').append(showState())
+      .toString();
+  }
+
+  String showList() {
+    var n = rootBlock.next;
+    var b = new StringBuilder();
+    while(true) {
+      if(n == this) b.append('<');
+      b.append(n.showThis());
+      if(n == this) b.append('>');
+      if(n == rootBlock) return b.toString();
+      b.append(" -> ");
+      n = n.next;
+    }
+  }
+
+  String showSharing() {
+    return switch(sharing) {
+      case SHARING_EXCLUSIVE -> "E";
+      case SHARING_LEFT -> "L";
+      case SHARING_RIGHT -> "R";
+      default -> String.valueOf(sharing);
+    };
+  }
+
+  String showState() {
+    return switch(state) {
+      case STATE_OPEN -> "O";
+      case STATE_PROCESSING -> "P";
+      case STATE_CLOSED -> "C";
+      default -> String.valueOf(state);
+    };
+  }
 }
 
 
 final class NestedBufferedOutput extends BufferedOutput {
+  /// The parent from which this block was created by [#defer()], otherwise null.
   private BufferedOutput parent = null;
 
-  NestedBufferedOutput(byte[] buf, boolean fixed, CacheRootBufferedOutput cacheRoot) {
+  NestedBufferedOutput(byte[] buf, boolean fixed, TopLevelBufferedOutput cacheRoot) {
     super(buf, false, 0, 0, 0, fixed, Long.MAX_VALUE, cacheRoot);
   }
 
   /// Re-initialize this block and return its old buffer.
   byte[] reinit(byte[] buf, boolean bigEndian, int start, int pos, int lim, byte sharing,
-    long totalLimit, long totalFlushed, boolean truncate, BufferedOutput root, BufferedOutput parent) {
+    long totalLimit, long totalFlushed, boolean truncate, BufferedOutput rootBlock, BufferedOutput parent) {
     var b = this.buf;
     this.buf = buf;
     this.bigEndian = bigEndian;
@@ -798,9 +860,9 @@ final class NestedBufferedOutput extends BufferedOutput {
     this.totalLimit = totalLimit;
     this.totalFlushed = totalFlushed;
     this.truncate = truncate;
-    this.root = root;
+    this.rootBlock = rootBlock;
     this.parent = parent;
-    this.closed = false;
+    this.state = STATE_OPEN;
     return b;
   }
 
@@ -813,15 +875,19 @@ final class NestedBufferedOutput extends BufferedOutput {
 }
 
 
-abstract class CacheRootBufferedOutput extends BufferedOutput {
+abstract class TopLevelBufferedOutput extends BufferedOutput {
   final int initialBufferSize;
 
-  CacheRootBufferedOutput(byte[] buf, boolean bigEndian, int start, int pos, int lim, int initialBufferSize, boolean fixed, long totalLimit) {
+  TopLevelBufferedOutput(byte[] buf, boolean bigEndian, int start, int pos, int lim, int initialBufferSize, boolean fixed, long totalLimit) {
     super(buf, bigEndian, start, pos, lim, fixed, totalLimit, null);
     this.initialBufferSize = initialBufferSize;
   }
 
   private BufferedOutput cachedExclusive, cachedShared = null; // single-linked lists (via `next`) of blocks cached for reuse
+
+  /// Mark the given block as closed. This method can be overridden in subclasses to perform
+  /// additional processing when closing a block.
+  void processAndClose(BufferedOutput b) { b.state = STATE_CLOSED; }
 
   /// Prefer splitting the current block over growing if it's sufficiently filled
   abstract boolean preferSplit();
@@ -870,7 +936,7 @@ abstract class CacheRootBufferedOutput extends BufferedOutput {
 }
 
 
-final class FlushingBufferedOutput extends CacheRootBufferedOutput {
+final class FlushingBufferedOutput extends TopLevelBufferedOutput {
   private final OutputStream out;
 
   FlushingBufferedOutput(byte[] buf, boolean bigEndian, int start, int pos, int lim, int initialBufferSize, boolean fixed, long totalLimit, OutputStream out) {
@@ -894,7 +960,7 @@ final class FlushingBufferedOutput extends CacheRootBufferedOutput {
     while(true) {
       var bn = b.next;
       var blen = b.pos - b.start;
-      if(!b.closed) {
+      if(b.state != BufferedOutput.STATE_CLOSED) {
         if((forceFlush && blen > 0) || !b.fixed && blen > initialBufferSize/2) {
           writeToOutput(b.buf, b.start, blen);
           b.totalFlushed += blen;

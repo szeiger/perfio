@@ -22,31 +22,31 @@ class OutputToInputBenchmark extends BenchUtil:
   final lazy val data = BenchmarkDataSet.forName(dataSet)
   import data._
 
-  @Benchmark
-  def jdk_ByteArrayOutputStream_growing(bh: Blackhole): Unit =
-    val bout = new MyByteArrayOutputStream
-    writeTo(bout)
-    val in = new ByteArrayInputStream(bout.getBuffer, 0, bout.getSize)
-    readFrom(bh, in)
-
-  @Benchmark
-  def jdk_ByteArrayOutputStream_preallocated(bh: Blackhole): Unit =
-    val bout = new MyByteArrayOutputStream(byteSize)
-    writeTo(bout)
-    val in = new ByteArrayInputStream(bout.getBuffer, 0, bout.getSize)
-    readFrom(bh, in)
-
-  @Benchmark
-  def jdk_PipeOutputStream(bh: Blackhole): Unit =
-    // This works best. Adding a BufferedOutputStream or BufferedInputStream only makes it slower.
-    val pout = new PipedOutputStream()
-    val pin = new PipedInputStream(pout)
-    val t1 = new Thread(() => writeTo(pout))
-    val t2 = new Thread(() => readFrom(bh, pin))
-    t1.start()
-    t2.start()
-    t1.join()
-    t2.join()
+//  @Benchmark
+//  def jdk_ByteArrayOutputStream_growing(bh: Blackhole): Unit =
+//    val bout = new MyByteArrayOutputStream
+//    writeTo(bout)
+//    val in = new ByteArrayInputStream(bout.getBuffer, 0, bout.getSize)
+//    readFrom(bh, in)
+//
+//  @Benchmark
+//  def jdk_ByteArrayOutputStream_preallocated(bh: Blackhole): Unit =
+//    val bout = new MyByteArrayOutputStream(byteSize)
+//    writeTo(bout)
+//    val in = new ByteArrayInputStream(bout.getBuffer, 0, bout.getSize)
+//    readFrom(bh, in)
+//
+//  @Benchmark
+//  def jdk_PipeOutputStream(bh: Blackhole): Unit =
+//    // This works best. Adding a BufferedOutputStream or BufferedInputStream only makes it slower.
+//    val pout = new PipedOutputStream()
+//    val pin = new PipedInputStream(pout)
+//    val t1 = new Thread(() => writeTo(pout))
+//    val t2 = new Thread(() => readFrom(bh, pin))
+//    t1.start()
+//    t2.start()
+//    t1.join()
+//    t2.join()
 
   @Benchmark
   def perfIO_ArrayBufferedOutput_growing(bh: Blackhole): Unit =

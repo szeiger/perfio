@@ -94,23 +94,23 @@ class BufferedOutputViewBenchmark extends BenchUtil:
       i += 1
     out.close()
 
-  @Benchmark
-  def array_DataOutputStream_direct_preallocated(bh: Blackhole): Unit =
-    val bout = new MyByteArrayOutputStream(byteSize)
-    val out = new DataOutputStream(bout)
-    writeDirectTo(out)
-    assert(bout.getSize == byteSize)
-    bh.consume(bout.getSize)
-    bh.consume(bout.getBuffer)
-
-  @Benchmark
-  def array_DataOutputStream_nested_preallocated(bh: Blackhole): Unit =
-    val bout = new MyByteArrayOutputStream(byteSize)
-    val out = new DataOutputStream(bout)
-    writeNestedTo(out)
-    assert(bout.getSize == byteSize)
-    bh.consume(bout.getSize)
-    bh.consume(bout.getBuffer)
+//  @Benchmark
+//  def array_DataOutputStream_direct_preallocated(bh: Blackhole): Unit =
+//    val bout = new MyByteArrayOutputStream(byteSize)
+//    val out = new DataOutputStream(bout)
+//    writeDirectTo(out)
+//    assert(bout.getSize == byteSize)
+//    bh.consume(bout.getSize)
+//    bh.consume(bout.getBuffer)
+//
+//  @Benchmark
+//  def array_DataOutputStream_nested_preallocated(bh: Blackhole): Unit =
+//    val bout = new MyByteArrayOutputStream(byteSize)
+//    val out = new DataOutputStream(bout)
+//    writeNestedTo(out)
+//    assert(bout.getSize == byteSize)
+//    bh.consume(bout.getSize)
+//    bh.consume(bout.getBuffer)
 
   @Benchmark
   def array_FlushingBufferedOutput_direct_preallocated(bh: Blackhole): Unit =
@@ -150,21 +150,21 @@ class BufferedOutputViewBenchmark extends BenchUtil:
     bh.consume(out.buffer)
     bh.consume(out.length)
 
-  @Benchmark
-  def file_DataOutputStream_direct(bh: Blackhole): Unit =
-    val fout = new FileOutputStream("/dev/null")
-    val bout = new BufferedOutputStream(fout)
-    val out = new DataOutputStream(bout)
-    writeDirectTo(out)
-    out.close()
-
-  @Benchmark
-  def file_DataOutputStream_nested(bh: Blackhole): Unit =
-    val fout = new FileOutputStream("/dev/null")
-    val bout = new BufferedOutputStream(fout)
-    val out = new DataOutputStream(bout)
-    writeNestedTo(out)
-    out.close()
+//  @Benchmark
+//  def file_DataOutputStream_direct(bh: Blackhole): Unit =
+//    val fout = new FileOutputStream("/dev/null")
+//    val bout = new BufferedOutputStream(fout)
+//    val out = new DataOutputStream(bout)
+//    writeDirectTo(out)
+//    out.close()
+//
+//  @Benchmark
+//  def file_DataOutputStream_nested(bh: Blackhole): Unit =
+//    val fout = new FileOutputStream("/dev/null")
+//    val bout = new BufferedOutputStream(fout)
+//    val out = new DataOutputStream(bout)
+//    writeNestedTo(out)
+//    out.close()
 
   @Benchmark
   def file_FlushingBufferedOutput_direct(bh: Blackhole): Unit =

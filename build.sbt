@@ -11,6 +11,7 @@ val runtimeOpts = Seq(
   "--add-modules", "jdk.incubator.vector",
   "--add-opens", "java.base/jdk.internal.misc=ALL-UNNAMED",
   "--add-opens", "java.base/java.lang=ALL-UNNAMED",
+  "-ea",
 ) ++ (if(release >= 22) Nil else Seq(
   "--enable-preview",
 ))

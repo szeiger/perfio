@@ -16,7 +16,7 @@ public final class PipeBufferedOutput extends BlockFlushingBufferedOutput {
   private final BlockingQueue<BufferedOutput> returnQueue = new LinkedBlockingQueue<>();
 
   PipeBufferedOutput(boolean bigEndian, int initialBufferSize, int blockDepth) {
-    super(bigEndian, initialBufferSize, blockDepth);
+    super(bigEndian, initialBufferSize);
     queue = new ArrayBlockingQueue<>(blockDepth);
   }
 

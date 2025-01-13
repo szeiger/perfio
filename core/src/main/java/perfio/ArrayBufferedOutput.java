@@ -34,7 +34,7 @@ public final class ArrayBufferedOutput extends AccumulatingBufferedOutput {
   void flushBlocks(boolean forceFlush) throws IOException {
     while(next != this) {
       var b = next;
-      if(!b.closed) return;
+      if(b.state != BufferedOutput.STATE_CLOSED) return;
       var blen = b.pos - b.start;
       if(blen > 0) flushSingle(b, true);
       else b.unlinkAndReturn();
@@ -52,7 +52,7 @@ public final class ArrayBufferedOutput extends AccumulatingBufferedOutput {
       var outrem = outbuf.length - outpos;
       if(outrem < blen) {
         if(blen + outpos < 0) throw new IOException("Buffer exceeds maximum array length");
-        growOutBuffer((int)(blen + outpos));
+        growOutBuffer(blen + outpos);
       }
       System.arraycopy(b.buf, b.start, outbuf, outpos, blen);
       outpos += blen;
@@ -74,7 +74,7 @@ public final class ArrayBufferedOutput extends AccumulatingBufferedOutput {
   }
 
   private void checkClosed() throws IOException {
-    if(!closed) throw new IOException("Cannot access buffer before closing");
+    if(state != BufferedOutput.STATE_CLOSED) throw new IOException("Cannot access buffer before closing");
   }
 
   /// Copy the data to a newly allocated byte array of the exact size.
