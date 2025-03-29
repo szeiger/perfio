@@ -18,12 +18,12 @@ abstract class BenchmarkDataSet:
 object BenchmarkDataSet:
   def forName(s: String): BenchmarkDataSet = s match
     case "num" => NumDataSet
+    case "numSmall" => NumDataSetSmall
     case "bytes" => BytesDataSet
     case "chunks" => ChunksDataSet
 
 
-object NumDataSet extends BenchmarkDataSet:
-  val count = 20000000
+class NumDataSet(count: Int) extends BenchmarkDataSet:
   val byteSize = count * 13
 
   def writeTo(out: OutputStream): Unit =
@@ -82,6 +82,9 @@ object NumDataSet extends BenchmarkDataSet:
       i += 1
     din.close()
   }
+
+object NumDataSet extends NumDataSet(20000000)
+object NumDataSetSmall extends NumDataSet(1000000)
 
 
 object BytesDataSet extends BenchmarkDataSet:

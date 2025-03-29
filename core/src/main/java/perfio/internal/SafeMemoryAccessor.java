@@ -1,9 +1,6 @@
 package perfio.internal;
 
-import java.nio.ByteOrder;
-
 import static perfio.internal.BufferUtil.*;
-import static perfio.internal.BufferUtil.BA_DOUBLE_LITTLE;
 
 final class SafeMemoryAccessor extends MemoryAccessor {
   private SafeMemoryAccessor() {}

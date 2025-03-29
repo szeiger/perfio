@@ -4,7 +4,6 @@ import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 
 import static perfio.internal.BufferUtil.*;
-import static perfio.internal.BufferUtil.BA_DOUBLE_LITTLE;
 
 public abstract class MemoryAccessor {
   public static final MemoryAccessor INSTANCE;

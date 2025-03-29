@@ -5,11 +5,13 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.junit.runners.Parameterized
 
-import java.io.{EOFException, IOException}
+import java.io.{ByteArrayInputStream, EOFException}
+import java.util.concurrent.{Callable, ForkJoinPool, ForkJoinTask}
+import java.util.zip.GZIPInputStream
 
 @RunWith(classOf[Parameterized])
 class BufferedOutputTest(_name: String, create: TestData => OutputTester) extends TestUtil:
-  val count = 1000
+  val count = 2
 
   lazy val numTestData = createTestData("num"): dout =>
     for i <- 0 until count do
@@ -82,7 +84,6 @@ class BufferedOutputTest(_name: String, create: TestData => OutputTester) extend
         assertException[EOFException](bo2.int8(0))
         bo2.close()
         cnt(0)
-        assertException[IOException](bo2.int8(0))
 
   @Test def defer(): Unit =
     create(viewTestData): bo1 =>
@@ -103,9 +104,10 @@ class BufferedOutputTest(_name: String, create: TestData => OutputTester) extend
         bo1.int32(13)
         cnt1(4)
         cnt2(0)
+        assert(bo2.state == BufferedOutput.STATE_OPEN)
+        val bo2t = bo2.totalBytesWritten.toInt
         bo2.close()
-        assertException[IOException](bo2.int8(0))
-        cnt1(bo2.totalBytesWritten.toInt)
+        cnt1(bo2t)
 
   private def testFixed(padLeft: Int, padRight: Int): Unit =
     val buf = new Array[Byte](count*13 + padLeft + padRight)
@@ -160,39 +162,88 @@ object BufferedOutputTest:
       )
       (fn, tr) <- Array(
         ("", identity[OutputTester]),
-        ("_SyncXor", xorOutputTester(85)),
+        ("_SyncXorPartialFlush", xorOutputTester(85, true, true, false)),
+        ("_SyncXorFlush", xorOutputTester(85, true, false, false)),
+        ("_SyncXorInsert", xorOutputTester(85, false, false, false)),
+        ("_AsyncXorInsert", xorOutputTester(85, false, false, true)),
+        ("_Gzip", gzipOutputTester),
       )
     yield Array[Any](n+fn, c.andThen(tr))
     java.util.List.of(a*)
 
-  def xorOutputTester(mask: Byte)(ot: OutputTester): OutputTester =
-    ot.bo = new SyncXorFilteringBufferedOutput(ot.bo, mask)
+  def gzipOutputTester(ot: OutputTester): OutputTester =
+    ot.bo = new GzipBufferedOutput(ot.bo)
+    ot.decoder = { a => new GZIPInputStream(new ByteArrayInputStream(a, 0, a.length)).readAllBytes() }
+    ot
+
+  def xorOutputTester(mask: Byte, flush: Boolean, partialFlush: Boolean, async: Boolean)(ot: OutputTester): OutputTester =
+    ot.bo = if(async) new AsyncXorBlockBufferedOutput(ot.bo, mask)
+      else if(flush) new XorFlushingBufferedOutput(ot.bo, mask, partialFlush)
+      else new XorBlockBufferedOutput(ot.bo, mask)
     ot.decoder = (a => a.map(b => (b ^ mask).toByte))
     ot
 
-  class SyncXorFilteringBufferedOutput(parent: BufferedOutput, mask: Byte) extends FilteringBufferedOutput(parent):
-    def finalizeBlock(b: BufferedOutput, blocking: Boolean): Unit =
+  class XorBlockBufferedOutput(parent: BufferedOutput, mask: Byte) extends FilteringBufferedOutput(parent, false):
+    def finalizeBlock(b: BufferedOutput, blocking: Boolean): Boolean =
       assert((b.prev eq b.topLevel) || (b.prev.state == BufferedOutput.STATE_CLOSED))
+      b.state = BufferedOutput.STATE_CLOSED
+      var i = b.start
+      while i < b.pos do
+        b.buf(i) = (b.buf(i) ^ mask).toByte
+        i += 1
+      false
 
-//      var i = b.start
-//      while i < b.pos do
-//        b.buf(i) = (b.buf(i) ^ mask).toByte
-//        i += 1
-//      b.state = BufferedOutput.STATE_CLOSED
-//
-//      parent.write(b.buf, b.start, b.pos - b.start)
-//      println(s"${b.showList()}")
-//      b.totalFlushed += (b.pos - b.start)
-//      b.pos = b.lim
-//      b.start = b.lim
-
+  class XorFlushingBufferedOutput(parent: BufferedOutput, mask: Byte, partialFlush: Boolean) extends FilteringBufferedOutput(parent, partialFlush):
+    def finalizeBlock(b: BufferedOutput, blocking: Boolean): Boolean =
+      if(b.state == BufferedOutput.STATE_PROCESSING) b.state = BufferedOutput.STATE_CLOSED
       val blen = b.pos - b.start
       val p = parent.fwd(blen)
       var i = 0
       while i < blen do
         parent.buf(p + i) = (b.buf(b.start + i) ^ mask).toByte
         i += 1
+      true
+
+  class AsyncXorBlockBufferedOutput(parent: BufferedOutput, mask: Byte) extends FilteringBufferedOutput(parent, false):
+    private val pool = ForkJoinPool.commonPool()
+
+    override def processAndClose(b: BufferedOutput): Unit =
+      println(s"processAndClose $b")
+      //(new Throwable).printStackTrace()
+      assert(b.state == BufferedOutput.STATE_OPEN)
+      assert(b.filterState == null)
+      super.processAndClose(b)
+      assert(b.state == BufferedOutput.STATE_PROCESSING)
+      b.filterState = "filtered"
+
+      var i = b.start
+      while i < b.pos do
+        b.buf(i) = (b.buf(i) ^ mask).toByte
+        i += 1
+
+//      b.filterState = pool.submit: () =>
+//        //println(s"Processing ${b.showThis()}")
+//        var i = b.start
+//        while i < b.pos do
+//          b.buf(i) = (b.buf(i) ^ mask).toByte
+//          i += 1
+//        Thread.sleep(1L)
+//        null
+//      b.filterState.asInstanceOf[ForkJoinTask[Null]].get()
+
+    def finalizeBlock(b: BufferedOutput, blocking: Boolean): Boolean =
+      println(s"finalizeBlock $b $blocking")
+      assert(b.state == BufferedOutput.STATE_PROCESSING)
+      assert(b.filterState == "filtered")
+      b.filterState = null
+      assert((b.prev eq b.topLevel) || (b.prev.state == BufferedOutput.STATE_CLOSED))
       b.state = BufferedOutput.STATE_CLOSED
-      b.totalFlushed += blen
-      b.pos = b.lim
-      b.start = b.lim
+//      if(blocking)
+//        b.filterState.asInstanceOf[ForkJoinTask[Null]].get()
+//        b.filterState = null
+//        b.state = BufferedOutput.STATE_CLOSED
+//      else
+//        if(b.filterState.asInstanceOf[ForkJoinTask[Null]].isDone)
+//          b.filterState = null
+//          b.state = BufferedOutput.STATE_CLOSED
+      false

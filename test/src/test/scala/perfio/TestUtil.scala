@@ -77,11 +77,11 @@ class TestData(val bytes: Array[Byte], val name: String, owner: Class[?]):
     OutputTester(this, bo)(Await.result(res, Duration.Inf))
 
   def createFixedBufferedOutput(buf: Array[Byte], start: Int = 0, len: Int = -1): OutputTester =
-    val bo = BufferedOutput.ofArray(buf, start, if(len == -1) buf.length-start else len)
-    new OutputTester(this, bo)(buf.slice(start, start+bo.totalBytesWritten.toInt)):
+    val initbo = BufferedOutput.ofArray(buf, start, if(len == -1) buf.length-start else len)
+    new OutputTester(this, initbo)(buf.slice(start, start+initbo.totalBytesWritten.toInt)):
       override def check(): Unit =
         super.check()
-        val checkLen = this.bo.totalBytesWritten.toInt
+        val checkLen = initbo.totalBytesWritten.toInt
         Assert.assertArrayEquals("Array prefix should be empty", new Array[Byte](start), buf.slice(0, start))
         Assert.assertArrayEquals("Array suffix should be empty", new Array[Byte](buf.length-start-checkLen), buf.slice(start + checkLen, buf.length))
 

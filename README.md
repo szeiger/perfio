@@ -129,7 +129,7 @@ When the length of the prefix is variable, you can use `defer` instead. This met
   b2.close();
 ```
 
-Both `BufferedInput` and `BufferedOutput` will reuse views by default. This means that you should not access any view after closing it (unless it was explicitly detached by calling `detach()`) because the object and/or its buffer may have been repurposed. This design makes the repeated use of views for writing small amounts of data very efficient.
+Both `BufferedInput` and `BufferedOutput` will reuse views by default. This means that you must not access any view after closing it (unless it was explicitly detached by calling `detach()`) because the object and/or its buffer may have been repurposed. This design makes the repeated use of views for writing small amounts of data very efficient. Note that a buffer may have already been reused by the time `close()` returns.
 
 ### Text I/O
 

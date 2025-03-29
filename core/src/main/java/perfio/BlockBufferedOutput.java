@@ -56,7 +56,7 @@ final class BlockBufferedOutputIterator extends BufferIterator {
   public Object next() throws IOException {
     if(block == root) return null;
     var b = skipEmpty(block == null ? root.next : block.next);
-    if(b == null) return false;
+    if(b == null) return null;
     block = b;
     return b;
   }

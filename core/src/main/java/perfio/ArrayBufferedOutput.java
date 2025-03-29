@@ -44,9 +44,18 @@ public final class ArrayBufferedOutput extends AccumulatingBufferedOutput {
   private void flushSingle(BufferedOutput b, boolean unlink) throws IOException {
     var blen = b.pos - b.start;
     if(outbuf == null) {
-      outbuf = b.buf;
-      outstart = b.start;
-      outpos = b.pos;
+      assert b == this || !fixed; // No prefix blocks allowed when outputting to a fixed array
+      if(b.buf.length < buf.length && pos == start && b.next == this && state == STATE_OPEN) {
+        // this.buf was pre-allocated to a larger size so we try to avoid switching to a smaller
+        // b.buf that we have to grow again later.
+        // TODO optimize non-trivial cases
+        System.arraycopy(b.buf, b.start, buf, pos, blen);
+        pos += blen;
+      } else {
+        outbuf = b.buf;
+        outstart = b.start;
+        outpos = b.pos;
+      }
       if(unlink) b.unlinkOnly();
     } else {
       var outrem = outbuf.length - outpos;
