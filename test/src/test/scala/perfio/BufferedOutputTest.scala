@@ -6,12 +6,12 @@ import org.junit.runner.RunWith
 import org.junit.runners.Parameterized
 
 import java.io.{ByteArrayInputStream, EOFException}
-import java.util.concurrent.{Callable, ForkJoinPool, ForkJoinTask}
+import java.util.concurrent.CompletableFuture
 import java.util.zip.GZIPInputStream
 
 @RunWith(classOf[Parameterized])
 class BufferedOutputTest(_name: String, create: TestData => OutputTester) extends TestUtil:
-  val count = 2
+  val count = 1000
 
   lazy val numTestData = createTestData("num"): dout =>
     for i <- 0 until count do
@@ -162,10 +162,14 @@ object BufferedOutputTest:
       )
       (fn, tr) <- Array(
         ("", identity[OutputTester]),
-        ("_SyncXorPartialFlush", xorOutputTester(85, true, true, false)),
-        ("_SyncXorFlush", xorOutputTester(85, true, false, false)),
-        ("_SyncXorInsert", xorOutputTester(85, false, false, false)),
-        ("_AsyncXorInsert", xorOutputTester(85, false, false, true)),
+        ("_SyncXorPartialFlush", xorOutputTester(new XorFlushingBufferedOutput(_, true))),
+        ("_SyncXorFlush", xorOutputTester(new XorFlushingBufferedOutput(_, false))),
+        ("_SyncXorBlock", xorOutputTester(new XorBlockBufferedOutput(_))),
+        ("_SyncXorBlockSwapping", xorOutputTester(new XorBlockSwappingBufferedOutput(_))),
+        ("_SimpleAsyncXor", xorOutputTester(new SimpleAsyncXorBlockBufferedOutput(_))),
+        ("_SimpleAsyncSequentialXor", xorOutputTester(new SimpleAsyncSequentialXorBlockBufferedOutput(_))),
+        ("_AsyncXor", xorOutputTester(new AsyncXorBlockBufferedOutput(_, false, 0))),
+        ("_AsyncSequentialXor", xorOutputTester(new AsyncXorBlockBufferedOutput(_, true, 0))),
         ("_Gzip", gzipOutputTester),
       )
     yield Array[Any](n+fn, c.andThen(tr))
@@ -176,74 +180,134 @@ object BufferedOutputTest:
     ot.decoder = { a => new GZIPInputStream(new ByteArrayInputStream(a, 0, a.length)).readAllBytes() }
     ot
 
-  def xorOutputTester(mask: Byte, flush: Boolean, partialFlush: Boolean, async: Boolean)(ot: OutputTester): OutputTester =
-    ot.bo = if(async) new AsyncXorBlockBufferedOutput(ot.bo, mask)
-      else if(flush) new XorFlushingBufferedOutput(ot.bo, mask, partialFlush)
-      else new XorBlockBufferedOutput(ot.bo, mask)
-    ot.decoder = (a => a.map(b => (b ^ mask).toByte))
+  def xorOutputTester(f: BufferedOutput => BufferedOutput)(ot: OutputTester): OutputTester =
+    ot.bo = f(ot.bo)
+    ot.decoder = (a => a.map(b => (b ^ 85).toByte))
     ot
 
-  class XorBlockBufferedOutput(parent: BufferedOutput, mask: Byte) extends FilteringBufferedOutput(parent, false):
-    def finalizeBlock(b: BufferedOutput, blocking: Boolean): Boolean =
-      assert((b.prev eq b.topLevel) || (b.prev.state == BufferedOutput.STATE_CLOSED))
-      b.state = BufferedOutput.STATE_CLOSED
-      var i = b.start
-      while i < b.pos do
-        b.buf(i) = (b.buf(i) ^ mask).toByte
-        i += 1
-      false
-
-  class XorFlushingBufferedOutput(parent: BufferedOutput, mask: Byte, partialFlush: Boolean) extends FilteringBufferedOutput(parent, partialFlush):
-    def finalizeBlock(b: BufferedOutput, blocking: Boolean): Boolean =
-      if(b.state == BufferedOutput.STATE_PROCESSING) b.state = BufferedOutput.STATE_CLOSED
+  class XorFlushingBufferedOutput(parent: BufferedOutput, partialFlush: Boolean) extends FilteringBufferedOutput(parent, partialFlush):
+    def filterBlock(b: BufferedOutput): Unit =
       val blen = b.pos - b.start
       val p = parent.fwd(blen)
       var i = 0
       while i < blen do
-        parent.buf(p + i) = (b.buf(b.start + i) ^ mask).toByte
+        parent.buf(p + i) = (b.buf(b.start + i) ^ 85.toByte).toByte
         i += 1
-      true
+      if(state == BufferedOutput.STATE_CLOSED) releaseBlock(b)
 
-  class AsyncXorBlockBufferedOutput(parent: BufferedOutput, mask: Byte) extends FilteringBufferedOutput(parent, false):
-    private val pool = ForkJoinPool.commonPool()
-
-    override def processAndClose(b: BufferedOutput): Unit =
-      println(s"processAndClose $b")
-      //(new Throwable).printStackTrace()
-      assert(b.state == BufferedOutput.STATE_OPEN)
-      assert(b.filterState == null)
-      super.processAndClose(b)
-      assert(b.state == BufferedOutput.STATE_PROCESSING)
-      b.filterState = "filtered"
-
+  class XorBlockBufferedOutput(parent: BufferedOutput) extends FilteringBufferedOutput(parent, false):
+    def filterBlock(b: BufferedOutput): Unit =
       var i = b.start
       while i < b.pos do
-        b.buf(i) = (b.buf(i) ^ mask).toByte
+        b.buf(i) = (b.buf(i) ^ 85.toByte).toByte
         i += 1
+      appendBlockToParent(b)
 
-//      b.filterState = pool.submit: () =>
-//        //println(s"Processing ${b.showThis()}")
-//        var i = b.start
-//        while i < b.pos do
-//          b.buf(i) = (b.buf(i) ^ mask).toByte
-//          i += 1
-//        Thread.sleep(1L)
-//        null
-//      b.filterState.asInstanceOf[ForkJoinTask[Null]].get()
+  class XorBlockSwappingBufferedOutput(parent: BufferedOutput) extends FilteringBufferedOutput(parent, false):
+    def filterBlock(b: BufferedOutput): Unit =
+      val out = allocBlock()
+      val blen = b.pos - b.start
+      var i = 0
+      while i < blen do
+        out.buf(i) = (b.buf(i + b.start) ^ 85.toByte).toByte
+        i += 1
+      out.start = 0
+      out.pos = blen
+      appendBlockToParent(out)
+      returnToCache(b)
 
-    def finalizeBlock(b: BufferedOutput, blocking: Boolean): Boolean =
-      println(s"finalizeBlock $b $blocking")
-      assert(b.state == BufferedOutput.STATE_PROCESSING)
-      assert(b.filterState == "filtered")
-      b.filterState = null
-      assert((b.prev eq b.topLevel) || (b.prev.state == BufferedOutput.STATE_CLOSED))
-      b.state = BufferedOutput.STATE_CLOSED
-//      if(blocking)
-//        b.filterState.asInstanceOf[ForkJoinTask[Null]].get()
-//        b.filterState = null
-//        b.state = BufferedOutput.STATE_CLOSED
-//      else
-//        if(b.filterState.asInstanceOf[ForkJoinTask[Null]].isDone)
-//          b.filterState = null
-//          b.state = BufferedOutput.STATE_CLOSED
-      false
+  class SimpleAsyncXorBlockBufferedOutput(parent: BufferedOutput) extends FilteringBufferedOutput(parent, false):
+    private var pending: BufferedOutput = null
+
+    private def enqueue(b: BufferedOutput): Unit =
+      if(pending == null)
+        pending = b
+        b.next = b
+        b.prev = b
+      else b.insertBefore(pending)
+
+    private def dequeueFirst(): BufferedOutput =
+      val p = pending
+      if(p.next eq p) pending = null
+      else
+        pending = p.next
+        p.unlinkOnly()
+      p
+
+    def filterBlock(b: BufferedOutput): Unit =
+      while pending != null && pending.filterState.asInstanceOf[CompletableFuture[Unit]].isDone do
+        val p = dequeueFirst()
+        appendBlockToParent(p)
+      b.filterState = CompletableFuture.runAsync: () =>
+        //println(s"Starting $b on ${Thread.currentThread()}")
+        //Thread.sleep(100L)
+        var i = b.start
+        while i < b.pos do
+          b.buf(i) = (b.buf(i) ^ 85.toByte).toByte
+          i += 1
+        //println(s"Finished $b on ${Thread.currentThread()}")
+      enqueue(b)
+
+
+    override protected def flushPending(): Unit =
+      while pending != null do
+        val p = dequeueFirst()
+        p.filterState.asInstanceOf[CompletableFuture[Unit]].get
+        appendBlockToParent(p)
+
+  class SimpleAsyncSequentialXorBlockBufferedOutput(parent: BufferedOutput) extends FilteringBufferedOutput(parent, false):
+    private var pending: BufferedOutput = null
+    private var previousFuture: CompletableFuture[?] = null
+
+    private def enqueue(b: BufferedOutput): Unit =
+      if(pending == null)
+        pending = b
+        b.next = b
+        b.prev = b
+      else b.insertBefore(pending)
+
+    private def dequeueFirst(): BufferedOutput =
+      val p = pending
+      if(p.next eq p) pending = null
+      else
+        pending = p.next
+        p.unlinkOnly()
+      p
+
+    def filterBlock(b: BufferedOutput): Unit =
+      while pending != null && pending.filterState.asInstanceOf[CompletableFuture[?]].isDone do
+        val p = dequeueFirst()
+        appendBlockToParent(p)
+      val r: Runnable = () =>
+        //println(s"Starting $b on ${Thread.currentThread()}")
+        //Thread.sleep(100L)
+        var i = b.start
+        while i < b.pos do
+          b.buf(i) = (b.buf(i) ^ 85.toByte).toByte
+          i += 1
+        //println(s"Finished $b on ${Thread.currentThread()}")
+      if(previousFuture == null)
+        previousFuture = CompletableFuture.runAsync(r)
+        b.filterState = previousFuture
+      else
+        previousFuture = previousFuture.thenRun(r)
+        b.filterState = previousFuture
+      enqueue(b)
+
+
+    override protected def flushPending(): Unit =
+      while pending != null do
+        val p = dequeueFirst()
+        p.filterState.asInstanceOf[CompletableFuture[Unit]].get
+        appendBlockToParent(p)
+
+  class AsyncXorBlockBufferedOutput(parent: BufferedOutput, sequential: Boolean, depth: Int) extends AsyncFilteringBufferedOutput(parent, sequential, depth):
+    def filterAsync(t: AsyncFilteringBufferedOutput#Task): Unit =
+      val tolen = t.to.buf.length min 1024 // force some buffer overflows to test the overflow logic
+      val fromlen = t.from.pos - t.from.start
+      val prlen = fromlen min tolen
+      var i = 0
+      while i < prlen do
+        t.to.int8((t.from.buf(i + t.from.start) ^ 85.toByte).toByte)
+        i += 1
+      t.from.start += prlen

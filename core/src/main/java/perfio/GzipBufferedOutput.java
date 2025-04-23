@@ -13,15 +13,9 @@ public class GzipBufferedOutput extends FilteringBufferedOutput {
     writeGzipHeader(parent);
   }
 
-  @Override
-  void flushBlocks(boolean forceFlush) throws IOException {
-    super.flushBlocks(forceFlush);
-  }
-
   @Override void finish() throws IOException {
     if(!defl.finished()) {
       try {
-        //System.out.println("***** finish");
         defl.finish();
         while(!defl.finished()) deflate();
         writeGzipTrailer(parent);
@@ -31,10 +25,7 @@ public class GzipBufferedOutput extends FilteringBufferedOutput {
   
   private void deflate() throws IOException {
     parent.ensureAvailable(1);
-    //var t0 = System.currentTimeMillis();
     var l = defl.deflate(parent.buf, parent.pos, parent.lim - parent.pos);
-    //var t1 = System.currentTimeMillis();
-    //System.out.println("*****   deflated to "+l+" bytes of "+(parent.lim - parent.pos)+" in "+(t1-t0)+" ms");
     parent.pos += l;
   }
 
@@ -50,14 +41,11 @@ public class GzipBufferedOutput extends FilteringBufferedOutput {
     }
   }
 
-  boolean finalizeBlock(BufferedOutput b, boolean blocking) throws IOException {
-    //System.out.println("***** finalizeBlock "+b.showThis()+", "+blocking);
+  protected void filterBlock(BufferedOutput b) throws IOException {
     defl.setInput(b.buf, b.start, b.pos - b.start);
     while(!defl.needsInput()) deflate();
     crc.update(b.buf, b.start, b.pos - b.start);
-    if(b.state == BufferedOutput.STATE_PROCESSING)
-      b.state = BufferedOutput.STATE_CLOSED;
-    return true;
+    if(b.state != STATE_OPEN) releaseBlock(b);
   }
 
   private void writeGzipHeader(BufferedOutput b) throws IOException {

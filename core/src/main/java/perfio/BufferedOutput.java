@@ -155,8 +155,7 @@ public abstract class BufferedOutput implements Closeable, Flushable {
   static final byte SHARING_RIGHT     = (byte)2; // buffer is shared with previous blocks only
   
   static final byte STATE_OPEN        = (byte)0;
-  static final byte STATE_PROCESSING  = (byte)1;
-  static final byte STATE_CLOSED      = (byte)2;
+  static final byte STATE_CLOSED      = (byte)1;
 
 
   // ======================================================= non-static parts:
@@ -525,7 +524,7 @@ public abstract class BufferedOutput implements Closeable, Flushable {
     var b = cache.getExclusiveBlock();
     totalFlushed += (pos-start);
     buf = b.reinit(buf, bigEndian, start, pos, lim, sharing, 0L, 0L, true, rootBlock, null, topLevel);
-    topLevel.processAndClose(b);
+    b.state = STATE_CLOSED;
     b.insertBefore(this);
     start = 0;
     pos = 0;
@@ -650,43 +649,42 @@ public abstract class BufferedOutput implements Closeable, Flushable {
   /// In all cases any nested BufferedOutputs that have not been closed yet are implicitly
   /// closed when closing this BufferedOutput.
   public final void close() throws IOException {
-    if(state == STATE_OPEN) {
-      if(!truncate) checkUnderflow();
-      topLevel.processAndClose(this);
-      lim = pos;
-      // We always unlink SHARING_LEFT when closing so we don't have to merge blocks later when
-      // flushing. They are always created by reserveShort() and they cannot be root blocks.
-      if(sharing == SHARING_LEFT) {
-        var n = next;
-        n.start = start;
-        n.totalFlushed -= (pos - start);
-        var pre = prev;
-        var r = rootBlock;
-        unlinkAndReturn();
-        if(pre == r) r.flushBlocks(false);
-      } else {
-        if(rootBlock == this) {
-          for(var b = next; b != this;) {
-            var bn = b.next;
-            if(b.state == STATE_OPEN) {
-              if(!b.truncate) b.checkUnderflow();
-              if(b.sharing == SHARING_LEFT) {
-                bn.start = b.start;
-                bn.totalFlushed -= (b.pos - b.start);
-                b.unlinkAndReturn();
-              } else {
-                b.lim = b.pos;
-                topLevel.processAndClose(b);
-              }
+    if(state != STATE_OPEN) return;
+    if(!truncate) checkUnderflow();
+    state = STATE_CLOSED;
+    lim = pos;
+    // We always unlink SHARING_LEFT when closing so we don't have to merge blocks later when
+    // flushing. They are always created by reserveShort() and they cannot be root blocks.
+    if(sharing == SHARING_LEFT) {
+      var n = next;
+      n.start = start;
+      n.totalFlushed -= (pos - start);
+      var pre = prev;
+      var r = rootBlock;
+      unlinkAndReturn();
+      if(pre == r) r.flushBlocks(false);
+    } else {
+      if(rootBlock == this) {
+        for(var b = next; b != this;) {
+          var bn = b.next;
+          if(b.state == STATE_OPEN) {
+            if(!b.truncate) b.checkUnderflow();
+            if(b.sharing == SHARING_LEFT) {
+              bn.start = b.start;
+              bn.totalFlushed -= (b.pos - b.start);
+              b.unlinkAndReturn();
+            } else {
+              b.lim = b.pos;
+              b.state = STATE_CLOSED;
             }
-            b = bn;
           }
-          if(this == topLevel) flushBlocks(true);
-        } else if(prev == rootBlock) rootBlock.flushBlocks(false);
-        assert state != STATE_OPEN;
-        assert(pos == lim);
-        closeUpstream();
-      }
+          b = bn;
+        }
+        if(this == topLevel) flushBlocks(true);
+      } else if(prev == rootBlock) rootBlock.flushBlocks(false);
+      assert state == STATE_CLOSED;
+      assert(pos == lim);
+      closeUpstream();
     }
   }
 
@@ -876,7 +874,6 @@ public abstract class BufferedOutput implements Closeable, Flushable {
   final String showState() {
     return switch(state) {
       case STATE_OPEN -> "O";
-      case STATE_PROCESSING -> "P";
       case STATE_CLOSED -> "C";
       default -> String.valueOf(state);
     };
@@ -931,10 +928,6 @@ abstract class TopLevelBufferedOutput extends BufferedOutput {
   }
 
   private BufferedOutput cachedExclusive, cachedShared = null; // single-linked lists (via `next`) of blocks cached for reuse
-
-  /// Mark the given block as closed. This method can be overridden in subclasses to perform
-  /// additional processing when closing a block.
-  void processAndClose(BufferedOutput b) { b.state = STATE_CLOSED; }
 
   /// Prefer splitting the current block over growing if it's sufficiently filled
   abstract boolean preferSplit();
