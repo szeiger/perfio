@@ -11,7 +11,6 @@ val runtimeOpts = Seq(
   "--add-modules", "jdk.incubator.vector",
   "--add-opens", "java.base/jdk.internal.misc=ALL-UNNAMED",
   "--add-opens", "java.base/java.lang=ALL-UNNAMED",
-  "-ea",
 ) ++ (if(release >= 22) Nil else Seq(
   "--enable-preview",
 ))
@@ -115,6 +114,7 @@ lazy val test_ = Project("test", file("test"))
     testFrameworks += TestFramework("hedgehog.sbt.Framework"),
     name := "perfio-test",
     publish / skip := true,
+    javaOptions += "-ea",
   )
 
 lazy val protoRuntime = (project in file("proto-runtime"))
@@ -146,6 +146,7 @@ lazy val proto = (project in file("proto"))
       outs
     }.taskValue,
     publish / skip := true,
+    javaOptions += "-ea",
   )
 
 lazy val protoBench = (project in file("proto-bench"))

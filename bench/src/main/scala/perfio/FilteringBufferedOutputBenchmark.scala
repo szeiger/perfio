@@ -278,7 +278,7 @@ class FilteringBufferedOutputBenchmark extends BenchUtil:
         appendBlockToParent(p.rootBlock)
         returnToCache(p)
 
-  class AsyncXorBlockBufferedOutput(parent: BufferedOutput, sequential: Boolean, depth: Int) extends AsyncFilteringBufferedOutput(parent, sequential, depth):
+  class AsyncXorBlockBufferedOutput(parent: BufferedOutput, sequential: Boolean, depth: Int) extends AsyncFilteringBufferedOutput(parent, sequential, depth, false):
     def filterAsync(t: AsyncFilteringBufferedOutput#Task): Unit =
       val tolen = t.to.buf.length
       val fromlen = t.from.pos - t.from.start

@@ -613,6 +613,7 @@ public abstract class BufferedOutput implements Closeable, Flushable {
 
   /// Unlink this block.
   void unlinkOnly() {
+    //System.out.println("unlinkOnly "+this.showThis());
     prev.next = next;
     next.prev = prev;
   }
@@ -945,6 +946,7 @@ abstract class TopLevelBufferedOutput extends BufferedOutput {
       b.next = cachedShared;
       cachedShared = b;
     } else {
+      //System.out.println("Returning exclusive block to "+this);
       b.next = cachedExclusive;
       cachedExclusive = b;
     }
@@ -953,7 +955,7 @@ abstract class TopLevelBufferedOutput extends BufferedOutput {
   /// Get a cached or new exclusive block.
   NestedBufferedOutput getExclusiveBlock() {
     if(cachedExclusive == null) {
-      //System.out.println("New exclusive block");
+      //System.out.println("New exclusive block in "+this);
       return new NestedBufferedOutput(new byte[initialBufferSize], false, this);
     } else {
       //System.out.println("Cached exclusive block "+cachedExclusive.showThis());

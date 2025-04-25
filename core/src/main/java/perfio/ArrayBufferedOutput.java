@@ -42,6 +42,7 @@ public final class ArrayBufferedOutput extends AccumulatingBufferedOutput {
   }
 
   private void flushSingle(BufferedOutput b, boolean unlink) throws IOException {
+    //System.out.println(showThis()+".flushSingle("+b.showThis()+")");
     var blen = b.pos - b.start;
     if(outbuf == null) {
       assert b == this || !fixed; // No prefix blocks allowed when outputting to a fixed array

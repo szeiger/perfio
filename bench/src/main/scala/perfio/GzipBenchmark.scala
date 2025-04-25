@@ -17,7 +17,8 @@ import java.util.zip.GZIPOutputStream
 @State(Scope.Benchmark)
 class GzipBenchmark extends BenchUtil:
 
-  @Param(Array("numSmall", "chunks"))
+  //@Param(Array("numSmall", "chunks", "chunksSlow", "randomChunks"))
+  @Param(Array("chunks"))
   var dataSet: String = null
   final lazy val data = BenchmarkDataSet.forName(dataSet)
   import data.*
@@ -34,6 +35,22 @@ class GzipBenchmark extends BenchUtil:
   def gzipBufferedOutput(bh: Blackhole): Unit =
     val out = BufferedOutput.growing(byteSize)
     val gout = new GzipBufferedOutput(out)
+    writeTo(gout)
+    bh.consume(out.buffer)
+    bh.consume(out.length)
+
+  @Benchmark
+  def asyncGzipBufferedOutput(bh: Blackhole): Unit =
+    val out = BufferedOutput.growing(byteSize)
+    val gout = new AsyncGzipBufferedOutput(out)
+    writeTo(gout)
+    bh.consume(out.buffer)
+    bh.consume(out.length)
+
+  @Benchmark
+  def asyncGzipBufferedOutputUnlimited(bh: Blackhole): Unit =
+    val out = BufferedOutput.growing(byteSize)
+    val gout = new AsyncGzipBufferedOutput(out, 0)
     writeTo(gout)
     bh.consume(out.buffer)
     bh.consume(out.length)

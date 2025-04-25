@@ -5,6 +5,7 @@ import org.openjdk.jmh.infra.Blackhole
 
 import java.io.{DataInputStream, DataOutputStream, InputStream, OutputStream}
 import java.nio.ByteBuffer
+import java.util.Random
 
 abstract class BenchmarkDataSet:
   def byteSize: Int
@@ -21,6 +22,8 @@ object BenchmarkDataSet:
     case "numSmall" => NumDataSetSmall
     case "bytes" => BytesDataSet
     case "chunks" => ChunksDataSet
+    case "chunksSlow" => ChunksSlowDataSet
+    case "randomChunks" => RandomChunksDataSet
 
 
 class NumDataSet(count: Int) extends BenchmarkDataSet:
@@ -135,15 +138,34 @@ object BytesDataSet extends BenchmarkDataSet:
   }
 
 
-object ChunksDataSet extends BenchmarkDataSet:
-  val count = 100000
-  val chunk = Array.tabulate[Byte](1024)(_.toByte)
-  val byteSize = count * 1024
+object ChunksDataSet extends CompressibleChunksDataSet(1024, 0)
+
+object RandomChunksDataSet extends RandomChunksDataSet(1024, 0)
+
+object ChunksSlowDataSet extends CompressibleChunksDataSet(1024, 2)
+
+class CompressibleChunksDataSet(chunkSize: Int, val delay: Long) extends ChunksDataSet:
+  val count = ((100000L * 1024) / chunkSize).toInt
+  val chunk = Array.tabulate[Byte](chunkSize)(_.toByte)
+  val byteSize = count * chunkSize
+
+class RandomChunksDataSet(chunkSize: Int, val delay: Long) extends ChunksDataSet:
+  val rnd = new Random(0L)
+  val count = ((100000L * 1024) / chunkSize).toInt
+  val chunk = Array.fill[Byte](chunkSize)(rnd.nextInt().toByte)
+  val byteSize = count * chunkSize
+
+abstract class ChunksDataSet extends BenchmarkDataSet:
+  val delay: Long
+  val count: Int
+  val chunk: Array[Byte]
+  val byteSize: Int
 
   def writeTo(out: OutputStream): Unit =
     var i = 0
     while i < count do
       out.write(chunk)
+      if(i % 1000 == 0) Thread.sleep(delay)
       i += 1
     out.close()
 
@@ -151,6 +173,7 @@ object ChunksDataSet extends BenchmarkDataSet:
     var i = 0
     while i < count do
       out.write(chunk)
+      if(i % 1000 == 0) Thread.sleep(delay)
       i += 1
     out.close()
 
@@ -158,12 +181,14 @@ object ChunksDataSet extends BenchmarkDataSet:
     var i = 0
     while i < count do
       out.put(chunk)
+      if(i % 1000 == 0) Thread.sleep(delay)
       i += 1
 
   def writeTo(out: BufferedOutput): Unit =
     var i = 0
     while i < count do
       out.write(chunk)
+      if(i % 1000 == 0) Thread.sleep(delay)
       i += 1
     out.close()
 

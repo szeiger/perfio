@@ -26,6 +26,7 @@ public class GzipBufferedOutput extends FilteringBufferedOutput {
   private void deflate() throws IOException {
     parent.ensureAvailable(1);
     var l = defl.deflate(parent.buf, parent.pos, parent.lim - parent.pos);
+    //System.out.println("compressed to "+l);
     parent.pos += l;
   }
 

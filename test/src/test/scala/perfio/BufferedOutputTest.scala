@@ -170,13 +170,14 @@ object BufferedOutputTest:
         ("_SimpleAsyncSequentialXor", xorOutputTester(new SimpleAsyncSequentialXorBlockBufferedOutput(_))),
         ("_AsyncXor", xorOutputTester(new AsyncXorBlockBufferedOutput(_, false, 0))),
         ("_AsyncSequentialXor", xorOutputTester(new AsyncXorBlockBufferedOutput(_, true, 0))),
-        ("_Gzip", gzipOutputTester),
+        ("_Gzip", gzipOutputTester(new GzipBufferedOutput(_))),
+        ("_AsyncGzip", gzipOutputTester(new AsyncGzipBufferedOutput(_))),
       )
     yield Array[Any](n+fn, c.andThen(tr))
     java.util.List.of(a*)
 
-  def gzipOutputTester(ot: OutputTester): OutputTester =
-    ot.bo = new GzipBufferedOutput(ot.bo)
+  def gzipOutputTester(f: BufferedOutput => BufferedOutput)(ot: OutputTester): OutputTester =
+    ot.bo = f(ot.bo)
     ot.decoder = { a => new GZIPInputStream(new ByteArrayInputStream(a, 0, a.length)).readAllBytes() }
     ot
 
@@ -301,7 +302,7 @@ object BufferedOutputTest:
         p.filterState.asInstanceOf[CompletableFuture[Unit]].get
         appendBlockToParent(p)
 
-  class AsyncXorBlockBufferedOutput(parent: BufferedOutput, sequential: Boolean, depth: Int) extends AsyncFilteringBufferedOutput(parent, sequential, depth):
+  class AsyncXorBlockBufferedOutput(parent: BufferedOutput, sequential: Boolean, depth: Int) extends AsyncFilteringBufferedOutput(parent, sequential, depth, false):
     def filterAsync(t: AsyncFilteringBufferedOutput#Task): Unit =
       val tolen = t.to.buf.length min 1024 // force some buffer overflows to test the overflow logic
       val fromlen = t.from.pos - t.from.start

@@ -1,7 +1,14 @@
 package perfio;
 
+import java.io.EOFException;
 import java.io.IOException;
 
+/// Base class for filtering [BufferedOutput] implementations that process the output data and
+/// append it to a parent buffer.
+/// 
+/// Synchronous filters need to implement at least [#filterBlock(BufferedOutput)] and potentially
+/// override [#finish()]. Asynchronous filters must also override [#flushPending()] (but most
+/// asynchronous filters will want to extend [AsyncFilteringBufferedOutput] instead).
 public abstract class FilteringBufferedOutput extends TopLevelBufferedOutput {
   protected final BufferedOutput parent;
   private final boolean flushPartial;
@@ -29,11 +36,13 @@ public abstract class FilteringBufferedOutput extends TopLevelBufferedOutput {
     parent.close();
   }
 
-  /// Close this FilteringBufferedOutput without closing the parent.
-  public void end() throws IOException {
-    super.closeUpstream();
-    finish();
-  }
+  ///// Close this FilteringBufferedOutput without closing the parent.
+  //public void end() throws IOException {
+  //  if(state == STATE_OPEN) {
+  //    super.closeUpstream();
+  //    finish();
+  //  }
+  //}
 
   /// Close the filter and clean up resources without closing or flushing the parent.
   void finish() throws IOException {}
@@ -59,23 +68,6 @@ public abstract class FilteringBufferedOutput extends TopLevelBufferedOutput {
       } else break;
     }
     if(forceFlush) flushPending();
-  }
-
-  private NestedBufferedOutput copyStateToCached() {
-    var to = cachedBlock;
-    to.buf = this.buf;
-    to.start = this.start;
-    to.pos = this.pos;
-    to.lim = this.lim;
-    assert(this.sharing != SHARING_LEFT);
-    to.sharing = SHARING_EXCLUSIVE;
-    to.totalFlushed = 0;
-    assert(this.state == STATE_CLOSED);
-    cachedBlock = null;
-    buf = null;
-    prev = null;
-    next = null;
-    return to;
   }
 
   /// Process the given non-empty closed block `b`. This method is called in output order for all
@@ -131,6 +123,7 @@ public abstract class FilteringBufferedOutput extends TopLevelBufferedOutput {
   /// Append a block to the parent.
   protected final void appendBlockToParent(BufferedOutput b) throws IOException {
     int blen = b.pos - b.start;
+    if(parent.rootBlock.totalBytesWritten() + blen > parent.totalLimit) throw new EOFException();
     var emptyParent = parent.pos == parent.start && !parent.fixed;
     if(emptyParent) {
       //System.out.println("Insert into empty parent");
@@ -143,22 +136,62 @@ public abstract class FilteringBufferedOutput extends TopLevelBufferedOutput {
       b.state = STATE_CLOSED;
       if(b.prev == parent.rootBlock) parent.rootBlock.flushBlocks(false);
       //System.out.println(parent.rootBlock.showList());
-    } else if(parent.available() >= b.pos - b.start) {
+    } else if(parent.available() >= b.pos - b.start || parent.fixed) {
       //System.out.println("Copy to parent");
       var p = parent.fwd(blen);
       System.arraycopy(b.buf, b.start, parent.buf, p, blen);
-      b.totalFlushed += blen;
-      b.pos = b.lim;
-      b.start = b.lim;
       releaseBlock(b);
-    } else {
-      //System.out.println("Insert & swap");
-      //TODO
-      parent.write(b.buf, b.start, blen);
-      b.totalFlushed += blen;
-      b.pos = b.lim;
-      b.start = b.lim;
-      releaseBlock(b);
-    }
+    } else appendBlockToParentSwap(b);
+  }
+
+  private NestedBufferedOutput copyStateToCached() {
+    var to = cachedBlock;
+    to.buf = this.buf;
+    to.start = this.start;
+    to.pos = this.pos;
+    to.lim = this.lim;
+    assert(this.sharing != SHARING_LEFT);
+    to.sharing = SHARING_EXCLUSIVE;
+    to.totalFlushed = 0;
+    assert(this.state == STATE_CLOSED);
+    clearLocal();
+    return to;
+  }
+  
+  private void clearLocal() {
+    cachedBlock = null;
+    buf = null;
+    prev = null;
+    next = null;
+  }
+
+  private void appendBlockToParentSwap(BufferedOutput b) throws IOException {
+    //System.out.println("Insert & swap");
+    BufferedOutput bt;
+    if(b == this) {
+      bt = cachedBlock;
+      clearLocal();
+    } else bt = b;
+    var tmpbuf = parent.buf;
+    var tmpstart = parent.start;
+    var tmppos = parent.pos;
+    var tmpsharing = parent.sharing;
+    var len = tmppos - tmpstart;
+    parent.rootBlock.totalFlushed += len;
+    bt.totalFlushed = 0;
+    parent.buf = b.buf;
+    parent.start = b.start;
+    parent.pos = b.pos;
+    parent.lim = parent.buf.length;
+    parent.sharing = b.sharing;
+    bt.buf = tmpbuf;
+    bt.start = tmpstart;
+    bt.pos = tmppos;
+    bt.sharing = tmpsharing;
+    bt.rootBlock = parent.rootBlock;
+    bt.topLevel = parent.topLevel;
+    bt.insertBefore(parent);
+    bt.state = STATE_CLOSED;
+    if(bt.prev == parent.rootBlock) parent.rootBlock.flushBlocks(false);
   }
 }
