@@ -33,6 +33,7 @@ public abstract class FilteringBufferedOutput extends TopLevelBufferedOutput {
   @Override void closeUpstream() throws IOException {
     super.closeUpstream();
     finish();
+    cleanUp();
     parent.close();
   }
 
@@ -44,8 +45,11 @@ public abstract class FilteringBufferedOutput extends TopLevelBufferedOutput {
   //  }
   //}
 
-  /// Close the filter and clean up resources without closing or flushing the parent.
-  void finish() throws IOException {}
+  /// Close the filter without closing or flushing the parent.
+  protected void finish() throws IOException {}
+
+  /// Clean up resources when the filter is closed.
+  protected void cleanUp() throws IOException {}
 
   void flushBlocks(boolean forceFlush) throws IOException {
     while(true) {

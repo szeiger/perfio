@@ -24,20 +24,27 @@ class GzipBenchmark extends BenchUtil:
   import data.*
 
   @Benchmark
-  def gzipOutputStream(bh: Blackhole): Unit =
-    val bout = new MyByteArrayOutputStream(byteSize)
-    val gout = new GZIPOutputStream(bout)
-    writeTo(gout)
-    bh.consume(bout.getSize)
-    bh.consume(bout.getBuffer)
-
-  @Benchmark
-  def gzipBufferedOutput(bh: Blackhole): Unit =
+  def noopBufferedOutput(bh: Blackhole): Unit =
     val out = BufferedOutput.growing(byteSize)
-    val gout = new GzipBufferedOutput(out)
-    writeTo(gout)
+    writeTo(out)
     bh.consume(out.buffer)
     bh.consume(out.length)
+
+//  @Benchmark
+//  def gzipOutputStream(bh: Blackhole): Unit =
+//    val bout = new MyByteArrayOutputStream(byteSize)
+//    val gout = new GZIPOutputStream(bout)
+//    writeTo(gout)
+//    bh.consume(bout.getSize)
+//    bh.consume(bout.getBuffer)
+//
+//  @Benchmark
+//  def gzipBufferedOutput(bh: Blackhole): Unit =
+//    val out = BufferedOutput.growing(byteSize)
+//    val gout = new GzipBufferedOutput(out)
+//    writeTo(gout)
+//    bh.consume(out.buffer)
+//    bh.consume(out.length)
 
   @Benchmark
   def asyncGzipBufferedOutput(bh: Blackhole): Unit =
@@ -51,6 +58,30 @@ class GzipBenchmark extends BenchUtil:
   def asyncGzipBufferedOutputUnlimited(bh: Blackhole): Unit =
     val out = BufferedOutput.growing(byteSize)
     val gout = new AsyncGzipBufferedOutput(out, 0)
+    writeTo(gout)
+    bh.consume(out.buffer)
+    bh.consume(out.length)
+
+  @Benchmark
+  def parallelGzipBufferedOutput(bh: Blackhole): Unit =
+    val out = BufferedOutput.growing(byteSize)
+    val gout = new ParallelGzipBufferedOutput(out)
+    writeTo(gout)
+    bh.consume(out.buffer)
+    bh.consume(out.length)
+
+  @Benchmark
+  def parallelGzipBufferedOutputSinglePart(bh: Blackhole): Unit =
+    val out = BufferedOutput.growing(byteSize)
+    val gout = new ParallelGzipBufferedOutput(out, -1, Int.MaxValue)
+    writeTo(gout)
+    bh.consume(out.buffer)
+    bh.consume(out.length)
+
+  @Benchmark
+  def parallelGzipBufferedOutputNoPart(bh: Blackhole): Unit =
+    val out = BufferedOutput.growing(byteSize)
+    val gout = new ParallelGzipBufferedOutput(out, -1, 0)
     writeTo(gout)
     bh.consume(out.buffer)
     bh.consume(out.length)

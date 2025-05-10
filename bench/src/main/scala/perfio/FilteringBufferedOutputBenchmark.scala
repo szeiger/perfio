@@ -45,29 +45,29 @@ class FilteringBufferedOutputBenchmark extends BenchUtil:
     writeTo(f(out))
     out.close()
 
-  @Benchmark
-  def syncInPlace(bh: Blackhole): Unit = runArray(bh)(new XorBlockBufferedOutput(_))
-
-  @Benchmark
-  def sync(bh: Blackhole): Unit = runArray(bh)(new XorBlockSwappingBufferedOutput(_))
-
-  @Benchmark
-  def partialFlushing(bh: Blackhole): Unit = runArray(bh)(new XorFlushingBufferedOutput(_, true))
-
-  @Benchmark
-  def flushing(bh: Blackhole): Unit = runArray(bh)(new XorFlushingBufferedOutput(_, false))
-
-  @Benchmark
-  def simpleParallelInPlace(bh: Blackhole): Unit = runArray(bh)(new SimpleAsyncXorBlockBufferedOutput(_))
-
-  @Benchmark
-  def simpleAsyncInPlace(bh: Blackhole): Unit = runArray(bh)(new SimpleAsyncSequentialXorBlockBufferedOutput(_))
-
-  @Benchmark
-  def simpleParallel(bh: Blackhole): Unit = runArray(bh)(new SimpleAsyncSwappingXorBlockBufferedOutput(_))
-
-  @Benchmark
-  def simpleAsync(bh: Blackhole): Unit = runArray(bh)(new SimpleAsyncSequentialSwappingXorBlockBufferedOutput(_))
+//  @Benchmark
+//  def syncInPlace(bh: Blackhole): Unit = runArray(bh)(new XorBlockBufferedOutput(_))
+//
+//  @Benchmark
+//  def sync(bh: Blackhole): Unit = runArray(bh)(new XorBlockSwappingBufferedOutput(_))
+//
+//  @Benchmark
+//  def partialFlushing(bh: Blackhole): Unit = runArray(bh)(new XorFlushingBufferedOutput(_, true))
+//
+//  @Benchmark
+//  def flushing(bh: Blackhole): Unit = runArray(bh)(new XorFlushingBufferedOutput(_, false))
+//
+//  @Benchmark
+//  def simpleParallelInPlace(bh: Blackhole): Unit = runArray(bh)(new SimpleAsyncXorBlockBufferedOutput(_))
+//
+//  @Benchmark
+//  def simpleAsyncInPlace(bh: Blackhole): Unit = runArray(bh)(new SimpleAsyncSequentialXorBlockBufferedOutput(_))
+//
+//  @Benchmark
+//  def simpleParallel(bh: Blackhole): Unit = runArray(bh)(new SimpleAsyncSwappingXorBlockBufferedOutput(_))
+//
+//  @Benchmark
+//  def simpleAsync(bh: Blackhole): Unit = runArray(bh)(new SimpleAsyncSequentialSwappingXorBlockBufferedOutput(_))
 
   @Benchmark
   def parallel(bh: Blackhole): Unit = runArray(bh)(new AsyncXorBlockBufferedOutput(_, false, -1))
@@ -278,16 +278,16 @@ class FilteringBufferedOutputBenchmark extends BenchUtil:
         appendBlockToParent(p.rootBlock)
         returnToCache(p)
 
-  class AsyncXorBlockBufferedOutput(parent: BufferedOutput, sequential: Boolean, depth: Int) extends AsyncFilteringBufferedOutput(parent, sequential, depth, false):
+  class AsyncXorBlockBufferedOutput(parent: BufferedOutput, sequential: Boolean, depth: Int) extends AsyncFilteringBufferedOutput(parent, sequential, depth, false, 0):
     def filterAsync(t: AsyncFilteringBufferedOutput#Task): Unit =
       val tolen = t.to.buf.length
-      val fromlen = t.from.pos - t.from.start
-      val prlen = fromlen min tolen
+      val prlen = t.length min tolen
       var i = 0
       while i < prlen do
-        t.to.buf(i) = (t.from.buf(i + t.from.start) ^ 85.toByte).toByte
+        t.to.buf(i) = (t.buf(i + t.start) ^ 85.toByte).toByte
         i += 1
       t.to.start = 0
       t.to.pos = prlen
-      t.from.start += prlen
+      t.start += prlen
+      if(t.start == t.end) t.consume()
       //Thread.sleep(0, 100000)

@@ -506,7 +506,7 @@ public abstract class BufferedOutput implements Closeable, Flushable {
     //System.out.println("***** flushAndGrow("+count+") in "+showThis());
     checkState();
     if(fixed) return;
-    if(topLevel.preferSplit() && lim-pos <= topLevel.initialBufferSize/2) { //TODO try to flush first?
+    if(topLevel.preferSplit() && lim-pos <= topLevel.initialBufferSize/2 && count <= topLevel.initialBufferSize) { //TODO try to flush first?
       // switch to a new buffer if this one is sufficiently filled
       newBuffer();
     } else if(prev == rootBlock) {

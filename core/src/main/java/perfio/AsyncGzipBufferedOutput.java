@@ -9,13 +9,13 @@ public class AsyncGzipBufferedOutput extends AsyncFilteringBufferedOutput {
   private final CRC32 crc = new CRC32();
 
   public AsyncGzipBufferedOutput(BufferedOutput parent, int depth) throws IOException {
-    super(parent, true, depth, true);
-    writeGzipHeader(parent);
+    super(parent, true, depth, true, 0);
+    GzipUtil.writeHeader(parent);
   }
 
   public AsyncGzipBufferedOutput(BufferedOutput parent) throws IOException { this(parent, 2); }
 
-  @Override void finish() throws IOException {
+  @Override protected void finish() throws IOException {
     if(!defl.finished()) {
       try {
         defl.finish();
@@ -23,27 +23,18 @@ public class AsyncGzipBufferedOutput extends AsyncFilteringBufferedOutput {
           parent.ensureAvailable(1);
           parent.pos += defl.deflate(parent.buf, parent.pos, parent.lim - parent.pos);
         }
-        writeGzipTrailer(parent);
+        GzipUtil.writeTrailer(parent, crc.getValue(), defl.getTotalIn());
       } finally { defl.end(); }
     }
   }
 
   protected void filterAsync(Task t) {
-    var b = t.from;
-    if(!t.continuation) {
-      crc.update(b.buf, b.start, b.pos - b.start);
-      defl.setInput(b.buf, b.start, b.pos - b.start);
+    if(t.state == Task.STATE_NEW) {
+      crc.update(t.buf, t.start, t.end - t.start);
+      defl.setInput(t.buf, t.start, t.end - t.start);
     }
     var o = t.to;
     o.pos += defl.deflate(o.buf, o.start, o.buf.length-o.start);
-    if(defl.needsInput()) b.start = b.pos;
-  }
-
-  private void writeGzipHeader(BufferedOutput b) throws IOException {
-    b.int64l(0x88b1f).int16l((short)0xff00);
-  }
-
-  private void writeGzipTrailer(BufferedOutput b) throws IOException {
-    b.int32l((int)crc.getValue()).int32l(defl.getTotalIn());
+    if(defl.needsInput()) t.consume();
   }
 }

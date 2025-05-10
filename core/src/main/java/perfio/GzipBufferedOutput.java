@@ -10,15 +10,15 @@ public class GzipBufferedOutput extends FilteringBufferedOutput {
 
   public GzipBufferedOutput(BufferedOutput parent) throws IOException {
     super(parent, true);
-    writeGzipHeader(parent);
+    GzipUtil.writeHeader(parent);
   }
 
-  @Override void finish() throws IOException {
+  @Override protected void finish() throws IOException {
     if(!defl.finished()) {
       try {
         defl.finish();
         while(!defl.finished()) deflate();
-        writeGzipTrailer(parent);
+        GzipUtil.writeTrailer(parent, crc.getValue(), defl.getTotalIn());
       } finally { defl.end(); }
     }
   }
@@ -48,12 +48,15 @@ public class GzipBufferedOutput extends FilteringBufferedOutput {
     crc.update(b.buf, b.start, b.pos - b.start);
     if(b.state != STATE_OPEN) releaseBlock(b);
   }
+}
 
-  private void writeGzipHeader(BufferedOutput b) throws IOException {
+
+class GzipUtil {
+  static void writeHeader(BufferedOutput b) throws IOException {
     b.int64l(0x88b1f).int16l((short)0xff00);
   }
 
-  private void writeGzipTrailer(BufferedOutput b) throws IOException {
-    b.int32l((int)crc.getValue()).int32l(defl.getTotalIn());
+  static void writeTrailer(BufferedOutput b, long crc, int len) throws IOException {
+    b.int32l((int)crc).int32l(len);
   }
 }
