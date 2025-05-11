@@ -104,7 +104,7 @@ class FilteringBufferedOutputBenchmark extends BenchUtil:
       out.start = 0
       out.pos = blen
       appendBlockToParent(out)
-      returnToCache(b)
+      releaseBlock(b)
 
   class SimpleAsyncXorBlockBufferedOutput(parent: BufferedOutput) extends FilteringBufferedOutput(parent, false):
     private var pending: BufferedOutput = null
@@ -206,7 +206,7 @@ class FilteringBufferedOutputBenchmark extends BenchUtil:
       while pending != null && pending.filterState.asInstanceOf[CompletableFuture[?]].isDone do
         val p = dequeueFirst()
         appendBlockToParent(p.rootBlock)
-        returnToCache(p)
+        releaseBlock(p)
 
       b.rootBlock = allocBlock()
       val r: Runnable = () =>
@@ -226,7 +226,7 @@ class FilteringBufferedOutputBenchmark extends BenchUtil:
         val p = dequeueFirst()
         p.filterState.asInstanceOf[CompletableFuture[Unit]].get
         appendBlockToParent(p.rootBlock)
-        returnToCache(p)
+        releaseBlock(p)
 
   class SimpleAsyncSequentialSwappingXorBlockBufferedOutput(parent: BufferedOutput) extends FilteringBufferedOutput(parent, false):
     private var pending: BufferedOutput = null
@@ -251,7 +251,7 @@ class FilteringBufferedOutputBenchmark extends BenchUtil:
       while pending != null && pending.filterState.asInstanceOf[CompletableFuture[?]].isDone do
         val p = dequeueFirst()
         appendBlockToParent(p.rootBlock)
-        returnToCache(p)
+        releaseBlock(p)
 
       b.rootBlock = allocBlock()
       val r: Runnable = () =>
@@ -276,7 +276,7 @@ class FilteringBufferedOutputBenchmark extends BenchUtil:
         val p = dequeueFirst()
         p.filterState.asInstanceOf[CompletableFuture[Unit]].get
         appendBlockToParent(p.rootBlock)
-        returnToCache(p)
+        releaseBlock(p)
 
   class AsyncXorBlockBufferedOutput(parent: BufferedOutput, sequential: Boolean, depth: Int) extends AsyncFilteringBufferedOutput(parent, sequential, depth, false, 0):
     def filterAsync(t: AsyncFilteringBufferedOutput#Task): Unit =

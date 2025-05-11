@@ -118,7 +118,7 @@ public abstract class FilteringBufferedOutput extends TopLevelBufferedOutput {
       b.buf = buf;
       cachedBlock = null;
     }
-    cache.returnToCache(b);
+    cache.returnToCache((NestedBufferedOutput)b);
   }
 
   /// Get a block from the cache.

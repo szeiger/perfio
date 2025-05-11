@@ -595,7 +595,7 @@ public abstract class BufferedOutput implements Closeable, Flushable {
     b.prev = this;
   }
 
-  /// Insert this block and its prefix list before the given block. Must only be called on a root block.
+  /// Insert this block and its prefix list before the given block.
   void insertAllBefore(BufferedOutput b) {
     var n = next;
     n.prev = b.prev;
@@ -608,7 +608,7 @@ public abstract class BufferedOutput implements Closeable, Flushable {
   void unlinkAndReturn() {
     prev.next = next;
     next.prev = prev;
-    cache.returnToCache(this);
+    cache.returnToCache((NestedBufferedOutput)this);
   }
 
   /// Unlink this block.
@@ -766,7 +766,7 @@ public abstract class BufferedOutput implements Closeable, Flushable {
       pos += blen;
       var bn = b.next;
       if(b == r) {
-        cache.returnToCache(r);
+        cache.returnToCache((NestedBufferedOutput)r);
         return true;
       }
       b.unlinkAndReturn();
@@ -885,6 +885,8 @@ public abstract class BufferedOutput implements Closeable, Flushable {
 final class NestedBufferedOutput extends BufferedOutput {
   /// The parent from which this block was created by [#defer()], otherwise null.
   private BufferedOutput parent = null;
+  
+  boolean nocache;
 
   NestedBufferedOutput(byte[] buf, boolean fixed, TopLevelBufferedOutput topLevel) {
     super(buf, false, 0, 0, 0, fixed, Long.MAX_VALUE, topLevel, topLevel);
@@ -928,7 +930,7 @@ abstract class TopLevelBufferedOutput extends BufferedOutput {
     this.initialBufferSize = initialBufferSize;
   }
 
-  private BufferedOutput cachedExclusive, cachedShared = null; // single-linked lists (via `next`) of blocks cached for reuse
+  private NestedBufferedOutput cachedExclusive, cachedShared = null; // single-linked lists (via `next`) of blocks cached for reuse
 
   /// Prefer splitting the current block over growing if it's sufficiently filled
   abstract boolean preferSplit();
@@ -938,17 +940,19 @@ abstract class TopLevelBufferedOutput extends BufferedOutput {
     cachedShared = null;
   }
 
-  void returnToCache(BufferedOutput b) {
-    b.topLevel = null;
-    b.rootBlock = null;
-    if(b.sharing == SHARING_LEFT) {
-      b.buf = null;
-      b.next = cachedShared;
-      cachedShared = b;
-    } else {
-      //System.out.println("Returning exclusive block to "+this);
-      b.next = cachedExclusive;
-      cachedExclusive = b;
+  void returnToCache(NestedBufferedOutput b) {
+    if(!b.nocache) {
+      b.topLevel = null;
+      b.rootBlock = null;
+      if(b.sharing == SHARING_LEFT) {
+        b.buf = null;
+        b.next = cachedShared;
+        cachedShared = b;
+      } else {
+        //System.out.println("Returning exclusive block to "+this);
+        b.next = cachedExclusive;
+        cachedExclusive = b;
+      }
     }
   }
 
@@ -960,8 +964,8 @@ abstract class TopLevelBufferedOutput extends BufferedOutput {
     } else {
       //System.out.println("Cached exclusive block "+cachedExclusive.showThis());
       var b = cachedExclusive;
-      cachedExclusive = b.next;
-      return (NestedBufferedOutput)b;
+      cachedExclusive = (NestedBufferedOutput)b.next;
+      return b;
     }
   }
 
@@ -973,8 +977,8 @@ abstract class TopLevelBufferedOutput extends BufferedOutput {
     } else {
       //System.out.println("Cached shared block");
       var b = cachedShared;
-      cachedShared = b.next;
-      return (NestedBufferedOutput)b;
+      cachedShared = (NestedBufferedOutput)b.next;
+      return b;
     }
   }
 }

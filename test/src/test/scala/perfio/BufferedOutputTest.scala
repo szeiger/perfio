@@ -217,7 +217,7 @@ object BufferedOutputTest:
       out.start = 0
       out.pos = blen
       appendBlockToParent(out)
-      returnToCache(b)
+      releaseBlock(b)
 
   class SimpleAsyncXorBlockBufferedOutput(parent: BufferedOutput) extends FilteringBufferedOutput(parent, false):
     private var pending: BufferedOutput = null

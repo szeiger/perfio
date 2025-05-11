@@ -1,7 +1,12 @@
 package perfio;
 
+import perfio.internal.BufferUtil;
+
 import java.io.Closeable;
 import java.io.IOException;
+import java.lang.invoke.MethodHandles;
+import java.lang.invoke.MethodType;
+import java.lang.invoke.VarHandle;
 import java.util.concurrent.*;
 
 /// This class provides a convenient base for asynchronous and parallel [FilteringBufferedOutput]
@@ -36,10 +41,10 @@ public abstract class AsyncFilteringBufferedOutput extends FilteringBufferedOutp
     public int start, end, totalLength;
     public byte state;
     private boolean consumed, isLastInPartition, ownsSourceBlock;
-    
+
     /// Partition-specific data
     public Object data;
-    
+
     /// The task starts a new partition with a new input block and a new output block
     public static final byte STATE_NEW = 0;
     /// The task is resubmitted with a new output block after an overflow
@@ -48,7 +53,7 @@ public abstract class AsyncFilteringBufferedOutput extends FilteringBufferedOutp
     /// when a fixed partition size is set. If this is the last input block in the stream, it may
     /// be empty.
     public static final byte STATE_UNDERFLOWED = 2;
-    
+
     private Task() {}
 
     public void run() {
@@ -56,21 +61,32 @@ public abstract class AsyncFilteringBufferedOutput extends FilteringBufferedOutp
         data = prevInPartition.data;
         prevInPartition = null;
       }
-      filterAsync(this);
-      if(allDone != null && consumed) allDone.complete(null);
+      while(true) {
+        filterAsync(this);
+        if(consumed) {
+          if(allDone != null) allDone.complete(null);
+          return;
+        } else {
+          //System.out.println("Async overflow in "+this);
+          var n = allocTargetBlockNoCache(_from);
+          to.insertAllBefore(n);
+          to = n;
+          state = Task.STATE_OVERFLOWED;
+        }
+      }
     }
 
     private void await() throws IOException {
       try { stepDone.get(); }
       catch (InterruptedException | ExecutionException e) { throw new IOException(e); }
     }
-    
+
     public void consume() { consumed = true; }
-    
+
     public boolean isLast() { return isLastInPartition; }
-    
+
     public int length() { return end - start; }
-    
+
     public String toString() {
       var st = state == STATE_OVERFLOWED ? "OVER" : state == STATE_UNDERFLOWED ? "UNDER" : "NEW";
       var s = st + " " + _from.hashCode() + "[" + start + "," + end + "[";
@@ -81,7 +97,7 @@ public abstract class AsyncFilteringBufferedOutput extends FilteringBufferedOutp
       return s;
     }
   }
-  
+
   /// Constructor to be called by subclasses.
   ///
   /// @param parent The parent buffer to write to.
@@ -112,7 +128,7 @@ public abstract class AsyncFilteringBufferedOutput extends FilteringBufferedOutp
   }
 
   /// Constructor that uses the common ForkJoinPool.
-  /// 
+  ///
   /// @see #AsyncFilteringBufferedOutput(BufferedOutput, boolean, int, boolean, int, Executor)
   protected AsyncFilteringBufferedOutput(BufferedOutput parent, boolean sequential, int depth, boolean allowAppend,
       int partitionSize) {
@@ -146,29 +162,56 @@ public abstract class AsyncFilteringBufferedOutput extends FilteringBufferedOutp
   private BufferedOutput allocTargetBlock(BufferedOutput from) {
     var b = (NestedBufferedOutput)allocBlock();
     b.reinit(b.buf, from.bigEndian, 0, 0, b.buf.length, SHARING_EXCLUSIVE, b.buf.length, 0, true, from.rootBlock, b, from.topLevel);
+    b.next = b.prev = b;
     return b;
   }
+
+  // safe to call from worker threads
+  private BufferedOutput allocTargetBlockNoCache(BufferedOutput from) {
+    var b = new NestedBufferedOutput(new byte[initialBufferSize], false, this);
+    b.reinit(b.buf, from.bigEndian, 0, 0, b.buf.length, SHARING_EXCLUSIVE, b.buf.length, 0, true, from.rootBlock, b, from.topLevel);
+    b.next = b.prev = b;
+    b.nocache = true;
+    return b;
+  }
+
+  //private void validateRing(BufferedOutput b) {
+  //  System.out.println("validating");
+  //  assert(b != null);
+  //  var n = b;
+  //  assert(n != null);
+  //  while(true) {
+  //    //System.out.println(n.showThis());
+  //    assert(n.next != null);
+  //    assert(n.prev != null);
+  //    assert(n.next.prev == n);
+  //    assert(n.prev.next == n);
+  //    n = n.next;
+  //    if(n == b) break;
+  //    //try { Thread.sleep(10); } catch (InterruptedException e) {}
+  //  }
+  //  System.out.println("validating done");
+  //}
 
   private BufferedOutput flushFirst(boolean reclaim) throws IOException {
     var t = firstPending;
     BufferedOutput ret = null;
-    if(!t.consumed) { // overflow -> reschedule
-      appendBlockToParent(t.to);
-      t.to = allocTargetBlock(t._from);
-      t.state = Task.STATE_OVERFLOWED;
-      t.stepDone = CompletableFuture.runAsync(t, pool);
-      //System.out.println("Rescheduled "+t);
-    } else {
-      if(t.to.pos != t.to.start) {
-        if(reclaim && allowAppend && t.to.pos - t.to.start < t.to.buf.length / 2) ret = t.to;
-        else appendBlockToParent(t.to);
+    var n = t.to.next;
+    while(true) {
+      var nn = n.next;
+      if(n.pos != n.start) {
+        if(reclaim && allowAppend && n == t.to && ret == null && n.pos - n.start < n.buf.length / 2) ret = n;
+        else appendBlockToParent(n);
       } else {
-        if(reclaim) ret = t.to;
-        else releaseBlock(t.to);
+        if(reclaim && ret == null) ret = n;
+        else releaseBlock(n);
       }
-      if(t.ownsSourceBlock) releaseBlock(t._from);
-      dequeueFirst();
+      if(n == t.to) break;
+      n = nn;
     }
+    if(t.ownsSourceBlock) releaseBlock(t._from);
+    dequeueFirst();
+    if(ret != null) ret.prev = ret.next = ret;
     return ret;
   }
 
@@ -203,10 +246,10 @@ public abstract class AsyncFilteringBufferedOutput extends FilteringBufferedOutp
       t.totalLength = prevTotal + tlen;
       t.isLastInPartition = partitionSize == 0 || t.totalLength == partitionSize;
       t.prevInPartition = activePartition;
-      
+
       if(activePartition != null)
         t.stepDone = activePartition.allDone.thenRunAsync(t, pool);
-      else 
+      else
         t.stepDone = sequential && lastPending != null ? lastPending.allDone.thenRunAsync(t, pool) : CompletableFuture.runAsync(t, pool);
       start = t.end;
       activePartition = t.isLastInPartition ? null : t;
@@ -215,7 +258,7 @@ public abstract class AsyncFilteringBufferedOutput extends FilteringBufferedOutp
       enqueue(t);
     }
   }
-  
+
   @Override protected void flushPending() throws IOException {
     if(activePartition != null) {
       var t = new Task();
@@ -243,7 +286,7 @@ public abstract class AsyncFilteringBufferedOutput extends FilteringBufferedOutp
     }
     return ret;
   }
-  
+
   /// Register a [Closeable] object to be closed together with this [BufferedOutput]. This method
   /// is safe to call from worker threads during [#filterAsync(Task)] to register thread-local
   /// state that needs to be cleaned up.

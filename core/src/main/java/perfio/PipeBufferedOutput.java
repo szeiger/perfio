@@ -29,7 +29,7 @@ public final class PipeBufferedOutput extends BlockFlushingBufferedOutput {
   void put(BufferedOutput b) throws IOException {
     BufferedOutput r;
     while((r = returnQueue.poll()) != null)
-      if(r != this) returnToCache(r);
+      if(r != this) returnToCache((NestedBufferedOutput)r);
     try { queue.put(b); }
     catch(InterruptedException ex) { throw new IOException("Pipe transfer interrupted", ex); }
   }
