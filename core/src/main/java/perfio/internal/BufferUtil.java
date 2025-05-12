@@ -1,5 +1,8 @@
 package perfio.internal;
 
+import perfio.AsyncFilteringBufferedOutput;
+import perfio.BufferedOutput;
+
 import java.io.IOException;
 import java.lang.foreign.Arena;
 import java.lang.foreign.MemorySegment;
@@ -83,5 +86,10 @@ public class BufferUtil {
     } catch(NoClassDefFoundError t) {}
     VECTOR_ENABLED = e;
     VECTOR_LENGTH = vlen;
+  }
+  
+  public static VarHandle findVarHandle(MethodHandles.Lookup l, Class<?> recv, String name, Class<?> type) {
+    try { return l.findVarHandle(recv, name, type); }
+    catch(Exception ex) { throw new ExceptionInInitializerError(ex); }
   }
 }

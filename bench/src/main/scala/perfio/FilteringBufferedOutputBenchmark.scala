@@ -27,6 +27,9 @@ class FilteringBufferedOutputBenchmark extends BenchUtil:
   var output: String = null
   var fileOut = false
 
+  @Param(Array("32768"))
+  var blockSize: Int = 0
+
   @Setup
   def setup: Unit =
     fileOut = output == "file"
@@ -35,13 +38,13 @@ class FilteringBufferedOutputBenchmark extends BenchUtil:
     if(fileOut) runFile(bh)(f) else runArray(bh)(f)
 
   private def runArray(bh: Blackhole)(f: BufferedOutput => BufferedOutput) =
-    val out = BufferedOutput.growing(byteSize)
+    val out = BufferedOutput.growing(byteSize, blockSize)
     writeTo(f(out))
     bh.consume(out.buffer)
     bh.consume(out.length)
 
   private def runFile(bh: Blackhole)(f: BufferedOutput => BufferedOutput) =
-    val out = BufferedOutput.ofFile(Paths.get("/dev/null"))
+    val out = BufferedOutput.ofFile(Paths.get("/dev/null"), blockSize)
     writeTo(f(out))
     out.close()
 

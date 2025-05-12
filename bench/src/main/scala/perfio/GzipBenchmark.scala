@@ -20,16 +20,20 @@ class GzipBenchmark extends BenchUtil:
   //@Param(Array("numSmall", "chunks", "chunksSlow", "randomChunks"))
   @Param(Array("chunks"))
   var dataSet: String = null
+
+  @Param(Array("1024", "32768"))
+  var blockSize: Int = 0
+
   final lazy val data = BenchmarkDataSet.forName(dataSet)
   import data.*
 
-  @Benchmark
-  def noopBufferedOutput(bh: Blackhole): Unit =
-    val out = BufferedOutput.growing(byteSize)
-    writeTo(out)
-    bh.consume(out.buffer)
-    bh.consume(out.length)
-
+//  @Benchmark
+//  def noopBufferedOutput(bh: Blackhole): Unit =
+//    val out = BufferedOutput.growing(byteSize, blockSize)
+//    writeTo(out)
+//    bh.consume(out.buffer)
+//    bh.consume(out.length)
+//
 //  @Benchmark
 //  def gzipOutputStream(bh: Blackhole): Unit =
 //    val bout = new MyByteArrayOutputStream(byteSize)
@@ -40,7 +44,7 @@ class GzipBenchmark extends BenchUtil:
 //
 //  @Benchmark
 //  def gzipBufferedOutput(bh: Blackhole): Unit =
-//    val out = BufferedOutput.growing(byteSize)
+//    val out = BufferedOutput.growing(byteSize, blockSize)
 //    val gout = new GzipBufferedOutput(out)
 //    writeTo(gout)
 //    bh.consume(out.buffer)
@@ -48,7 +52,7 @@ class GzipBenchmark extends BenchUtil:
 
   @Benchmark
   def asyncGzipBufferedOutput(bh: Blackhole): Unit =
-    val out = BufferedOutput.growing(byteSize)
+    val out = BufferedOutput.growing(byteSize, blockSize)
     val gout = new AsyncGzipBufferedOutput(out)
     writeTo(gout)
     bh.consume(out.buffer)
@@ -56,7 +60,7 @@ class GzipBenchmark extends BenchUtil:
 
   @Benchmark
   def asyncGzipBufferedOutputUnlimited(bh: Blackhole): Unit =
-    val out = BufferedOutput.growing(byteSize)
+    val out = BufferedOutput.growing(byteSize, blockSize)
     val gout = new AsyncGzipBufferedOutput(out, 0)
     writeTo(gout)
     bh.consume(out.buffer)
@@ -64,7 +68,7 @@ class GzipBenchmark extends BenchUtil:
 
   @Benchmark
   def parallelGzipBufferedOutput(bh: Blackhole): Unit =
-    val out = BufferedOutput.growing(byteSize)
+    val out = BufferedOutput.growing(byteSize, blockSize)
     val gout = new ParallelGzipBufferedOutput(out)
     writeTo(gout)
     bh.consume(out.buffer)
@@ -72,7 +76,7 @@ class GzipBenchmark extends BenchUtil:
 
   @Benchmark
   def parallelGzipBufferedOutputSinglePart(bh: Blackhole): Unit =
-    val out = BufferedOutput.growing(byteSize)
+    val out = BufferedOutput.growing(byteSize, blockSize)
     val gout = new ParallelGzipBufferedOutput(out, -1, Int.MaxValue)
     writeTo(gout)
     bh.consume(out.buffer)
@@ -80,7 +84,7 @@ class GzipBenchmark extends BenchUtil:
 
   @Benchmark
   def parallelGzipBufferedOutputNoPart(bh: Blackhole): Unit =
-    val out = BufferedOutput.growing(byteSize)
+    val out = BufferedOutput.growing(byteSize, blockSize)
     val gout = new ParallelGzipBufferedOutput(out, -1, 0)
     writeTo(gout)
     bh.consume(out.buffer)

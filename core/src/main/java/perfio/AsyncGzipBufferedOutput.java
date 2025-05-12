@@ -13,7 +13,7 @@ public class AsyncGzipBufferedOutput extends AsyncFilteringBufferedOutput {
     GzipUtil.writeHeader(parent);
   }
 
-  public AsyncGzipBufferedOutput(BufferedOutput parent) throws IOException { this(parent, 2); }
+  public AsyncGzipBufferedOutput(BufferedOutput parent) throws IOException { this(parent, 3); }
 
   @Override protected void finish() throws IOException {
     if(!defl.finished()) {

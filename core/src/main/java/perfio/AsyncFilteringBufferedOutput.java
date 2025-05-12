@@ -5,7 +5,6 @@ import perfio.internal.BufferUtil;
 import java.io.Closeable;
 import java.io.IOException;
 import java.lang.invoke.MethodHandles;
-import java.lang.invoke.MethodType;
 import java.lang.invoke.VarHandle;
 import java.util.concurrent.*;
 
@@ -24,8 +23,7 @@ public abstract class AsyncFilteringBufferedOutput extends FilteringBufferedOutp
   private final Executor pool;
   private final boolean sequential;
   private final boolean allowAppend;
-  private ConcurrentLinkedQueue<Closeable> cleanUp = new ConcurrentLinkedQueue<>();
-  
+
   /// A task represents an input block to be transformed, together with an output block to write
   /// the data to. Filter implementations should not rely on the identity of [Task] objects.
   /// Additional tasks for continuations after an overflow or underflow may use the same [Task]
@@ -33,8 +31,7 @@ public abstract class AsyncFilteringBufferedOutput extends FilteringBufferedOutp
   /// can be stored in the [Task#data] field.
   public final class Task implements Runnable {
     private Task next, prevInPartition;
-    private CompletableFuture<?> stepDone;
-    private final CompletableFuture<?> allDone = sequential || (partitionSize > 0) ? new CompletableFuture<>() : null;
+    private CountDownLatch taskDone;
     private BufferedOutput _from;
     public BufferedOutput to;
     public byte[] buf;
@@ -42,6 +39,11 @@ public abstract class AsyncFilteringBufferedOutput extends FilteringBufferedOutp
     public byte state;
     private boolean consumed, isLastInPartition, ownsSourceBlock;
 
+    private static final Object FINISHED = new Object();
+    private volatile Object runNext;
+    private static final VarHandle RUN_NEXT =
+        BufferUtil.findVarHandle(MethodHandles.lookup(), Task.class, "runNext", Object.class);
+    
     /// Partition-specific data
     public Object data;
 
@@ -56,30 +58,14 @@ public abstract class AsyncFilteringBufferedOutput extends FilteringBufferedOutp
 
     private Task() {}
 
-    public void run() {
-      if(prevInPartition != null) {
-        data = prevInPartition.data;
-        prevInPartition = null;
-      }
-      while(true) {
-        filterAsync(this);
-        if(consumed) {
-          if(allDone != null) allDone.complete(null);
-          return;
-        } else {
-          //System.out.println("Async overflow in "+this);
-          var n = allocTargetBlockNoCache(_from);
-          to.insertAllBefore(n);
-          to = n;
-          state = Task.STATE_OVERFLOWED;
-        }
-      }
-    }
+    public void run() { runAll(this); }
 
     private void await() throws IOException {
-      try { stepDone.get(); }
-      catch (InterruptedException | ExecutionException e) { throw new IOException(e); }
+      try { taskDone.await(); }
+      catch (InterruptedException e) { throw new IOException(e); }
     }
+
+    private boolean isDone() { return taskDone.getCount() == 0; }
 
     public void consume() { consumed = true; }
 
@@ -96,7 +82,40 @@ public abstract class AsyncFilteringBufferedOutput extends FilteringBufferedOutp
       s += " tot=" + totalLength;
       return s;
     }
+    
+    private Task getRunNext() {
+      if(RUN_NEXT.compareAndSet(this, null, FINISHED)) return null;
+      else return (Task)runNext;
+    }
   }
+
+  private void runAll(Task t) {
+    while(true) {
+      if(t.prevInPartition != null) {
+        t.data = t.prevInPartition.data;
+        t.prevInPartition = null;
+      }
+      while(true) {
+        filterAsync(t);
+        if(t.consumed) break;
+        //System.out.println("Async overflow in "+this);
+        var n = allocTargetBlockNoCache(t._from);
+        t.to.insertAllBefore(n);
+        t.to = n;
+        t.state = Task.STATE_OVERFLOWED;
+      }
+      var t2 = t.getRunNext();
+      if(depth != 0) t.taskDone.countDown();
+      if(t2 == null) {
+        // With unlimited depth we only need to notify once at the end of the group
+        if(depth == 0) t.taskDone.countDown();
+        return;
+      }
+      t = t2;
+      //System.out.println("running continuation");
+    }
+  }
+
 
   /// Constructor to be called by subclasses.
   ///
@@ -148,7 +167,7 @@ public abstract class AsyncFilteringBufferedOutput extends FilteringBufferedOutp
     if(firstPending == null) lastPending = null;
   }
 
-  private boolean firstIsDone() { return firstPending != null && firstPending.stepDone.isDone(); }
+  private boolean firstIsDone() { return firstPending != null && firstPending.isDone(); }
 
   /// Process the data in `t.buf` at `[t.start - t.end[` and write the output into `t.to`. This
   /// method is called on a worker thread. If the input was fully consumed, it must call
@@ -175,24 +194,6 @@ public abstract class AsyncFilteringBufferedOutput extends FilteringBufferedOutp
     return b;
   }
 
-  //private void validateRing(BufferedOutput b) {
-  //  System.out.println("validating");
-  //  assert(b != null);
-  //  var n = b;
-  //  assert(n != null);
-  //  while(true) {
-  //    //System.out.println(n.showThis());
-  //    assert(n.next != null);
-  //    assert(n.prev != null);
-  //    assert(n.next.prev == n);
-  //    assert(n.prev.next == n);
-  //    n = n.next;
-  //    if(n == b) break;
-  //    //try { Thread.sleep(10); } catch (InterruptedException e) {}
-  //  }
-  //  System.out.println("validating done");
-  //}
-
   private BufferedOutput flushFirst(boolean reclaim) throws IOException {
     var t = firstPending;
     BufferedOutput ret = null;
@@ -217,8 +218,17 @@ public abstract class AsyncFilteringBufferedOutput extends FilteringBufferedOutp
 
   protected void filterBlock(BufferedOutput b) throws IOException {
     BufferedOutput reclaimed = null;
-    if(depth > 0) reclaimed = flushPending(depth-1, true);
-    else while(firstIsDone()) reclaimed = flushFirst(pendingCount == 1);
+
+
+    while(firstIsDone()) reclaimed = flushFirst(pendingCount == 1);
+    if(depth > 0) {
+      while(pendingCount >= depth) {
+        firstPending.await();
+        reclaimed = flushFirst(pendingCount == 1 && reclaimed == null);
+      }
+    }
+
+
     var start = b.start;
     final var end = b.pos;
     while(start != end) {
@@ -247,10 +257,9 @@ public abstract class AsyncFilteringBufferedOutput extends FilteringBufferedOutp
       t.isLastInPartition = partitionSize == 0 || t.totalLength == partitionSize;
       t.prevInPartition = activePartition;
 
-      if(activePartition != null)
-        t.stepDone = activePartition.allDone.thenRunAsync(t, pool);
-      else
-        t.stepDone = sequential && lastPending != null ? lastPending.allDone.thenRunAsync(t, pool) : CompletableFuture.runAsync(t, pool);
+      if(activePartition != null) scheduleContinuation(activePartition, t);
+      else if(sequential && lastPending != null) scheduleContinuation(lastPending, t);
+      else scheduleNew(t);
       start = t.end;
       activePartition = t.isLastInPartition ? null : t;
       //System.out.println("Scheduled "+t);
@@ -270,12 +279,15 @@ public abstract class AsyncFilteringBufferedOutput extends FilteringBufferedOutp
       t.ownsSourceBlock = false;
       t.prevInPartition = activePartition;
       t.state = Task.STATE_UNDERFLOWED;
-      t.stepDone = activePartition.allDone.thenRunAsync(t); // TODO run on current thread if prev is already done?
+      scheduleContinuation(activePartition, t); // TODO run on current thread if prev is already done?
       activePartition = null;
       //System.out.println("Scheduled end marker "+t);
       enqueue(t);
     }
-    flushPending(0, false);
+    while(pendingCount > 0) {
+      firstPending.await();
+      flushFirst(false);
+    }
   }
 
   private BufferedOutput flushPending(int until, boolean reclaim) throws IOException {
@@ -287,15 +299,17 @@ public abstract class AsyncFilteringBufferedOutput extends FilteringBufferedOutp
     return ret;
   }
 
-  /// Register a [Closeable] object to be closed together with this [BufferedOutput]. This method
-  /// is safe to call from worker threads during [#filterAsync(Task)] to register thread-local
-  /// state that needs to be cleaned up.
-  protected void registerCleanUp(Closeable c) { cleanUp.add(c); }
+  private void scheduleContinuation(Task prev, Task t) {
+    t.taskDone = depth == 0 ? prev.taskDone : new CountDownLatch(1);
+    if(!Task.RUN_NEXT.compareAndSet(prev, null, t)) {
+      if(depth == 0) t.taskDone = new CountDownLatch(1);
+      pool.execute(t);
+    }
+  }
 
-  @Override
-  protected void cleanUp() throws IOException {
-    super.cleanUp();
-    Closeable c;
-    while((c = cleanUp.poll()) != null) c.close();
+
+  private void scheduleNew(Task t) {
+    t.taskDone = new CountDownLatch(1);
+    pool.execute(t);
   }
 }
