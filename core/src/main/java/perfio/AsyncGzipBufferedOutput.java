@@ -9,7 +9,7 @@ public class AsyncGzipBufferedOutput extends AsyncFilteringBufferedOutput {
   private final CRC32 crc = new CRC32();
 
   public AsyncGzipBufferedOutput(BufferedOutput parent, int depth) throws IOException {
-    super(parent, true, depth, true, 0);
+    super(parent, true, depth, true, 65536, 0, true, null);
     GzipUtil.writeHeader(parent);
   }
 
@@ -29,7 +29,7 @@ public class AsyncGzipBufferedOutput extends AsyncFilteringBufferedOutput {
   }
 
   protected void filterAsync(Task t) {
-    if(t.state == Task.STATE_NEW) {
+    if(t.state != Task.STATE_OVERFLOWED) {
       crc.update(t.buf, t.start, t.end - t.start);
       defl.setInput(t.buf, t.start, t.end - t.start);
     }

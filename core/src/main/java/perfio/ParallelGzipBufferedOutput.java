@@ -8,9 +8,13 @@ public class ParallelGzipBufferedOutput extends AsyncFilteringBufferedOutput {
   private final CRC32 crc = new CRC32();
   private int totalIn;
 
-  public ParallelGzipBufferedOutput(BufferedOutput parent, int depth, int partitionSize) throws IOException {
-    super(parent, false, depth, true, partitionSize);
+  public ParallelGzipBufferedOutput(BufferedOutput parent, int depth, int minPartitionSize, int maxPartitionSize) throws IOException {
+    super(parent, false, depth, true, minPartitionSize, maxPartitionSize, true, null);
     GzipUtil.writeHeader(parent);
+  }
+
+  public ParallelGzipBufferedOutput(BufferedOutput parent, int depth, int partitionSize) throws IOException {
+    this(parent, depth, partitionSize, partitionSize);
   }
 
   public ParallelGzipBufferedOutput(BufferedOutput parent) throws IOException { this(parent, -1, 65536); }

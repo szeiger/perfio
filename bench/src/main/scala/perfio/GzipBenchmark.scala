@@ -21,7 +21,8 @@ class GzipBenchmark extends BenchUtil:
   @Param(Array("chunks"))
   var dataSet: String = null
 
-  @Param(Array("1024", "32768"))
+  //@Param(Array("1024", "32768"))
+  @Param(Array("1024"))
   var blockSize: Int = 0
 
   final lazy val data = BenchmarkDataSet.forName(dataSet)

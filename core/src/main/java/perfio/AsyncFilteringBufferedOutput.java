@@ -2,7 +2,6 @@ package perfio;
 
 import perfio.internal.BufferUtil;
 
-import java.io.Closeable;
 import java.io.IOException;
 import java.lang.invoke.MethodHandles;
 import java.lang.invoke.VarHandle;
@@ -17,12 +16,54 @@ import java.util.concurrent.*;
 /// of in-place updates and direct writing to the parent) should also overwrite
 /// [#filterBlock(BufferedOutput)] accordingly.
 public abstract class AsyncFilteringBufferedOutput extends FilteringBufferedOutput {
-  private Task firstPending, lastPending, activePartition;
-  private int pendingCount;
-  private final int depth, partitionSize;
+  private final int depth, minPartitionSize, maxPartitionSize;
+  private final boolean sequential, allowAppend, batchSubmit;
   private final Executor pool;
-  private final boolean sequential;
-  private final boolean allowAppend;
+
+  private Task firstPending, lastPending, activePartition, firstUnsubmitted;
+  private int pendingCount;
+  //private final AtomicInteger asyncAllocated = new AtomicInteger();
+
+  /// Constructor to be called by subclasses.
+  ///
+  /// @param parent The parent buffer to write to.
+  /// @param sequential If set to true, blocks will be processed sequentially, i.e. a new block is
+  ///   not started before the previous one has been processed completely (including potentially
+  ///   rescheduling it in case of overflows). Note that `sequential = true` is different from
+  ///   `depth = 1`. While both guarantee sequential processing, `sequential = true` (with a
+  ///   `depth` greater than 1) starts processing a new block immediately when the previous one
+  ///   is done and does not block the main thread. While partitioning is not useful in sequential
+  ///   mode, `minPartitionSize` can be set together with `batchSubmit = true`.
+  /// @param depth The maximum number of blocks or partitions in flight, 0 for no limit, or -1 to
+  ///   match the common ForkJoinPool's parallelism. This can be used to throttle the main thread
+  ///   to limit memory usage when the filter cannot keep up with the incoming data. When
+  ///   `batchSubmit == true` the count is in scheduled partitions, otherwise in blocks.
+  /// @param allowAppend When set to true, [#filterAsync(Task)] must support appending to a
+  ///   non-empty block, otherwise it is guaranteed to get an empty block (i.e. `start = 0`).
+  /// @param minPartitionSize When both `minPartitionSize` and `maxPartitionSize` are set to 0,
+  ///   each [Task] processes one input block, which is typically between 1/2 and 1 times the
+  ///   parent's initial buffer size, but may be smaller or larger. When set to a non-zero value,
+  ///   each task processes between the minimum and maximum number of bytes, which may come from
+  ///   multiple input blocks. The last task of a stream may be smaller.
+  /// @param maxPartitionSize The maximum partition size, or 0 for unlimited. When unlimited, input
+  ///   blocks are never split into multiple partitions.
+  /// @param batchSubmit When set to true, a partition is submitted to the thread pool (and its
+  ///   result is awaited) in one go, otherwise each input block is submitted immediately. Batching
+  ///   can help avoid frequent stalls of the filter processing threads which lead to high thread
+  ///   parking overhead.
+  /// @param pool The thread pool on which the asynchronous tasks will be executed, or `null` to
+  ///   use the default pool.
+  protected AsyncFilteringBufferedOutput(BufferedOutput parent, boolean sequential, int depth, boolean allowAppend,
+      int minPartitionSize, int maxPartitionSize, boolean batchSubmit, Executor pool) {
+    super(parent, false);
+    this.sequential = sequential;
+    this.depth = depth < 0 ? ForkJoinPool.getCommonPoolParallelism() : depth;
+    this.allowAppend = allowAppend;
+    this.minPartitionSize = minPartitionSize;
+    this.maxPartitionSize = maxPartitionSize > 0 ? maxPartitionSize : Integer.MAX_VALUE;
+    this.pool = pool != null ? pool : ForkJoinPool.commonPool();
+    this.batchSubmit = batchSubmit;
+  }
 
   /// A task represents an input block to be transformed, together with an output block to write
   /// the data to. Filter implementations should not rely on the identity of [Task] objects.
@@ -30,19 +71,20 @@ public abstract class AsyncFilteringBufferedOutput extends FilteringBufferedOutp
   /// object or a different one. State that needs to be kept around for the duration of a partition
   /// can be stored in the [Task#data] field.
   public final class Task implements Runnable {
-    private Task next, prevInPartition;
+    private Task next, prevInPartition, nextInBatch;
     private CountDownLatch taskDone;
     private BufferedOutput _from;
     public BufferedOutput to;
     public byte[] buf;
-    public int start, end, totalLength;
+    public int start, end;
+    private int totalLength;
     public byte state;
     private boolean consumed, isLastInPartition, ownsSourceBlock;
 
     private static final Object FINISHED = new Object();
     private volatile Object runNext;
     private static final VarHandle RUN_NEXT =
-        BufferUtil.findVarHandle(MethodHandles.lookup(), Task.class, "runNext", Object.class);
+      BufferUtil.findVarHandle(MethodHandles.lookup(), Task.class, "runNext", Object.class);
     
     /// Partition-specific data
     public Object data;
@@ -91,67 +133,40 @@ public abstract class AsyncFilteringBufferedOutput extends FilteringBufferedOutp
 
   private void runAll(Task t) {
     while(true) {
+      runBatch(t);
+      var t2 = t.getRunNext();
+      if(depth != 0) t.taskDone.countDown();
+      if(t2 == null) {
+        // With unlimited depth we only need to notify once at the end of the group.
+        // Intermediate tasks will be flushed when finished but never awaited.
+        if(depth == 0) t.taskDone.countDown();
+        return;
+      }
+      t = t2;
+    }
+  }
+  
+  private void runBatch(Task t) {
+    while(true) {
       if(t.prevInPartition != null) {
         t.data = t.prevInPartition.data;
         t.prevInPartition = null;
       }
       while(true) {
+        //System.err.println("filterAsync "+t);
         filterAsync(t);
         if(t.consumed) break;
         //System.out.println("Async overflow in "+this);
         var n = allocTargetBlockNoCache(t._from);
+        //asyncAllocated.incrementAndGet();
         t.to.insertAllBefore(n);
         t.to = n;
         t.state = Task.STATE_OVERFLOWED;
       }
-      var t2 = t.getRunNext();
-      if(depth != 0) t.taskDone.countDown();
-      if(t2 == null) {
-        // With unlimited depth we only need to notify once at the end of the group
-        if(depth == 0) t.taskDone.countDown();
-        return;
-      }
-      t = t2;
-      //System.out.println("running continuation");
+      var n = t.nextInBatch;
+      if(n == null) break;
+      t = n;
     }
-  }
-
-
-  /// Constructor to be called by subclasses.
-  ///
-  /// @param parent The parent buffer to write to.
-  /// @param sequential If set to true, blocks will be processed sequentially, i.e. a new block is
-  ///   not started before the previous one has been processed completely (including potentially
-  ///   rescheduling it in case of overflows). Note that `sequential = true` is different from
-  ///   `depth = 1`. While both guarantee sequential processing, `sequential = true` (with a
-  ///   `depth` greater than 1) starts  processing a new block immediately when the previous one
-  ///   is done and does not block the main thread.
-  /// @param depth The maximum number of blocks in flight, 0 for no limit, or -1 to match the
-  ///   common ForkJoinPool's parallelism. This can be used to throttle the main thread to limit
-  ///   memory usage when the filter cannot keep up with the incoming data.
-  /// @param allowAppend When set to true, [#filterAsync(Task)] must support appending to a
-  ///   non-empty block, otherwise it is guaranteed to get an empty block (i.e. `start = 0`).
-  /// @param partitionSize When set to 0, each [Task] processes one input block, which is typically
-  ///   between 1/2 and 1 times the parent's initial buffer size, but may be smaller or larger.
-  ///   When set to a non-zero value, each task processes exactly this number of bytes, which may
-  ///   come from multiple input blocks. The last task of a stream may be shorter.
-  /// @param pool The thread pool on which the asynchronous tasks will be executed.
-  protected AsyncFilteringBufferedOutput(BufferedOutput parent, boolean sequential, int depth, boolean allowAppend,
-      int partitionSize, Executor pool) {
-    super(parent, false);
-    this.sequential = sequential;
-    this.depth = depth < 0 ? ForkJoinPool.getCommonPoolParallelism() : depth;
-    this.allowAppend = allowAppend;
-    this.partitionSize = partitionSize;
-    this.pool = pool;
-  }
-
-  /// Constructor that uses the common ForkJoinPool.
-  ///
-  /// @see #AsyncFilteringBufferedOutput(BufferedOutput, boolean, int, boolean, int, Executor)
-  protected AsyncFilteringBufferedOutput(BufferedOutput parent, boolean sequential, int depth, boolean allowAppend,
-      int partitionSize) {
-    this(parent, sequential, depth, allowAppend, partitionSize, ForkJoinPool.commonPool());
   }
 
   private void enqueue(Task t) {
@@ -194,40 +209,15 @@ public abstract class AsyncFilteringBufferedOutput extends FilteringBufferedOutp
     return b;
   }
 
-  private BufferedOutput flushFirst(boolean reclaim) throws IOException {
-    var t = firstPending;
-    BufferedOutput ret = null;
-    var n = t.to.next;
-    while(true) {
-      var nn = n.next;
-      if(n.pos != n.start) {
-        if(reclaim && allowAppend && n == t.to && ret == null && n.pos - n.start < n.buf.length / 2) ret = n;
-        else appendBlockToParent(n);
-      } else {
-        if(reclaim && ret == null) ret = n;
-        else releaseBlock(n);
-      }
-      if(n == t.to) break;
-      n = nn;
-    }
-    if(t.ownsSourceBlock) releaseBlock(t._from);
-    dequeueFirst();
-    if(ret != null) ret.prev = ret.next = ret;
-    return ret;
-  }
-
   protected void filterBlock(BufferedOutput b) throws IOException {
     BufferedOutput reclaimed = null;
-
-
-    while(firstIsDone()) reclaimed = flushFirst(pendingCount == 1);
+    while(firstIsDone()) reclaimed = flushFirst(reclaimed == null);
     if(depth > 0) {
       while(pendingCount >= depth) {
         firstPending.await();
-        reclaimed = flushFirst(pendingCount == 1 && reclaimed == null);
+        reclaimed = flushFirst(reclaimed == null);
       }
     }
-
 
     var start = b.start;
     final var end = b.pos;
@@ -243,60 +233,114 @@ public abstract class AsyncFilteringBufferedOutput extends FilteringBufferedOutp
       int tlen, prevTotal;
       boolean isNew = activePartition == null;
       if(isNew) {
-        tlen = partitionSize > 0 ? Math.min(blen, partitionSize) : blen;
+        tlen = Math.min(blen, maxPartitionSize);
         prevTotal = 0;
       } else {
         prevTotal = activePartition.totalLength;
-        tlen = Math.min(blen, partitionSize - prevTotal);
+        tlen = Math.min(blen, maxPartitionSize - prevTotal);
         t.state = Task.STATE_UNDERFLOWED;
       }
 
       t.end = start + tlen;
       t.ownsSourceBlock = t.end == end;
       t.totalLength = prevTotal + tlen;
-      t.isLastInPartition = partitionSize == 0 || t.totalLength == partitionSize;
+      t.isLastInPartition = t.totalLength >= minPartitionSize;
       t.prevInPartition = activePartition;
-
-      if(activePartition != null) scheduleContinuation(activePartition, t);
-      else if(sequential && lastPending != null) scheduleContinuation(lastPending, t);
-      else scheduleNew(t);
+      //if(t.isLastInPartition) System.out.println("Partition size: "+t.totalLength);
       start = t.end;
-      activePartition = t.isLastInPartition ? null : t;
-      //System.out.println("Scheduled "+t);
 
-      enqueue(t);
+      if(batchSubmit) {
+        if(isNew) {
+          if(t.isLastInPartition) {
+            if(sequential && lastPending != null) scheduleContinuation(lastPending, t);
+            else scheduleNew(t);
+            enqueue(t);
+          } else {
+            activePartition = t;
+            firstUnsubmitted = t;
+          }
+        } else {
+          activePartition.nextInBatch = t;
+          if(t.isLastInPartition) {
+            if(sequential && lastPending != null) scheduleContinuation(lastPending, firstUnsubmitted);
+            else scheduleNew(firstUnsubmitted);
+            enqueue(firstUnsubmitted);
+            activePartition = null;
+            firstUnsubmitted = null;
+          } else activePartition = t;
+        }
+      } else {
+        if(activePartition != null) scheduleContinuation(activePartition, t);
+        else if(sequential && lastPending != null) scheduleContinuation(lastPending, t);
+        else scheduleNew(t);
+        activePartition = t.isLastInPartition ? null : t;
+        //System.out.println("Scheduled "+t);
+        enqueue(t);
+      }
     }
   }
 
+  private BufferedOutput flushFirst(boolean reclaim) throws IOException {
+    BufferedOutput reclaimed = null;
+    var t = firstPending;
+    while(true) {
+      //System.err.println("flushFirst "+t);
+      var n = t.to.next;
+      while(true) {
+        var nn = n.next;
+        if(n.pos != n.start) {
+          if(reclaim && reclaimed == null && allowAppend && firstPending == lastPending && t.nextInBatch == null && n == t.to && n.pos - n.start < n.buf.length / 2) reclaimed = n;
+          else appendBlockToParent(n);
+        } else {
+          if(reclaim && reclaimed == null) reclaimed = n;
+          else releaseBlock(n);
+        }
+        if(n == t.to) break;
+        n = nn;
+      }
+      if(t.ownsSourceBlock) releaseBlock(t._from);
+      if(t.nextInBatch == null) break;
+      t = t.nextInBatch;
+    }
+    dequeueFirst();
+    if(reclaimed != null) reclaimed.prev = reclaimed.next = reclaimed;
+    return reclaimed;
+  }
+
   @Override protected void flushPending() throws IOException {
-    if(activePartition != null) {
-      var t = new Task();
-      t._from = activePartition._from;
-      t.to = allocTargetBlock(activePartition._from);
-      t.buf = t.to.buf;
-      t.totalLength = activePartition.totalLength;
-      t.isLastInPartition = true;
-      t.ownsSourceBlock = false;
-      t.prevInPartition = activePartition;
-      t.state = Task.STATE_UNDERFLOWED;
-      scheduleContinuation(activePartition, t); // TODO run on current thread if prev is already done?
+    //System.err.println("flushPending: firstUnsubmitted="+firstUnsubmitted+", activePartition="+activePartition);
+    if(firstUnsubmitted != null) {
+      activePartition.isLastInPartition = true;
+      scheduleNew(firstUnsubmitted);
+      enqueue(firstUnsubmitted);
+      firstUnsubmitted = null;
       activePartition = null;
-      //System.out.println("Scheduled end marker "+t);
-      enqueue(t);
     }
     while(pendingCount > 0) {
       firstPending.await();
       flushFirst(false);
     }
-  }
-
-  private BufferedOutput flushPending(int until, boolean reclaim) throws IOException {
-    BufferedOutput ret = null;
-    while(pendingCount > until || firstIsDone()) {
-      firstPending.await();
-      ret = flushFirst(reclaim && pendingCount == 1);
+    if(activePartition != null) {
+      runPartitionTerminator();
+      flushFirst(false);
     }
-    return ret;
+    //System.out.println("asyncAllocated: "+asyncAllocated.get());
+  }
+  
+  private void runPartitionTerminator() {
+    var t = new Task();
+    t._from = activePartition._from;
+    t.to = allocTargetBlock(activePartition._from);
+    t.buf = t.to.buf;
+    t.totalLength = activePartition.totalLength;
+    t.isLastInPartition = true;
+    t.ownsSourceBlock = false;
+    t.prevInPartition = activePartition;
+    t.state = Task.STATE_UNDERFLOWED;
+    activePartition = null;
+    //System.err.println("running partition terminator "+t);
+    runBatch(t);
+    enqueue(t);
   }
 
   private void scheduleContinuation(Task prev, Task t) {
@@ -306,7 +350,6 @@ public abstract class AsyncFilteringBufferedOutput extends FilteringBufferedOutp
       pool.execute(t);
     }
   }
-
 
   private void scheduleNew(Task t) {
     t.taskDone = new CountDownLatch(1);
