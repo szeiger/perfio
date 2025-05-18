@@ -9,7 +9,7 @@ public class ParallelGzipBufferedOutput extends AsyncFilteringBufferedOutput {
   private int totalIn;
 
   public ParallelGzipBufferedOutput(BufferedOutput parent, int depth, int partitionSize) throws IOException {
-    super(parent, false, depth, true, partitionSize);
+    super(parent, false, depth, true, partitionSize, 0, null);
     GzipUtil.writeHeader(parent);
   }
 

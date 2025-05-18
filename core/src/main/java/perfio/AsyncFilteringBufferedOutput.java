@@ -2,7 +2,6 @@ package perfio;
 
 import perfio.internal.BufferUtil;
 
-import java.io.Closeable;
 import java.io.IOException;
 import java.lang.invoke.MethodHandles;
 import java.lang.invoke.VarHandle;
@@ -19,10 +18,10 @@ import java.util.concurrent.*;
 public abstract class AsyncFilteringBufferedOutput extends FilteringBufferedOutput {
   private Task firstPending, lastPending, activePartition;
   private int pendingCount;
-  private final int depth, partitionSize;
+  private final int depth, partitionSize, minSchedulingSize;
   private final Executor pool;
-  private final boolean sequential;
-  private final boolean allowAppend;
+  private final boolean sequential, allowAppend;
+  //private final AtomicInteger asyncAllocated = new AtomicInteger();
 
   /// A task represents an input block to be transformed, together with an output block to write
   /// the data to. Filter implementations should not rely on the identity of [Task] objects.
@@ -42,7 +41,7 @@ public abstract class AsyncFilteringBufferedOutput extends FilteringBufferedOutp
     private static final Object FINISHED = new Object();
     private volatile Object runNext;
     private static final VarHandle RUN_NEXT =
-        BufferUtil.findVarHandle(MethodHandles.lookup(), Task.class, "runNext", Object.class);
+      BufferUtil.findVarHandle(MethodHandles.lookup(), Task.class, "runNext", Object.class);
     
     /// Partition-specific data
     public Object data;
@@ -91,28 +90,33 @@ public abstract class AsyncFilteringBufferedOutput extends FilteringBufferedOutp
 
   private void runAll(Task t) {
     while(true) {
-      if(t.prevInPartition != null) {
-        t.data = t.prevInPartition.data;
-        t.prevInPartition = null;
-      }
-      while(true) {
-        filterAsync(t);
-        if(t.consumed) break;
-        //System.out.println("Async overflow in "+this);
-        var n = allocTargetBlockNoCache(t._from);
-        t.to.insertAllBefore(n);
-        t.to = n;
-        t.state = Task.STATE_OVERFLOWED;
-      }
+      runOne(t);
       var t2 = t.getRunNext();
       if(depth != 0) t.taskDone.countDown();
       if(t2 == null) {
-        // With unlimited depth we only need to notify once at the end of the group
+        // With unlimited depth we only need to notify once at the end of the group.
+        // Intermediate tasks will be flushed when finished but never awaited.
         if(depth == 0) t.taskDone.countDown();
         return;
       }
       t = t2;
-      //System.out.println("running continuation");
+    }
+  }
+  
+  private void runOne(Task t) {
+    if(t.prevInPartition != null) {
+      t.data = t.prevInPartition.data;
+      t.prevInPartition = null;
+    }
+    while(true) {
+      filterAsync(t);
+      if(t.consumed) break;
+      //System.out.println("Async overflow in "+this);
+      var n = allocTargetBlockNoCache(t._from);
+      //asyncAllocated.incrementAndGet();
+      t.to.insertAllBefore(n);
+      t.to = n;
+      t.state = Task.STATE_OVERFLOWED;
     }
   }
 
@@ -135,23 +139,20 @@ public abstract class AsyncFilteringBufferedOutput extends FilteringBufferedOutp
   ///   between 1/2 and 1 times the parent's initial buffer size, but may be smaller or larger.
   ///   When set to a non-zero value, each task processes exactly this number of bytes, which may
   ///   come from multiple input blocks. The last task of a stream may be shorter.
-  /// @param pool The thread pool on which the asynchronous tasks will be executed.
+  /// @param minSchedulingSize The minimum number of bytes after which an asynchronous action is
+  ///   scheduled. It may still be scheduled earlier if the end of the stream or partition has been
+  ///   reached.
+  /// @param pool The thread pool on which the asynchronous tasks will be executed, or `null` to
+  ///   use the default pool.
   protected AsyncFilteringBufferedOutput(BufferedOutput parent, boolean sequential, int depth, boolean allowAppend,
-      int partitionSize, Executor pool) {
+      int partitionSize, int minSchedulingSize, Executor pool) {
     super(parent, false);
     this.sequential = sequential;
     this.depth = depth < 0 ? ForkJoinPool.getCommonPoolParallelism() : depth;
     this.allowAppend = allowAppend;
     this.partitionSize = partitionSize;
-    this.pool = pool;
-  }
-
-  /// Constructor that uses the common ForkJoinPool.
-  ///
-  /// @see #AsyncFilteringBufferedOutput(BufferedOutput, boolean, int, boolean, int, Executor)
-  protected AsyncFilteringBufferedOutput(BufferedOutput parent, boolean sequential, int depth, boolean allowAppend,
-      int partitionSize) {
-    this(parent, sequential, depth, allowAppend, partitionSize, ForkJoinPool.commonPool());
+    this.minSchedulingSize = minSchedulingSize;
+    this.pool = pool != null ? pool : ForkJoinPool.commonPool();
   }
 
   private void enqueue(Task t) {
@@ -218,8 +219,6 @@ public abstract class AsyncFilteringBufferedOutput extends FilteringBufferedOutp
 
   protected void filterBlock(BufferedOutput b) throws IOException {
     BufferedOutput reclaimed = null;
-
-
     while(firstIsDone()) reclaimed = flushFirst(pendingCount == 1);
     if(depth > 0) {
       while(pendingCount >= depth) {
@@ -227,7 +226,6 @@ public abstract class AsyncFilteringBufferedOutput extends FilteringBufferedOutp
         reclaimed = flushFirst(pendingCount == 1 && reclaimed == null);
       }
     }
-
 
     var start = b.start;
     final var end = b.pos;
@@ -269,34 +267,30 @@ public abstract class AsyncFilteringBufferedOutput extends FilteringBufferedOutp
   }
 
   @Override protected void flushPending() throws IOException {
-    if(activePartition != null) {
-      var t = new Task();
-      t._from = activePartition._from;
-      t.to = allocTargetBlock(activePartition._from);
-      t.buf = t.to.buf;
-      t.totalLength = activePartition.totalLength;
-      t.isLastInPartition = true;
-      t.ownsSourceBlock = false;
-      t.prevInPartition = activePartition;
-      t.state = Task.STATE_UNDERFLOWED;
-      scheduleContinuation(activePartition, t); // TODO run on current thread if prev is already done?
-      activePartition = null;
-      //System.out.println("Scheduled end marker "+t);
-      enqueue(t);
-    }
     while(pendingCount > 0) {
       firstPending.await();
       flushFirst(false);
     }
-  }
-
-  private BufferedOutput flushPending(int until, boolean reclaim) throws IOException {
-    BufferedOutput ret = null;
-    while(pendingCount > until || firstIsDone()) {
-      firstPending.await();
-      ret = flushFirst(reclaim && pendingCount == 1);
+    if(activePartition != null) {
+      runPartitionTerminator();
+      flushFirst(false);
     }
-    return ret;
+    //System.out.println("asyncAllocated: "+asyncAllocated.get());
+  }
+  
+  private void runPartitionTerminator() {
+    var t = new Task();
+    t._from = activePartition._from;
+    t.to = allocTargetBlock(activePartition._from);
+    t.buf = t.to.buf;
+    t.totalLength = activePartition.totalLength;
+    t.isLastInPartition = true;
+    t.ownsSourceBlock = false;
+    t.prevInPartition = activePartition;
+    t.state = Task.STATE_UNDERFLOWED;
+    activePartition = null;
+    runOne(t);
+    enqueue(t);
   }
 
   private void scheduleContinuation(Task prev, Task t) {
@@ -306,7 +300,6 @@ public abstract class AsyncFilteringBufferedOutput extends FilteringBufferedOutp
       pool.execute(t);
     }
   }
-
 
   private void scheduleNew(Task t) {
     t.taskDone = new CountDownLatch(1);

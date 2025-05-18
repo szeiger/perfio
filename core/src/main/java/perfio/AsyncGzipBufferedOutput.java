@@ -9,7 +9,7 @@ public class AsyncGzipBufferedOutput extends AsyncFilteringBufferedOutput {
   private final CRC32 crc = new CRC32();
 
   public AsyncGzipBufferedOutput(BufferedOutput parent, int depth) throws IOException {
-    super(parent, true, depth, true, 0);
+    super(parent, true, depth, true, 0, 0, null);
     GzipUtil.writeHeader(parent);
   }
 
