@@ -21,7 +21,7 @@ public abstract class AsyncFilteringBufferedOutput extends FilteringBufferedOutp
   private final Executor pool;
 
   private Task firstPending, lastPending, activePartition, firstUnsubmitted;
-  private int pendingCount;
+  private int pendingCount, activePartitionLength;
   //private final AtomicInteger asyncAllocated = new AtomicInteger();
 
   /// Constructor to be called by subclasses.
@@ -37,7 +37,7 @@ public abstract class AsyncFilteringBufferedOutput extends FilteringBufferedOutp
   /// @param depth The maximum number of blocks or partitions in flight, 0 for no limit, or -1 to
   ///   match the common ForkJoinPool's parallelism. This can be used to throttle the main thread
   ///   to limit memory usage when the filter cannot keep up with the incoming data. When
-  ///   `batchSubmit == true` the count is in scheduled partitions, otherwise in blocks.
+  ///   `batchSubmit == true` the count is in partitions, otherwise in blocks.
   /// @param allowAppend When set to true, [#filterAsync(Task)] must support appending to a
   ///   non-empty block, otherwise it is guaranteed to get an empty block (i.e. `start = 0`).
   /// @param minPartitionSize When both `minPartitionSize` and `maxPartitionSize` are set to 0,
@@ -52,7 +52,7 @@ public abstract class AsyncFilteringBufferedOutput extends FilteringBufferedOutp
   ///   can help avoid frequent stalls of the filter processing threads which lead to high thread
   ///   parking overhead.
   /// @param pool The thread pool on which the asynchronous tasks will be executed, or `null` to
-  ///   use the default pool.
+  ///   use the common ForkJoinPool.
   protected AsyncFilteringBufferedOutput(BufferedOutput parent, boolean sequential, int depth, boolean allowAppend,
       int minPartitionSize, int maxPartitionSize, boolean batchSubmit, Executor pool) {
     super(parent, false);
@@ -61,8 +61,8 @@ public abstract class AsyncFilteringBufferedOutput extends FilteringBufferedOutp
     this.allowAppend = allowAppend;
     this.minPartitionSize = minPartitionSize;
     this.maxPartitionSize = maxPartitionSize > 0 ? maxPartitionSize : Integer.MAX_VALUE;
-    this.pool = pool != null ? pool : ForkJoinPool.commonPool();
     this.batchSubmit = batchSubmit;
+    this.pool = pool != null ? pool : ForkJoinPool.commonPool();
   }
 
   /// A task represents an input block to be transformed, together with an output block to write
@@ -77,17 +77,16 @@ public abstract class AsyncFilteringBufferedOutput extends FilteringBufferedOutp
     public BufferedOutput to;
     public byte[] buf;
     public int start, end;
-    private int totalLength;
     public byte state;
     private boolean consumed, isLastInPartition, ownsSourceBlock;
+    private volatile Object continuation;
 
-    private static final Object FINISHED = new Object();
-    private volatile Object runNext;
-    private static final VarHandle RUN_NEXT =
-      BufferUtil.findVarHandle(MethodHandles.lookup(), Task.class, "runNext", Object.class);
-    
     /// Partition-specific data
     public Object data;
+
+    private static final VarHandle CONTINUATION =
+      BufferUtil.findVarHandle(MethodHandles.lookup(), Task.class, "continuation", Object.class);
+    private static final Object FINISHED = new Object();
 
     /// The task starts a new partition with a new input block and a new output block
     public static final byte STATE_NEW = 0;
@@ -109,8 +108,10 @@ public abstract class AsyncFilteringBufferedOutput extends FilteringBufferedOutp
 
     private boolean isDone() { return taskDone.getCount() == 0; }
 
+    /// Mark the input as consumed. Returning without consuming the input indicates an overflow.
     public void consume() { consumed = true; }
 
+    /// Check if this is the last task in a partition
     public boolean isLast() { return isLastInPartition; }
 
     public int length() { return end - start; }
@@ -121,24 +122,23 @@ public abstract class AsyncFilteringBufferedOutput extends FilteringBufferedOutp
       if(isLastInPartition) s += " LAST";
       if(ownsSourceBlock) s += " OWNS";
       if(data != null) s += " (DATA)";
-      s += " tot=" + totalLength;
       return s;
     }
-    
-    private Task getRunNext() {
-      if(RUN_NEXT.compareAndSet(this, null, FINISHED)) return null;
-      else return (Task)runNext;
+
+    private Task getContinuation() {
+      if(CONTINUATION.compareAndSet(this, null, FINISHED)) return null;
+      else return (Task) continuation;
     }
   }
 
   private void runAll(Task t) {
     while(true) {
       runBatch(t);
-      var t2 = t.getRunNext();
+      var t2 = t.getContinuation();
       if(depth != 0) t.taskDone.countDown();
       if(t2 == null) {
-        // With unlimited depth we only need to notify once at the end of the group.
-        // Intermediate tasks will be flushed when finished but never awaited.
+        // With unlimited depth we only need to notify once at the end of the chain of
+        // continuations. All tasks share the same latch.
         if(depth == 0) t.taskDone.countDown();
         return;
       }
@@ -229,53 +229,38 @@ public abstract class AsyncFilteringBufferedOutput extends FilteringBufferedOutp
       t.buf = b.buf;
       t.start = start;
 
-      var blen = end - start;
-      int tlen, prevTotal;
+      int tlen = Math.min(end - start, maxPartitionSize - activePartitionLength);
       boolean isNew = activePartition == null;
-      if(isNew) {
-        tlen = Math.min(blen, maxPartitionSize);
-        prevTotal = 0;
-      } else {
-        prevTotal = activePartition.totalLength;
-        tlen = Math.min(blen, maxPartitionSize - prevTotal);
-        t.state = Task.STATE_UNDERFLOWED;
-      }
-
+      t.state = isNew ? Task.STATE_NEW : Task.STATE_UNDERFLOWED;
       t.end = start + tlen;
       t.ownsSourceBlock = t.end == end;
-      t.totalLength = prevTotal + tlen;
-      t.isLastInPartition = t.totalLength >= minPartitionSize;
+      t.isLastInPartition = (activePartitionLength + tlen) >= minPartitionSize;
       t.prevInPartition = activePartition;
-      //if(t.isLastInPartition) System.out.println("Partition size: "+t.totalLength);
       start = t.end;
+
+      if(t.isLastInPartition) activePartitionLength = 0;
+      else activePartitionLength += tlen;
 
       if(batchSubmit) {
         if(isNew) {
-          if(t.isLastInPartition) {
-            if(sequential && lastPending != null) scheduleContinuation(lastPending, t);
-            else scheduleNew(t);
-            enqueue(t);
-          } else {
+          if(t.isLastInPartition) scheduleNewOrSequential(t);
+          else {
             activePartition = t;
             firstUnsubmitted = t;
           }
         } else {
           activePartition.nextInBatch = t;
           if(t.isLastInPartition) {
-            if(sequential && lastPending != null) scheduleContinuation(lastPending, firstUnsubmitted);
-            else scheduleNew(firstUnsubmitted);
-            enqueue(firstUnsubmitted);
+            scheduleNewOrSequential(firstUnsubmitted);
             activePartition = null;
             firstUnsubmitted = null;
           } else activePartition = t;
         }
       } else {
         if(activePartition != null) scheduleContinuation(activePartition, t);
-        else if(sequential && lastPending != null) scheduleContinuation(lastPending, t);
-        else scheduleNew(t);
+        else scheduleNewOrSequential(t);
         activePartition = t.isLastInPartition ? null : t;
         //System.out.println("Scheduled "+t);
-        enqueue(t);
       }
     }
   }
@@ -312,7 +297,6 @@ public abstract class AsyncFilteringBufferedOutput extends FilteringBufferedOutp
     if(firstUnsubmitted != null) {
       activePartition.isLastInPartition = true;
       scheduleNew(firstUnsubmitted);
-      enqueue(firstUnsubmitted);
       firstUnsubmitted = null;
       activePartition = null;
     }
@@ -328,11 +312,11 @@ public abstract class AsyncFilteringBufferedOutput extends FilteringBufferedOutp
   }
   
   private void runPartitionTerminator() {
+    // TODO: Try to run this as a continuation and fall back to running synchronously if that fails
     var t = new Task();
     t._from = activePartition._from;
     t.to = allocTargetBlock(activePartition._from);
     t.buf = t.to.buf;
-    t.totalLength = activePartition.totalLength;
     t.isLastInPartition = true;
     t.ownsSourceBlock = false;
     t.prevInPartition = activePartition;
@@ -343,16 +327,23 @@ public abstract class AsyncFilteringBufferedOutput extends FilteringBufferedOutp
     enqueue(t);
   }
 
+  private void scheduleNewOrSequential(Task t) {
+    if(sequential && lastPending != null) scheduleContinuation(lastPending, t);
+    else scheduleNew(t);
+  }
+
   private void scheduleContinuation(Task prev, Task t) {
     t.taskDone = depth == 0 ? prev.taskDone : new CountDownLatch(1);
-    if(!Task.RUN_NEXT.compareAndSet(prev, null, t)) {
+    if(!Task.CONTINUATION.compareAndSet(prev, null, t)) {
       if(depth == 0) t.taskDone = new CountDownLatch(1);
       pool.execute(t);
     }
+    enqueue(t);
   }
 
   private void scheduleNew(Task t) {
     t.taskDone = new CountDownLatch(1);
     pool.execute(t);
+    enqueue(t);
   }
 }

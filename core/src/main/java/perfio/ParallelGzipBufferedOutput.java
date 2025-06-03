@@ -6,7 +6,6 @@ import java.util.zip.Deflater;
 
 public class ParallelGzipBufferedOutput extends AsyncFilteringBufferedOutput {
   private final CRC32 crc = new CRC32();
-  private int totalIn;
 
   public ParallelGzipBufferedOutput(BufferedOutput parent, int depth, int minPartitionSize, int maxPartitionSize) throws IOException {
     super(parent, false, depth, true, minPartitionSize, maxPartitionSize, true, null);
@@ -21,12 +20,14 @@ public class ParallelGzipBufferedOutput extends AsyncFilteringBufferedOutput {
 
   @Override protected void finish() throws IOException {
     parent.int16l((short)3);
-    GzipUtil.writeTrailer(parent, crc.getValue(), totalIn);
+    GzipUtil.writeTrailer(parent, crc.getValue(), (int)totalBytesWritten());
   }
 
   @Override protected void filterBlock(BufferedOutput b) throws IOException {
+    // Ideally we'd compute CRCs of each block in parallel and then merge them, but it's very
+    // fast compared to the deflate compression and Java doesn't expose the existing
+    // `crc32_combine()` from zlib for our use.
     crc.update(b.buf, b.start, b.pos - b.start);
-    totalIn += (b.pos - b.start);
     super.filterBlock(b);
   }
 
