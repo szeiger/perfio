@@ -15,6 +15,11 @@ import java.util.concurrent.*;
 /// Subclasses that want to provide synchronous filtering as an option (which can take advantage
 /// of in-place updates and direct writing to the parent) should also overwrite
 /// [#filterBlock(BufferedOutput)] accordingly.
+///
+/// Subclasses should clean up any resources before throwing an Exception from any of these
+/// methods. In case of a sequential filter, no further methods will be called and instead the
+/// asynchronous Exception is rethrown, but a parallel filter may still make further
+/// [#filterAsync(Task)] calls on other threads.
 public abstract class AsyncFilteringBufferedOutput extends FilteringBufferedOutput {
   private final int depth, minPartitionSize, maxPartitionSize;
   private final boolean sequential, allowAppend, batchSubmit;
@@ -22,6 +27,7 @@ public abstract class AsyncFilteringBufferedOutput extends FilteringBufferedOutp
 
   private Task firstPending, lastPending, activePartition, firstUnsubmitted;
   private int pendingCount, activePartitionLength;
+  private Throwable asyncError;
   //private final AtomicInteger asyncAllocated = new AtomicInteger();
 
   /// Constructor to be called by subclasses.
@@ -44,7 +50,7 @@ public abstract class AsyncFilteringBufferedOutput extends FilteringBufferedOutp
   ///   each [Task] processes one input block, which is typically between 1/2 and 1 times the
   ///   parent's initial buffer size, but may be smaller or larger. When set to a non-zero value,
   ///   each task processes between the minimum and maximum number of bytes, which may come from
-  ///   multiple input blocks. The last task of a stream may be smaller.
+  ///   multiple input blocks. The last task of a stream may be smaller than the minimum.
   /// @param maxPartitionSize The maximum partition size, or 0 for unlimited. When unlimited, input
   ///   blocks are never split into multiple partitions.
   /// @param batchSubmit When set to true, a partition is submitted to the thread pool (and its
@@ -72,6 +78,7 @@ public abstract class AsyncFilteringBufferedOutput extends FilteringBufferedOutp
   /// can be stored in the [Task#data] field.
   public final class Task implements Runnable {
     private Task next, prevInPartition, nextInBatch;
+    private Throwable asyncError;
     private CountDownLatch taskDone;
     private BufferedOutput _from;
     public BufferedOutput to;
@@ -133,20 +140,26 @@ public abstract class AsyncFilteringBufferedOutput extends FilteringBufferedOutp
 
   private void runAll(Task t) {
     while(true) {
-      runBatch(t);
+      try {
+        runBatch(t);
+      } catch(Throwable ex) {
+        t.asyncError = ex;
+        t.taskDone.countDown();
+        return;
+      }
       var t2 = t.getContinuation();
       if(depth != 0) t.taskDone.countDown();
       if(t2 == null) {
         // With unlimited depth we only need to notify once at the end of the chain of
         // continuations. All tasks share the same latch.
         if(depth == 0) t.taskDone.countDown();
-        return;
+        break;
       }
       t = t2;
     }
   }
-  
-  private void runBatch(Task firstInBatch) {
+
+  private void runBatch(Task firstInBatch) throws IOException {
     var t = firstInBatch;
     var stealFrom = firstInBatch;
     while(true) {
@@ -210,7 +223,7 @@ public abstract class AsyncFilteringBufferedOutput extends FilteringBufferedOutp
   /// `t.to` is initialized to a state where the primitive writing methods (e.g.
   /// [BufferedOutput#int8(byte)]) can be used on it. Filter implementations may also write
   /// directly to `t.to.buf` and set `t.to.start` and `t.to.pos` accordingly.
-  protected abstract void filterAsync(Task t);
+  protected abstract void filterAsync(Task t) throws IOException;
 
   private BufferedOutput allocTargetBlock(BufferedOutput from) {
     var b = (NestedBufferedOutput)allocBlock();
@@ -229,6 +242,8 @@ public abstract class AsyncFilteringBufferedOutput extends FilteringBufferedOutp
   }
 
   protected void filterBlock(BufferedOutput b) throws IOException {
+    if(asyncError != null) throw new IOException(asyncError);
+
     BufferedOutput reclaimed = null;
     while(firstIsDone()) reclaimed = flushFirst(reclaimed == null);
     if(depth > 0) {
@@ -284,9 +299,21 @@ public abstract class AsyncFilteringBufferedOutput extends FilteringBufferedOutp
     }
   }
 
+  private void handleAsyncError(Throwable ex) throws IOException {
+    asyncError = ex;
+    try {
+      if(activePartition != null && firstUnsubmitted == null) {
+        // Ensure that an already submitted active partition is properly terminated to free resources
+        var t = createPartitionTerminator();
+        scheduleContinuation(t.prevInPartition, t);
+      }
+    } finally { throw new IOException(ex); }
+  }
+
   private BufferedOutput flushFirst(boolean reclaim) throws IOException {
     BufferedOutput reclaimed = null;
     var t = firstPending;
+    if(t.asyncError != null) handleAsyncError(t.asyncError);
     while(true) {
       //System.err.println("flushFirst "+t);
       if(t.to != null) {
@@ -314,6 +341,8 @@ public abstract class AsyncFilteringBufferedOutput extends FilteringBufferedOutp
   }
 
   @Override protected void flushPending() throws IOException {
+    if(asyncError != null) throw new IOException(asyncError);
+
     //System.err.println("flushPending: firstUnsubmitted="+firstUnsubmitted+", activePartition="+activePartition);
     if(firstUnsubmitted != null) {
       activePartition.isLastInPartition = true;
@@ -326,14 +355,16 @@ public abstract class AsyncFilteringBufferedOutput extends FilteringBufferedOutp
       flushFirst(false);
     }
     if(activePartition != null) {
-      runPartitionTerminator();
+      // TODO: Try to run this as a continuation and fall back to running synchronously if that fails
+      var t = createPartitionTerminator();
+      runBatch(t);
+      enqueue(t);
       flushFirst(false);
     }
     //System.out.println("asyncAllocated: "+asyncAllocated.get());
   }
-  
-  private void runPartitionTerminator() {
-    // TODO: Try to run this as a continuation and fall back to running synchronously if that fails
+
+  private Task createPartitionTerminator() throws IOException {
     var t = new Task();
     t._from = activePartition._from;
     t.to = allocTargetBlock(activePartition._from);
@@ -343,9 +374,7 @@ public abstract class AsyncFilteringBufferedOutput extends FilteringBufferedOutp
     t.prevInPartition = activePartition;
     t.state = Task.STATE_UNDERFLOWED;
     activePartition = null;
-    //System.err.println("running partition terminator "+t);
-    runBatch(t);
-    enqueue(t);
+    return t;
   }
 
   private void scheduleNewOrSequential(Task t) {
