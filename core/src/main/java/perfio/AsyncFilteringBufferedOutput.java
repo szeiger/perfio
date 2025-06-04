@@ -146,19 +146,38 @@ public abstract class AsyncFilteringBufferedOutput extends FilteringBufferedOutp
     }
   }
   
-  private void runBatch(Task t) {
+  private void runBatch(Task firstInBatch) {
+    var t = firstInBatch;
+    var stealFrom = firstInBatch;
     while(true) {
       if(t.prevInPartition != null) {
         t.data = t.prevInPartition.data;
         t.prevInPartition = null;
       }
       while(true) {
-        //System.err.println("filterAsync "+t);
         filterAsync(t);
         if(t.consumed) break;
-        //System.out.println("Async overflow in "+this);
-        var n = allocTargetBlockNoCache(t._from);
-        //asyncAllocated.incrementAndGet();
+        BufferedOutput n = null;
+        // Try to steal an empty block from the same batch before allocating a non-cacheable one
+        while(stealFrom != t) {
+          var cand = stealFrom.to.prev;
+          if(cand.start == cand.pos) {
+            if(cand == stealFrom.to) {
+              stealFrom.to = null;
+              stealFrom = stealFrom.nextInBatch;
+            } else {
+              cand.unlinkOnly();
+              cand.next = cand.prev = cand;
+            }
+            n = cand;
+            break;
+          }
+          stealFrom = stealFrom.nextInBatch;
+        }
+        if(n == null) {
+          n = allocTargetBlockNoCache(t._from);
+          //asyncAllocated.incrementAndGet();
+        }
         t.to.insertAllBefore(n);
         t.to = n;
         t.state = Task.STATE_OVERFLOWED;
@@ -270,18 +289,20 @@ public abstract class AsyncFilteringBufferedOutput extends FilteringBufferedOutp
     var t = firstPending;
     while(true) {
       //System.err.println("flushFirst "+t);
-      var n = t.to.next;
-      while(true) {
-        var nn = n.next;
-        if(n.pos != n.start) {
-          if(reclaim && reclaimed == null && allowAppend && firstPending == lastPending && t.nextInBatch == null && n == t.to && n.pos - n.start < n.buf.length / 2) reclaimed = n;
-          else appendBlockToParent(n);
-        } else {
-          if(reclaim && reclaimed == null) reclaimed = n;
-          else releaseBlock(n);
+      if(t.to != null) {
+        var n = t.to.next;
+        while(true) {
+          var nn = n.next;
+          if(n.pos != n.start) {
+            if(reclaim && reclaimed == null && allowAppend && firstPending == lastPending && t.nextInBatch == null && n == t.to && n.pos - n.start < n.buf.length / 2) reclaimed = n;
+            else appendBlockToParent(n);
+          } else {
+            if(reclaim && reclaimed == null) reclaimed = n;
+            else releaseBlock(n);
+          }
+          if(n == t.to) break;
+          n = nn;
         }
-        if(n == t.to) break;
-        n = nn;
       }
       if(t.ownsSourceBlock) releaseBlock(t._from);
       if(t.nextInBatch == null) break;
