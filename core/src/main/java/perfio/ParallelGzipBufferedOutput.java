@@ -33,20 +33,24 @@ public class ParallelGzipBufferedOutput extends AsyncFilteringBufferedOutput {
 
   protected void filterAsync(Task t) {
     var defl = (Deflater)(t.data != null ? t.data : (t.data = new Deflater(Deflater.DEFAULT_COMPRESSION, true)));
-    var o = t.to;
-    if(t.start != t.end) {
-      if(t.state != Task.STATE_OVERFLOWED) defl.setInput(t.buf, t.start, t.end - t.start);
-      o.pos += defl.deflate(o.buf, o.pos, o.buf.length-o.pos);
-    }
-    if(defl.needsInput()) {
-      if(t.isLast()) {
-        int l;
-        while((l = defl.deflate(o.buf, o.pos, o.buf.length-o.pos, Deflater.SYNC_FLUSH)) > 0) o.pos += l;
-        if(o.pos < o.buf.length) {
-          defl.end();
-          t.consume();
-        }
-      } else t.consume();
+    try {
+      var o = t.to;
+      if(!t.isEmpty()) {
+        if(t.isNew()) defl.setInput(t.buf, t.start, t.length());
+        o.pos += defl.deflate(o.buf, o.pos, o.buf.length-o.pos);
+      }
+      if(defl.needsInput()) {
+        if(t.isLast()) {
+          int l;
+          while((l = defl.deflate(o.buf, o.pos, o.buf.length-o.pos, Deflater.SYNC_FLUSH)) > 0) o.pos += l;
+          if(o.pos < o.buf.length) {
+            defl.end();
+            t.consume();
+          }
+        } else t.consume();
+      }
+    } catch(Error | RuntimeException ex) {
+      try { defl.end(); } finally { throw ex; }
     }
   }
 }

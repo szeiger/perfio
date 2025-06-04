@@ -33,21 +33,17 @@ public class AsyncGzipBufferedOutput extends AsyncFilteringBufferedOutput {
   }
 
   protected void filterAsync(Task t) {
-    var done = false;
     try {
-      if(t.state != Task.STATE_OVERFLOWED) {
+      if(t.isNew()) {
         crc.update(t.buf, t.start, t.end - t.start);
         defl.setInput(t.buf, t.start, t.end - t.start);
       }
       var o = t.to;
       o.pos += defl.deflate(o.buf, o.start, o.buf.length-o.start);
       if(defl.needsInput()) t.consume();
-      done = true;
-    } finally {
-      if(!done) {
-        ended = true;
-        defl.end();
-      }
+    } catch(Error | RuntimeException ex) {
+      ended = true;
+      try { defl.end(); } finally { throw ex; }
     }
   }
 }

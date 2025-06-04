@@ -19,7 +19,8 @@ import java.util.concurrent.*;
 /// Subclasses should clean up any resources before throwing an Exception from any of these
 /// methods. In case of a sequential filter, no further methods will be called and instead the
 /// asynchronous Exception is rethrown, but a parallel filter may still make further
-/// [#filterAsync(Task)] calls on other threads.
+/// [#filterAsync(Task)] calls on other threads to process other partitions (all of which will
+/// be properly terminated with a "last" input block).
 public abstract class AsyncFilteringBufferedOutput extends FilteringBufferedOutput {
   private final int depth, minPartitionSize, maxPartitionSize;
   private final boolean sequential, allowAppend, batchSubmit;
@@ -88,7 +89,10 @@ public abstract class AsyncFilteringBufferedOutput extends FilteringBufferedOutp
     private boolean consumed, isLastInPartition, ownsSourceBlock;
     private volatile Object continuation;
 
-    /// Partition-specific data
+    /// Partition-specific data for use by filter implementations, initially set to `null` in a
+    /// new partition. This object is carried over from each [Task] of a partition to the next.
+    /// When used to hold resources that must be closed manually, this should be done at the end
+    /// of the partition (i.e. [#isLastInPartition] was true, and no overflow produced).
     public Object data;
 
     private static final VarHandle CONTINUATION =
@@ -120,7 +124,16 @@ public abstract class AsyncFilteringBufferedOutput extends FilteringBufferedOutp
 
     /// Check if this is the last task in a partition
     public boolean isLast() { return isLastInPartition; }
+    
+    /// Check if the input block is empty. Unless the filter implementation caused this on its
+    /// own, this can only happen in non-batched partitioned mode where an empty block is used to
+    /// terminate the last partition before the end of the stream or an explicit [#flush()].
+    public boolean isEmpty() { return start == end; }
+    
+    /// Check if the input block is new (i.e. `state != STATE_OVERFLOWED`)
+    public boolean isNew() { return state != STATE_OVERFLOWED; }
 
+    /// Return the length of the input block (`end - start`)
     public int length() { return end - start; }
 
     public String toString() {
@@ -188,7 +201,7 @@ public abstract class AsyncFilteringBufferedOutput extends FilteringBufferedOutp
           stealFrom = stealFrom.nextInBatch;
         }
         if(n == null) {
-          n = allocTargetBlockNoCache(t._from);
+          n = allocUncachedTargetBlock(t._from);
           //asyncAllocated.incrementAndGet();
         }
         t.to.insertAllBefore(n);
@@ -233,11 +246,10 @@ public abstract class AsyncFilteringBufferedOutput extends FilteringBufferedOutp
   }
 
   // safe to call from worker threads
-  private BufferedOutput allocTargetBlockNoCache(BufferedOutput from) {
-    var b = new NestedBufferedOutput(new byte[initialBufferSize], false, this);
+  private BufferedOutput allocUncachedTargetBlock(BufferedOutput from) {
+    var b = (NestedBufferedOutput)allocUncachedBlock();
     b.reinit(b.buf, from.bigEndian, 0, 0, b.buf.length, SHARING_EXCLUSIVE, b.buf.length, 0, true, from.rootBlock, b, from.topLevel);
     b.next = b.prev = b;
-    b.nocache = true;
     return b;
   }
 

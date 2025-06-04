@@ -87,9 +87,10 @@ public abstract class FilteringBufferedOutput extends TopLevelBufferedOutput {
   /// An asynchronous filter may instead start filtering the block on another thread, and collect
   /// any finished blocks to write them to the parent. It must also override [#flushPending()] to
   /// write pending blocks on demand. Note that all [#BufferedOutput] methods may only be called
-  /// on the main thread. In particular, you must not allocate a new block from a background
-  /// thread. Instead, wait for the next call to [#filterBlock(BufferedOutput)] or
-  /// [#flushPending()] to get a new block and then continue processing.
+  /// on the main thread. In particular, you must not get a cached block from a background thread
+  /// with [#allocBlock()]. Instead, wait for the next call to [#filterBlock(BufferedOutput)] or
+  /// [#flushPending()] to get a new block and then continue processing, or use
+  /// [#allocUncachedBlock()].
   ///
   /// Any block passed to [#filterBlock(BufferedOutput)] or allocated with [#allocBlock()] should
   /// either be passed to [#appendBlockToParent(BufferedOutput)] or released with
@@ -123,6 +124,14 @@ public abstract class FilteringBufferedOutput extends TopLevelBufferedOutput {
 
   /// Get a block from the cache.
   protected final BufferedOutput allocBlock() { return cache.getExclusiveBlock(); }
+  
+  /// Allocate a new, uncached block. Unlike [#allocBlock()] this method is safe to call from
+  /// other threads. It should not be used from the main threads.
+  protected final BufferedOutput allocUncachedBlock() {
+    var b = new NestedBufferedOutput(new byte[initialBufferSize], false, this);
+    b.nocache = true;
+    return b;
+  }
 
   /// Append a block to the parent.
   protected final void appendBlockToParent(BufferedOutput b) throws IOException {
