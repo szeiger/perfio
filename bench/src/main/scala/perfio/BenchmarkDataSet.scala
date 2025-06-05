@@ -22,7 +22,9 @@ object BenchmarkDataSet:
     case "numSmall" => NumDataSetSmall
     case "bytes" => BytesDataSet
     case "chunks" => ChunksDataSet
-    case "chunksSlow" => ChunksSlowDataSet
+    case "chunksSlow50" => ChunksSlowDataSet50
+    case "chunksSlow500" => ChunksSlowDataSet500
+    case "chunksVerySlow" => ChunksVerySlowDataSet
     case "randomChunks" => RandomChunksDataSet
 
 
@@ -142,21 +144,27 @@ object ChunksDataSet extends CompressibleChunksDataSet(1024, 0)
 
 object RandomChunksDataSet extends RandomChunksDataSet(1024, 0)
 
-object ChunksSlowDataSet extends CompressibleChunksDataSet(1024, 2)
+object ChunksSlowDataSet50 extends CompressibleChunksDataSet(1024, 50000)
 
-class CompressibleChunksDataSet(chunkSize: Int, val delay: Long) extends ChunksDataSet:
+object ChunksSlowDataSet500 extends CompressibleChunksDataSet(1024, 500000)
+
+object ChunksVerySlowDataSet extends CompressibleChunksDataSet(1024, 5000, 10)
+
+class CompressibleChunksDataSet(chunkSize: Int, val delay: Int = 0, val delayInterval: Int = 1000) extends ChunksDataSet:
   val count = ((100000L * 1024) / chunkSize).toInt
   val chunk = Array.tabulate[Byte](chunkSize)(_.toByte)
   val byteSize = count * chunkSize
 
-class RandomChunksDataSet(chunkSize: Int, val delay: Long) extends ChunksDataSet:
+class RandomChunksDataSet(chunkSize: Int, val delay: Int) extends ChunksDataSet:
   val rnd = new Random(0L)
   val count = ((100000L * 1024) / chunkSize).toInt
   val chunk = Array.fill[Byte](chunkSize)(rnd.nextInt().toByte)
   val byteSize = count * chunkSize
+  val delayInterval = 1000
 
 abstract class ChunksDataSet extends BenchmarkDataSet:
-  val delay: Long
+  val delay: Int
+  val delayInterval: Int
   val count: Int
   val chunk: Array[Byte]
   val byteSize: Int
@@ -165,7 +173,7 @@ abstract class ChunksDataSet extends BenchmarkDataSet:
     var i = 0
     while i < count do
       out.write(chunk)
-      if(i % 1000 == 0) Thread.sleep(delay)
+      if(i % delayInterval == 0) Thread.sleep(0, delay)
       i += 1
     out.close()
 
@@ -173,7 +181,7 @@ abstract class ChunksDataSet extends BenchmarkDataSet:
     var i = 0
     while i < count do
       out.write(chunk)
-      if(i % 1000 == 0) Thread.sleep(delay)
+      if(i % delayInterval == 0) Thread.sleep(0, delay)
       i += 1
     out.close()
 
@@ -181,14 +189,14 @@ abstract class ChunksDataSet extends BenchmarkDataSet:
     var i = 0
     while i < count do
       out.put(chunk)
-      if(i % 1000 == 0) Thread.sleep(delay)
+      if(i % delayInterval == 0) Thread.sleep(0, delay)
       i += 1
 
   def writeTo(out: BufferedOutput): Unit =
     var i = 0
     while i < count do
       out.write(chunk)
-      if(i % 1000 == 0) Thread.sleep(delay)
+      if(i % delayInterval == 0) Thread.sleep(0, delay)
       i += 1
     out.close()
 

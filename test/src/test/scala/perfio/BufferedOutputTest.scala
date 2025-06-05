@@ -7,7 +7,7 @@ import org.junit.runners.Parameterized
 
 import java.io.{ByteArrayInputStream, EOFException}
 import java.util.concurrent.CompletableFuture
-import java.util.zip.GZIPInputStream
+import java.util.zip.{Deflater, GZIPInputStream}
 
 @RunWith(classOf[Parameterized])
 class BufferedOutputTest(_name: String, create: TestData => OutputTester) extends TestUtil:
@@ -170,10 +170,10 @@ object BufferedOutputTest:
         ("_SimpleAsyncSequentialXor", xorOutputTester(new SimpleAsyncSequentialXorBlockBufferedOutput(_))),
         ("_AsyncXor", xorOutputTester(new AsyncXorBlockBufferedOutput(_, false, 0))),
         ("_AsyncSequentialXor", xorOutputTester(new AsyncXorBlockBufferedOutput(_, true, 0))),
-        ("_Gzip", gzipOutputTester(new GzipBufferedOutput(_))),
-        ("_AsyncGzip", gzipOutputTester(new AsyncGzipBufferedOutput(_))),
-        ("_ParallelGzip", gzipOutputTester(new ParallelGzipBufferedOutput(_))),
-        ("_ParallelGzipNoPart", gzipOutputTester(new ParallelGzipBufferedOutput(_, -1, 0))),
+        ("_GzipSync", gzipOutputTester(GzipBufferedOutput.sync)),
+        ("_GzipAsync", gzipOutputTester(GzipBufferedOutput.async)),
+        ("_GzipParallel", gzipOutputTester(GzipBufferedOutput.parallel)),
+        ("_GzipParallelNoPart", gzipOutputTester(GzipBufferedOutput.parallel(_, -1, 0, 0, false, null, Deflater.DEFAULT_COMPRESSION))),
       )
     yield Array[Any](n+fn, c.andThen(tr))
     java.util.List.of(a*)

@@ -71,6 +71,20 @@ public abstract class AsyncFilteringBufferedOutput extends FilteringBufferedOutp
     this.batchSubmit = batchSubmit;
     this.pool = pool != null ? pool : ForkJoinPool.commonPool();
   }
+  
+  /// Constructor for synchronous filters that allows sharing a common superclass.
+  /// [#filterBlock(BufferedOutput)] and [#flushPending()] must be overridden to replace the
+  /// asynchronous implementations.
+  protected AsyncFilteringBufferedOutput(BufferedOutput parent, boolean flushPartial) {
+    super(parent, flushPartial);
+    this.sequential = false;
+    this.depth = 0;
+    this.allowAppend = false;
+    this.minPartitionSize = 0;
+    this.maxPartitionSize = 0;
+    this.batchSubmit = false;
+    this.pool = null;
+  }
 
   /// A task represents an input block to be transformed, together with an output block to write
   /// the data to. Filter implementations should not rely on the identity of [Task] objects.

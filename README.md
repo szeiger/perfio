@@ -39,6 +39,8 @@ Mostly avoiding things that make the JDK abstractions slow:
 
   perfIO's TextOutput converts directly from Strings to byte data (writing it directly into a BufferedOutput's byte array) and LineTokenizer does the same when reading. This makes use of the more efficient conversions for the common character sets (UTF-8, Latin-1, ASCII) that are built into the String class, Unfortunately the provided API is not sufficient to avoid double buffering in all cases. perfIO can optionally call internal JDK methods to make some common use cases even faster. 
 
+- Output filters can run in asynchronous and parallel mode, and they can exchange blocks of data with the underyling BufferedOutput instead of copying everything.
+
 perfIO also uses both FFM and NIO abstractions where appropriate (depending on performance for the specific use case) and the Vector incubator API (for LineTokenizer).
 
 Another source of performance is not just making the available abstractions fast, but making fast abstractions easily available:
@@ -67,7 +69,7 @@ The minimum required JDK version is 21 with `--enable-preview` (for the FFM API)
 
 - Unsafe memory access is disabled by default. It can improve the performance in some cases but result in less optimized code in others. Both `-Dperfio.enableUnsafe=true` and `--enable-native-access=ALL-UNNAMED` are required to enable it.
 
-## Usage
+## Basic Usage
 
 A top-level `BufferedInput` or `BufferedOutput` object is instantiated by calling one of the static factory methods in the respective class. It should be closed after use by calling `close()`.
 
@@ -136,3 +138,25 @@ Both `BufferedInput` and `BufferedOutput` will reuse views by default. This mean
 A `LineTokenizer` can be obtained by calling `lines` on a `BufferedInput` object. It allows you to read a text file line by line. Line tokenization is currently limited to ASCII-compatible encodings, which includes UTF-8 and the ISO-8859 ("Latin") charsets. `LineTokenizer` will use a faster SIMD-based implementation if the Vector API (incubator version as of JDK 22) is available.
 
 A `TextOutput` can be obtained by calling `text` on a `BufferedOutput` object. It allows you to write text data, similar to `java.io.PrintWriter`. Unlike `LineTokenizer` it supports arbitrary character sets, but it is optimized for UTF-8, Latin-1 and ASCII.
+
+## Output Filters
+
+Output filters should extend `FilteringBufferedOutput` (synchronous filtering only) or `AsyncFilteringBufferedOutput` (synchronous/asynchronous/parallel filtering). The only pre-defined filter at the moment is `GzipBufferedOutput`. Instances can be created with the static factory methods in that class.
+
+```java
+  // Using parallel gzip compression with default parameters
+  var out = BufferedOutput.ofFile(Path.of("foo"));
+  var gout = GzipBufferedOutput.parallel(out);
+  // write to gout
+  gout.close();
+```
+
+![8.svg](docs/8.svg)
+
+The relative performance of sync/async/parallel filtering depends primarily on the speed of the main thread that writes the data.
+
+The `chunks` data set writes the same 1 kB byte array repeatedly at maximum speed. This is the ideal case for `java.io.GZIPOutputStream` because it can pass this byte array directly to zlib instead of copying it first. Due to a more efficient hand-off of the output into the underlying `BufferedOutput` and some optimizations, perfIO is still a bit faster in synchronous mode. Async has slightly more overhead and comes out at about the same speed as `GZIPOutputStream`. Parallel filtering (using up to 31 threads in this benchmark) is much faster. In the `chunksSlow50` data set we artificially slow down writing from 10ms to 21ms for uncompressed perfIO. Now asynchronous filtering is starting to show its advantage. Slowing down the main thread much further (`chunksVerySlow`) lets both async and parallel filtering do all work in the background so that the compression does not cause any slowdown compared to the uncompressed reference.
+
+The `numSmall` benchmark shows a more realistic case where we perform mixed int8/int32/int64 writes. This is much faster in general with perfIO, and so fast in fact that sync vs async filtering makes no difference. (Note that we do not use a `BufferedOutputStream` on top of the `GZIPOutputStream` in any benchmark because it would be slower in the chunk-based ones. The additional buffering would benefit `GZIPOutputStream` in `numSmall` but the difference is less than 5%).
+
+When tuning the async and parallel filters for performance (by using the overloaded factory methods that let you customize all parameters) the main focus should be on avoiding stalls of the filter threads. Even in the case of gzip, which is generally very slow compared to uncompressed writing with perfIO, uneven write performance can lead to stalls that require expensive rescheduling on the thread pool (usually the common `ForkJoinPool`). This can be solved by increasing the filter's partition size and/or queue depth.

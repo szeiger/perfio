@@ -3,8 +3,9 @@ package perfio
 import org.openjdk.jmh.annotations.*
 import org.openjdk.jmh.infra.*
 
-import java.util.concurrent.TimeUnit
-import java.util.zip.GZIPOutputStream
+import java.io.BufferedOutputStream
+import java.util.concurrent.{ForkJoinPool, TimeUnit}
+import java.util.zip.{Deflater, GZIPOutputStream}
 
 @BenchmarkMode(Array(Mode.AverageTime))
 @Fork(value = 1, jvmArgsAppend = Array("-Xmx12g", "-Xss32M", "-XX:+UnlockExperimentalVMOptions", "-XX:+UseZGC",
@@ -17,76 +18,88 @@ import java.util.zip.GZIPOutputStream
 @State(Scope.Benchmark)
 class GzipBenchmark extends BenchUtil:
 
-  //@Param(Array("numSmall", "chunks", "chunksSlow", "randomChunks"))
-  @Param(Array("chunks"))
+  @Param(Array("numSmall", "chunks", "chunksSlow50", "chunksVerySlow", "randomChunks"))
   var dataSet: String = null
 
   //@Param(Array("1024", "32768"))
-  @Param(Array("1024"))
+  @Param(Array("32768"))
   var blockSize: Int = 0
 
   final lazy val data = BenchmarkDataSet.forName(dataSet)
   import data.*
 
-//  @Benchmark
-//  def noopBufferedOutput(bh: Blackhole): Unit =
-//    val out = BufferedOutput.growing(byteSize, blockSize)
-//    writeTo(out)
-//    bh.consume(out.buffer)
-//    bh.consume(out.length)
-//
-//  @Benchmark
-//  def gzipOutputStream(bh: Blackhole): Unit =
-//    val bout = new MyByteArrayOutputStream(byteSize)
-//    val gout = new GZIPOutputStream(bout)
-//    writeTo(gout)
-//    bh.consume(bout.getSize)
-//    bh.consume(bout.getBuffer)
-//
-//  @Benchmark
-//  def gzipBufferedOutput(bh: Blackhole): Unit =
-//    val out = BufferedOutput.growing(byteSize, blockSize)
-//    val gout = new GzipBufferedOutput(out)
-//    writeTo(gout)
-//    bh.consume(out.buffer)
-//    bh.consume(out.length)
+  println()
+  println("availableProcessors: "+Runtime.getRuntime().availableProcessors())
+  println("Parallelism: "+ForkJoinPool.getCommonPoolParallelism)
+  println()
 
   @Benchmark
-  def asyncGzipBufferedOutput(bh: Blackhole): Unit =
+  def noop(bh: Blackhole): Unit =
     val out = BufferedOutput.growing(byteSize, blockSize)
-    val gout = new AsyncGzipBufferedOutput(out)
+    writeTo(out)
+    bh.consume(out.buffer)
+    bh.consume(out.length)
+
+  @Benchmark
+  def gzipOutputStream(bh: Blackhole): Unit =
+    val bout = new MyByteArrayOutputStream(byteSize)
+    val gout = new GZIPOutputStream(bout)
+    writeTo(gout)
+    bh.consume(bout.getSize)
+    bh.consume(bout.getBuffer)
+
+  @Benchmark
+  def gzipBufferedOutputStream(bh: Blackhole): Unit =
+    val bout = new MyByteArrayOutputStream(byteSize)
+    val gout = new BufferedOutputStream(new GZIPOutputStream(bout))
+    writeTo(gout)
+    bh.consume(bout.getSize)
+    bh.consume(bout.getBuffer)
+
+  @Benchmark
+  def sync(bh: Blackhole): Unit =
+    val out = BufferedOutput.growing(byteSize, blockSize)
+    val gout = GzipBufferedOutput.sync(out)
     writeTo(gout)
     bh.consume(out.buffer)
     bh.consume(out.length)
 
   @Benchmark
-  def asyncGzipBufferedOutputUnlimited(bh: Blackhole): Unit =
+  def async(bh: Blackhole): Unit =
     val out = BufferedOutput.growing(byteSize, blockSize)
-    val gout = new AsyncGzipBufferedOutput(out, 0)
+    val gout = GzipBufferedOutput.async(out)
     writeTo(gout)
     bh.consume(out.buffer)
     bh.consume(out.length)
 
   @Benchmark
-  def parallelGzipBufferedOutput(bh: Blackhole): Unit =
+  def asyncUnlimited(bh: Blackhole): Unit =
     val out = BufferedOutput.growing(byteSize, blockSize)
-    val gout = new ParallelGzipBufferedOutput(out)
+    val gout = GzipBufferedOutput.async(out, 0, 65536, 0, true, null, Deflater.DEFAULT_COMPRESSION)
     writeTo(gout)
     bh.consume(out.buffer)
     bh.consume(out.length)
 
   @Benchmark
-  def parallelGzipBufferedOutputSinglePart(bh: Blackhole): Unit =
+  def parallel(bh: Blackhole): Unit =
     val out = BufferedOutput.growing(byteSize, blockSize)
-    val gout = new ParallelGzipBufferedOutput(out, -1, Int.MaxValue)
+    val gout = GzipBufferedOutput.parallel(out)
     writeTo(gout)
     bh.consume(out.buffer)
     bh.consume(out.length)
 
   @Benchmark
-  def parallelGzipBufferedOutputNoPart(bh: Blackhole): Unit =
+  def parallelSinglePart(bh: Blackhole): Unit =
     val out = BufferedOutput.growing(byteSize, blockSize)
-    val gout = new ParallelGzipBufferedOutput(out, -1, 0)
+    val gout = GzipBufferedOutput.parallel(out, -1, Int.MaxValue, Int.MaxValue, false, null, Deflater.DEFAULT_COMPRESSION)
+    writeTo(gout)
+    bh.consume(out.buffer)
+    bh.consume(out.length)
+
+  @Benchmark
+  def parallelNoPart(bh: Blackhole): Unit =
+    val out = BufferedOutput.growing(byteSize, blockSize)
+    val gout = GzipBufferedOutput.parallel(out, -1, 0, 0, false, null, Deflater.DEFAULT_COMPRESSION)
     writeTo(gout)
     bh.consume(out.buffer)
     bh.consume(out.length)

@@ -11,7 +11,7 @@ import java.io.IOException;
 /// asynchronous filters will want to extend [AsyncFilteringBufferedOutput] instead).
 public abstract class FilteringBufferedOutput extends TopLevelBufferedOutput {
   protected final BufferedOutput parent;
-  private final boolean flushPartial;
+  protected final boolean flushPartial;
 
   /// An exclusive block from the cache whose buffer is used by this block. We swap it back into
   /// that block to either return it to the cache or insert it into the parent at the end (both of
