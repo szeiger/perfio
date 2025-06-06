@@ -86,7 +86,7 @@ public abstract class FilteringBufferedOutput extends TopLevelBufferedOutput {
   ///
   /// An asynchronous filter may instead start filtering the block on another thread, and collect
   /// any finished blocks to write them to the parent. It must also override [#flushPending()] to
-  /// write pending blocks on demand. Note that all [#BufferedOutput] methods may only be called
+  /// write pending blocks on demand. Note that all [BufferedOutput] methods may only be called
   /// on the main thread. In particular, you must not get a cached block from a background thread
   /// with [#allocBlock()]. Instead, wait for the next call to [#filterBlock(BufferedOutput)] or
   /// [#flushPending()] to get a new block and then continue processing, or use

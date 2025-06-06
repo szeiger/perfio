@@ -248,7 +248,7 @@ public abstract sealed class BufferedInput implements Closeable permits HeapBuff
   /// Read an unsigned 8-bit integer into the lower 8 bits of an `int`.
   public final int uint8() throws IOException { return int8() & 0xFF; }
 
-  /// Read a signed 16-bit integer (`short`) in the current byte [#order()].
+  /// Read a signed 16-bit integer (`short`) in the current byte [#order(ByteOrder)].
   public abstract short int16() throws IOException;
   /// Read a signed 16-bit integer (`short`) in the native byte order.
   public abstract short int16n() throws IOException;
@@ -257,7 +257,7 @@ public abstract sealed class BufferedInput implements Closeable permits HeapBuff
   /// Read a signed 16-bit integer (`short`) in little endian byte order.
   public abstract short int16l() throws IOException;
 
-  /// Read an unsigned 16-bit integer (`char`) in the current byte [#order()].
+  /// Read an unsigned 16-bit integer (`char`) in the current byte [#order(ByteOrder)].
   public abstract char uint16() throws IOException;
   /// Read an unsigned 16-bit integer (`char`) in the native byte order.
   public abstract char uint16n() throws IOException;
@@ -266,7 +266,7 @@ public abstract sealed class BufferedInput implements Closeable permits HeapBuff
   /// Read an unsigned 16-bit integer (`char`) in little endian byte order.
   public abstract char uint16l() throws IOException;
 
-  /// Read a signed 32-bit integer (`int`) in the current byte [#order()].
+  /// Read a signed 32-bit integer (`int`) in the current byte [#order(ByteOrder)].
   public abstract int int32() throws IOException;
   /// Read a signed 32-bit integer (`int`) in the native byte order.
   public abstract int int32n() throws IOException;
@@ -275,7 +275,7 @@ public abstract sealed class BufferedInput implements Closeable permits HeapBuff
   /// Read a signed 32-bit integer (`int`) in little endian byte order.
   public abstract int int32l() throws IOException;
 
-  /// Read an unsigned 32-bit integer into the lower 32 bits of a `long` in the current byte [#order()].
+  /// Read an unsigned 32-bit integer into the lower 32 bits of a `long` in the current byte [#order(ByteOrder)].
   public final long uint32() throws IOException { return int32() & 0xFFFFFFFFL; }
   /// Read an unsigned 32-bit integer into the lower 32 bits of a `long` in the native byte order.
   public final long uint32n() throws IOException { return int32n() & 0xFFFFFFFFL; }
@@ -284,7 +284,7 @@ public abstract sealed class BufferedInput implements Closeable permits HeapBuff
   /// Read an unsigned 32-bit integer into the lower 32 bits of a `long` in the little endian byte order.
   public final long uint32l() throws IOException { return int32l() & 0xFFFFFFFFL; }
 
-  /// Read a signed 64-bit integer (`long`) in the current byte [#order()].
+  /// Read a signed 64-bit integer (`long`) in the current byte [#order(ByteOrder)].
   public abstract long int64() throws IOException;
   /// Read a signed 64-bit integer (`long`) in the native byte order.
   public abstract long int64n() throws IOException;
@@ -293,7 +293,7 @@ public abstract sealed class BufferedInput implements Closeable permits HeapBuff
   /// Read a signed 64-bit integer (`long`) in little endian byte order.
   public abstract long int64l() throws IOException;
 
-  /// Read a 32-bit IEEE-754 floating point value (`float`) in the current byte [#order()].
+  /// Read a 32-bit IEEE-754 floating point value (`float`) in the current byte [#order(ByteOrder)].
   public abstract float float32() throws IOException;
   /// Read a 32-bit IEEE-754 floating point value (`float`) in the native byte order.
   public abstract float float32n() throws IOException;
@@ -302,7 +302,7 @@ public abstract sealed class BufferedInput implements Closeable permits HeapBuff
   /// Read a 32-bit IEEE-754 floating point value (`float`) in little endian byte order.
   public abstract float float32l() throws IOException;
 
-  /// Read a 64-bit IEEE-754 floating point value (`double`) in the current byte [#order()].
+  /// Read a 64-bit IEEE-754 floating point value (`double`) in the current byte [#order(ByteOrder)].
   public abstract double float64() throws IOException;
   /// Read a 64-bit IEEE-754 floating point value (`double`) in the native byte order.
   public abstract double float64n() throws IOException;

@@ -53,3 +53,7 @@ jobs:
           export JAVA_OPTS=--enable-preview
         fi
         sbt test bootstrapProto proto/test
+    - name: Build javadoc
+      if: matrix.java == 23
+      run: |
+        sbt core/doc
