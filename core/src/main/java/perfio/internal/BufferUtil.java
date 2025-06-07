@@ -1,8 +1,5 @@
 package perfio.internal;
 
-import perfio.AsyncFilteringBufferedOutput;
-import perfio.BufferedOutput;
-
 import java.io.IOException;
 import java.lang.foreign.Arena;
 import java.lang.foreign.MemorySegment;

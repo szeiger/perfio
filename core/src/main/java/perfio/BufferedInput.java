@@ -1,7 +1,7 @@
 package perfio;
 
 import perfio.internal.BufferUtil;
-import perfio.internal.MemoryAccessor;
+import perfio.internal.LineBuffer;
 
 import java.io.Closeable;
 import java.io.EOFException;

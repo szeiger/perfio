@@ -1,6 +1,6 @@
-package perfio;
+package perfio.internal;
 
-class LineBuffer {
+public class LineBuffer {
   private byte[] buf = new byte[256];
 
   private byte[] extendBuffer(int len) {
@@ -9,7 +9,7 @@ class LineBuffer {
     return new byte[buflen];
   }
 
-  byte[] get(int len) {
+  public byte[] get(int len) {
     if(buf.length < len) buf = extendBuffer(len);
     return buf;
   }

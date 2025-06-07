@@ -1,5 +1,6 @@
 package perfio;
 
+import perfio.internal.LineBuffer;
 import perfio.internal.StringInternals;
 
 import java.io.IOException;

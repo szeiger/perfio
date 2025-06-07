@@ -1,6 +1,7 @@
 package perfio;
 
 import perfio.internal.BufferUtil;
+import perfio.internal.LineBuffer;
 import perfio.internal.MemoryAccessor;
 
 import java.io.Closeable;
