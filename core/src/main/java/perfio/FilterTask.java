@@ -19,11 +19,10 @@ public abstract class FilterTask<Data> {
   /// be empty.
   public static final byte STATE_UNDERFLOWED = 2;
 
-  /// The output block to which the filter should write. This block is initialized to a state
-  /// where the primitive writing methods (e.g. [BufferedOutput#int8(byte)]) can be used on it.
-  /// Filter implementations may also write directly to `to.buf` and set `to.start` and `to.pos`
+  /// The output block to which the filter should write. Filters implementations can use the
+  /// primitive writing methods, or write directly to `to.buf` and set `to.start` and `to.pos`
   /// accordingly.
-  public BufferedOutput to;
+  public WritableBuffer<?> to;
 
   /// The input block's buffer.
   public byte[] buf;

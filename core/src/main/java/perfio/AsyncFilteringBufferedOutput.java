@@ -159,7 +159,7 @@ public abstract class AsyncFilteringBufferedOutput<Data> extends FilteringBuffer
         BufferedOutput n = null;
         // Try to steal an empty block from the same batch before allocating a non-cacheable one
         while(stealFrom != t) {
-          var cand = stealFrom.to.prev;
+          var cand = ((BufferedOutput)stealFrom.to).prev;
           if(cand.start == cand.pos) {
             if(cand == stealFrom.to) {
               stealFrom.to = null;
@@ -177,7 +177,7 @@ public abstract class AsyncFilteringBufferedOutput<Data> extends FilteringBuffer
           n = allocUncachedTargetBlock(t._from);
           //asyncAllocated.incrementAndGet();
         }
-        t.to.insertAllBefore(n);
+        ((BufferedOutput)t.to).insertAllBefore(n);
         t.to = n;
         t.state = Task.STATE_OVERFLOWED;
       }
@@ -298,7 +298,7 @@ public abstract class AsyncFilteringBufferedOutput<Data> extends FilteringBuffer
     while(true) {
       //System.err.println("flushFirst "+t);
       if(t.to != null) {
-        var n = t.to.next;
+        var n = ((BufferedOutput)t.to).next;
         while(true) {
           var nn = n.next;
           if(n.pos != n.start) {
