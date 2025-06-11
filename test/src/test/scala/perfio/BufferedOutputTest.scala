@@ -304,8 +304,8 @@ object BufferedOutputTest:
         p.filterState.asInstanceOf[CompletableFuture[Unit]].get
         appendBlockToParent(p)
 
-  class AsyncXorBlockBufferedOutput(parent: BufferedOutput, sequential: Boolean, depth: Int) extends AsyncFilteringBufferedOutput(parent, sequential, depth, false, 0, 0, false, null):
-    def filterAsync(t: AsyncFilteringBufferedOutput#Task): Unit =
+  class AsyncXorBlockBufferedOutput(parent: BufferedOutput, sequential: Boolean, depth: Int) extends AsyncFilteringBufferedOutput[Nothing](parent, sequential, depth, false, 0, 0, false, null):
+    def filterAsync(t: FilterTask[Nothing]): Unit =
       val tolen = t.to.buf.length min 1024 // force some buffer overflows to test the overflow logic
       val prlen = t.length min tolen
       var i = 0

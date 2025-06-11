@@ -14,7 +14,7 @@ import java.util.zip.Deflater;
 /// Parallel processing uses multiple threads to compress blocks (with a default size of 64k,
 /// independent of the BufferedOutput block size) in parallel which is much faster. Output sizes
 /// can be a bit larger due to using a new dictionary for each block.
-public abstract class GzipBufferedOutput extends AsyncFilteringBufferedOutput {
+public abstract class GzipBufferedOutput extends AsyncFilteringBufferedOutput<Deflater> {
   /// Create a new synchronous GzipBufferedOutput with default parameters.
   /// 
   /// This is the same as `sync(parent, Deflater.DEFAULT_COMPRESSION)`.
@@ -93,6 +93,7 @@ public abstract class GzipBufferedOutput extends AsyncFilteringBufferedOutput {
   }
 }
 
+
 final class SequentialGzipBufferedOutput extends GzipBufferedOutput {
   private final Deflater defl;
   private boolean ended;
@@ -142,7 +143,7 @@ final class SequentialGzipBufferedOutput extends GzipBufferedOutput {
     }
   }
 
-  protected void filterAsync(Task t) {
+  protected void filterAsync(FilterTask<Deflater> t) {
     try {
       if(t.isNew()) {
         crc.update(t.buf, t.start, t.end - t.start);
@@ -157,6 +158,7 @@ final class SequentialGzipBufferedOutput extends GzipBufferedOutput {
     }
   }
 }
+
 
 final class ParallelGzipBufferedOutput extends GzipBufferedOutput {
 
@@ -178,8 +180,8 @@ final class ParallelGzipBufferedOutput extends GzipBufferedOutput {
     super.filterBlock(b);
   }
 
-  protected void filterAsync(Task t) {
-    var defl = (Deflater)(t.data != null ? t.data : (t.data = mkDeflater()));
+  protected void filterAsync(FilterTask<Deflater> t) {
+    var defl = t.data != null ? t.data : (t.data = mkDeflater());
     try {
       var o = t.to;
       if(!t.isEmpty()) {

@@ -8,8 +8,8 @@ import java.lang.invoke.VarHandle;
 import java.util.concurrent.*;
 
 /// This class provides a convenient base for asynchronous and parallel [FilteringBufferedOutput]
-/// implementations. Subclasses only need to implement the [#filterAsync(Task)] method which is
-/// called on the worker threads to process a single input block into an output block. All
+/// implementations. Subclasses only need to implement the [#filterAsync(FilterTask)] method which
+/// is called on the worker threads to process a single input block into an output block. All
 /// scheduling is handled by this class.
 ///
 /// Subclasses that want to provide synchronous filtering as an option (which can take advantage
@@ -19,9 +19,11 @@ import java.util.concurrent.*;
 /// Subclasses should clean up any resources before throwing an Exception from any of these
 /// methods. In case of a sequential filter, no further methods will be called and instead the
 /// asynchronous Exception is rethrown, but a parallel filter may still make further
-/// [#filterAsync(Task)] calls on other threads to process other partitions (all of which will
-/// be properly terminated with a "last" input block).
-public abstract class AsyncFilteringBufferedOutput extends FilteringBufferedOutput {
+/// [#filterAsync(FilterTask)] calls on other threads to process other partitions (all of which
+/// will be properly terminated with a "last" input block).
+///
+/// @param <Data> The type of the filter implementation's [FilterTask#data].
+public abstract class AsyncFilteringBufferedOutput<Data> extends FilteringBufferedOutput {
   private final int depth, minPartitionSize, maxPartitionSize;
   private final boolean sequential, allowAppend, batchSubmit;
   private final Executor pool;
@@ -45,10 +47,10 @@ public abstract class AsyncFilteringBufferedOutput extends FilteringBufferedOutp
   ///   match the common ForkJoinPool's parallelism. This can be used to throttle the main thread
   ///   to limit memory usage when the filter cannot keep up with the incoming data. When
   ///   `batchSubmit == true` the count is in partitions, otherwise in blocks.
-  /// @param allowAppend When set to true, [#filterAsync(Task)] must support appending to a
+  /// @param allowAppend When set to true, [#filterAsync(FilterTask)] must support appending to a
   ///   non-empty block, otherwise it is guaranteed to get an empty block (i.e. `start = 0`).
   /// @param minPartitionSize When both `minPartitionSize` and `maxPartitionSize` are set to 0,
-  ///   each [Task] processes one input block, which is typically between 1/2 and 1 times the
+  ///   each [FilterTask] processes one input block, which is typically between 1/2 and 1 times the
   ///   parent's initial buffer size, but may be smaller or larger. When set to a non-zero value,
   ///   each task processes between the minimum and maximum number of bytes, which may come from
   ///   multiple input blocks. The last task of a stream may be smaller than the minimum.
@@ -86,43 +88,17 @@ public abstract class AsyncFilteringBufferedOutput extends FilteringBufferedOutp
     this.pool = null;
   }
 
-  /// A task represents an input block to be transformed, together with an output block to write
-  /// the data to. Filter implementations should not rely on the identity of [Task] objects.
-  /// Additional tasks for continuations after an overflow or underflow may use the same [Task]
-  /// object or a different one. State that needs to be kept around for the duration of a partition
-  /// can be stored in the [Task#data] field.
-  public final class Task implements Runnable {
+  private final class Task extends FilterTask<Data> implements Runnable {
     private Task next, prevInPartition, nextInBatch;
     private Throwable asyncError;
     private CountDownLatch taskDone;
     private BufferedOutput _from;
-    public BufferedOutput to;
-    public byte[] buf;
-    public int start, end;
-    public byte state;
-    private boolean consumed, isLastInPartition, ownsSourceBlock;
+    private boolean ownsSourceBlock;
     private volatile Object continuation;
 
-    /// Partition-specific data for use by filter implementations, initially set to `null` in a
-    /// new partition. This object is carried over from each [Task] of a partition to the next.
-    /// When used to hold resources that must be closed manually, this should be done at the end
-    /// of the partition (i.e. [#isLastInPartition] was true, and no overflow produced).
-    public Object data;
-
     private static final VarHandle CONTINUATION =
-      BufferUtil.findVarHandle(MethodHandles.lookup(), Task.class, "continuation", Object.class);
+      BufferUtil.findVarHandle(MethodHandles.lookup(), AsyncFilteringBufferedOutput.Task.class, "continuation", Object.class);
     private static final Object FINISHED = new Object();
-
-    /// The task starts a new partition with a new input block and a new output block
-    public static final byte STATE_NEW = 0;
-    /// The task is resubmitted with a new output block after an overflow
-    public static final byte STATE_OVERFLOWED = 1;
-    /// The task is resubmitted with a new input block after an underflow. This can only happen
-    /// when a fixed partition size is set. If this is the last input block in the stream, it may
-    /// be empty.
-    public static final byte STATE_UNDERFLOWED = 2;
-
-    private Task() {}
 
     public void run() { runAll(this); }
 
@@ -132,23 +108,6 @@ public abstract class AsyncFilteringBufferedOutput extends FilteringBufferedOutp
     }
 
     private boolean isDone() { return taskDone.getCount() == 0; }
-
-    /// Mark the input as consumed. Returning without consuming the input indicates an overflow.
-    public void consume() { consumed = true; }
-
-    /// Check if this is the last task in a partition
-    public boolean isLast() { return isLastInPartition; }
-    
-    /// Check if the input block is empty. Unless the filter implementation caused this on its
-    /// own, this can only happen in non-batched partitioned mode where an empty block is used to
-    /// terminate the last partition before the end of the stream or an explicit [#flush()].
-    public boolean isEmpty() { return start == end; }
-    
-    /// Check if the input block is new (i.e. `state != STATE_OVERFLOWED`)
-    public boolean isNew() { return state != STATE_OVERFLOWED; }
-
-    /// Return the length of the input block (`end - start`)
-    public int length() { return end - start; }
 
     public String toString() {
       var st = state == STATE_OVERFLOWED ? "OVER" : state == STATE_UNDERFLOWED ? "UNDER" : "NEW";
@@ -243,14 +202,10 @@ public abstract class AsyncFilteringBufferedOutput extends FilteringBufferedOutp
 
   private boolean firstIsDone() { return firstPending != null && firstPending.isDone(); }
 
-  /// Process the data in `t.buf` at `[t.start - t.end[` and write the output into `t.to`. This
+  /// Process the bytes in `t.buf` at `[t.start - t.end[` and write the output into `t.to`. This
   /// method is called on a worker thread. If the input was fully consumed, it must call
   /// `t.consume()`, otherwise the task will be rescheduled with a new output block.
-  ///
-  /// `t.to` is initialized to a state where the primitive writing methods (e.g.
-  /// [BufferedOutput#int8(byte)]) can be used on it. Filter implementations may also write
-  /// directly to `t.to.buf` and set `t.to.start` and `t.to.pos` accordingly.
-  protected abstract void filterAsync(Task t) throws IOException;
+  protected abstract void filterAsync(FilterTask<Data> t) throws IOException;
 
   private BufferedOutput allocTargetBlock(BufferedOutput from) {
     var b = (NestedBufferedOutput)allocBlock();
@@ -291,7 +246,7 @@ public abstract class AsyncFilteringBufferedOutput extends FilteringBufferedOutp
 
       int tlen = Math.min(end - start, maxPartitionSize - activePartitionLength);
       boolean isNew = activePartition == null;
-      t.state = isNew ? Task.STATE_NEW : Task.STATE_UNDERFLOWED;
+      t.state = isNew ? FilterTask.STATE_NEW : FilterTask.STATE_UNDERFLOWED;
       t.end = start + tlen;
       t.ownsSourceBlock = t.end == end;
       t.isLastInPartition = (activePartitionLength + tlen) >= minPartitionSize;
@@ -398,7 +353,7 @@ public abstract class AsyncFilteringBufferedOutput extends FilteringBufferedOutp
     t.isLastInPartition = true;
     t.ownsSourceBlock = false;
     t.prevInPartition = activePartition;
-    t.state = Task.STATE_UNDERFLOWED;
+    t.state = FilterTask.STATE_UNDERFLOWED;
     activePartition = null;
     return t;
   }
