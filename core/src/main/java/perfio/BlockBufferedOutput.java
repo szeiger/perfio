@@ -11,7 +11,7 @@ import java.nio.ByteOrder;
 final class BlockBufferedOutput extends AccumulatingBufferedOutput {
 
   BlockBufferedOutput(boolean bigEndian, int initialBufferSize) {
-    super(new byte[initialBufferSize], bigEndian, 0, 0, initialBufferSize, initialBufferSize, false, Long.MAX_VALUE);
+    super(new byte[initialBufferSize], bigEndian, 0, 0, initialBufferSize, initialBufferSize, false, Long.MAX_VALUE, true);
   }
 
   @Override
@@ -21,8 +21,6 @@ final class BlockBufferedOutput extends AccumulatingBufferedOutput {
   }
 
   void flushBlocks(boolean forceFlush) throws IOException {}
-
-  boolean preferSplit() { return true; }
 
   public InputStream toInputStream() throws IOException {
     return new BufferIteratorInputStream(bufferIterator());

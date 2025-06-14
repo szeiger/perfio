@@ -1,8 +1,5 @@
 package perfio;
 
-import perfio.internal.MemoryAccessor;
-import perfio.internal.StringInternals;
-
 import java.io.*;
 import java.nio.ByteOrder;
 import java.nio.charset.Charset;
@@ -163,7 +160,10 @@ public abstract class BufferedOutput extends WritableBuffer<BufferedOutput> impl
   final boolean fixed;
   long totalLimit;
 
-  BufferedOutput(byte[] buf, boolean bigEndian, int start, int pos, int lim, boolean fixed, long totalLimit, TopLevelBufferedOutput topLevel, TopLevelBufferedOutput cache) {
+  /// Prefer splitting the current block over growing if it's sufficiently filled
+  boolean preferSplit;
+
+  BufferedOutput(byte[] buf, boolean bigEndian, int start, int pos, int lim, boolean fixed, long totalLimit, TopLevelBufferedOutput topLevel, TopLevelBufferedOutput cache, boolean preferSplit) {
     this.buf = buf;
     this.bigEndian = bigEndian;
     this.start = start;
@@ -173,6 +173,7 @@ public abstract class BufferedOutput extends WritableBuffer<BufferedOutput> impl
     this.totalLimit = totalLimit;
     this.topLevel = topLevel == null ? (TopLevelBufferedOutput) this : topLevel;
     this.cache = cache == null ? (TopLevelBufferedOutput) this : cache;
+    this.preferSplit = preferSplit;
   }
 
   long totalFlushed = 0L; // Bytes already flushed upstream or held in prefix blocks
@@ -212,7 +213,7 @@ public abstract class BufferedOutput extends WritableBuffer<BufferedOutput> impl
     //System.out.println("***** flushAndGrow("+count+") in "+showThis());
     checkState();
     if(fixed) return;
-    if(topLevel.preferSplit() && lim-pos <= topLevel.initialBufferSize/2 && count <= topLevel.initialBufferSize) { //TODO try to flush first?
+    if(preferSplit && lim-pos <= topLevel.initialBufferSize/2 && count <= topLevel.initialBufferSize) { //TODO try to flush first?
       // switch to a new buffer if this one is sufficiently filled
       newBuffer();
     } else if(prev == rootBlock) {
@@ -229,7 +230,7 @@ public abstract class BufferedOutput extends WritableBuffer<BufferedOutput> impl
     var pre = this.prev;
     var b = cache.getExclusiveBlock();
     totalFlushed += (pos-start);
-    buf = b.reinit(buf, bigEndian, start, pos, lim, sharing, 0L, 0L, true, rootBlock, null, topLevel);
+    buf = b.reinit(buf, bigEndian, start, pos, lim, sharing, 0L, 0L, true, rootBlock, null, topLevel, preferSplit);
     b.state = STATE_CLOSED;
     b.insertBefore(this);
     start = 0;
@@ -400,7 +401,7 @@ public abstract class BufferedOutput extends WritableBuffer<BufferedOutput> impl
     var p = fwd(length);
     var len = p - start;
     var b = cache.getSharedBlock();
-    b.reinit(buf, bigEndian, start, p, pos, SHARING_LEFT, length, -len, false, rootBlock, null, topLevel);
+    b.reinit(buf, bigEndian, start, p, pos, SHARING_LEFT, length, -len, false, rootBlock, null, topLevel, preferSplit);
     b.insertBefore(this);
     totalFlushed += (pos - start);
     start = pos;
@@ -414,7 +415,7 @@ public abstract class BufferedOutput extends WritableBuffer<BufferedOutput> impl
     var b = cache.getExclusiveBlock();
     var l = lim;
     if(l - pos > max) l = (int)(max + pos);
-    buf = b.reinit(buf, bigEndian, start, pos, l, sharing, max-len, -len, false, rootBlock, null, topLevel);
+    buf = b.reinit(buf, bigEndian, start, pos, l, sharing, max-len, -len, false, rootBlock, null, topLevel, preferSplit);
     b.insertBefore(this);
     totalFlushed = totalFlushed + len + max;
     sharing = SHARING_EXCLUSIVE;
@@ -447,7 +448,8 @@ public abstract class BufferedOutput extends WritableBuffer<BufferedOutput> impl
   public final BufferedOutput defer(long max) throws IOException {
     checkState();
     var b = cache.getExclusiveBlock();
-    b.reinit(b.buf, bigEndian, 0, 0, b.buf.length, SHARING_EXCLUSIVE, max, 0L, true, b, this, topLevel);
+    //System.out.println("defer() using: "+b.showThis());
+    b.reinit(b.buf, bigEndian, 0, 0, b.buf.length, SHARING_EXCLUSIVE, max, 0L, true, b, this, topLevel, true);
     b.next = b;
     b.prev = b;
     return b;
@@ -459,8 +461,12 @@ public abstract class BufferedOutput extends WritableBuffer<BufferedOutput> impl
 
   /// Append a nested root block.
   void appendNested(BufferedOutput r) throws IOException {
-    //System.out.println("appendNested "+this+" "+r);
-    if(!appendNestedMerge(r)) appendNestedSwap(r);
+    //System.out.println("appendNested: "+r.showList());
+    //System.out.println("        into: "+this.showList());
+    var n = appendNestedMerge(r);
+    if(!n) appendNestedSwap(r);
+    //if(n) System.out.println("       using: merge");
+    //else System.out.println("       using: swap");
   }
 
   private boolean appendNestedMerge(BufferedOutput r) throws IOException {
@@ -544,6 +550,8 @@ public abstract class BufferedOutput extends WritableBuffer<BufferedOutput> impl
       .append(",pos=").append(pos)
       .append(",lim=").append(lim)
       .append(",len=").append(pos-start)
+      .append(",buflen=").append(buf.length)
+      .append(",ps=").append(preferSplit)
       .toString();
   }
 
@@ -595,13 +603,13 @@ final class NestedBufferedOutput extends BufferedOutput {
   boolean nocache;
 
   NestedBufferedOutput(byte[] buf, boolean fixed, TopLevelBufferedOutput topLevel) {
-    super(buf, false, 0, 0, 0, fixed, Long.MAX_VALUE, topLevel, topLevel);
+    super(buf, false, 0, 0, 0, fixed, Long.MAX_VALUE, topLevel, topLevel, topLevel.preferSplit);
   }
 
   /// Re-initialize this block and return its old buffer.
   byte[] reinit(byte[] buf, boolean bigEndian, int start, int pos, int lim, byte sharing,
       long totalLimit, long totalFlushed, boolean truncate, BufferedOutput rootBlock,
-      BufferedOutput parent, TopLevelBufferedOutput topLevel) {
+      BufferedOutput parent, TopLevelBufferedOutput topLevel, boolean preferSplit) {
     var b = this.buf;
     this.buf = buf;
     this.bigEndian = bigEndian;
@@ -616,6 +624,7 @@ final class NestedBufferedOutput extends BufferedOutput {
     this.parent = parent;
     this.state = STATE_OPEN;
     this.topLevel = topLevel;
+    this.preferSplit = preferSplit;
     return b;
   }
 
@@ -631,15 +640,12 @@ final class NestedBufferedOutput extends BufferedOutput {
 abstract class TopLevelBufferedOutput extends BufferedOutput {
   final int initialBufferSize;
 
-  TopLevelBufferedOutput(byte[] buf, boolean bigEndian, int start, int pos, int lim, int initialBufferSize, boolean fixed, long totalLimit, TopLevelBufferedOutput cache) {
-    super(buf, bigEndian, start, pos, lim, fixed, totalLimit, null, cache);
+  TopLevelBufferedOutput(byte[] buf, boolean bigEndian, int start, int pos, int lim, int initialBufferSize, boolean fixed, long totalLimit, TopLevelBufferedOutput cache, boolean preferSplit) {
+    super(buf, bigEndian, start, pos, lim, fixed, totalLimit, null, cache, preferSplit);
     this.initialBufferSize = initialBufferSize;
   }
 
   private NestedBufferedOutput cachedExclusive, cachedShared = null; // single-linked lists (via `next`) of blocks cached for reuse
-
-  /// Prefer splitting the current block over growing if it's sufficiently filled
-  abstract boolean preferSplit();
 
   void closeUpstream() throws IOException {
     cachedExclusive = null;
@@ -694,11 +700,9 @@ final class FlushingBufferedOutput extends TopLevelBufferedOutput {
   private final OutputStream out;
 
   FlushingBufferedOutput(byte[] buf, boolean bigEndian, int start, int pos, int lim, int initialBufferSize, boolean fixed, long totalLimit, OutputStream out) {
-    super(buf, bigEndian, start, pos, lim, initialBufferSize, fixed, totalLimit, null);
+    super(buf, bigEndian, start, pos, lim, initialBufferSize, fixed, totalLimit, null, false);
     this.out = out;
   }
-
-  boolean preferSplit() { return false; }
 
   @Override
   void flushUpstream() throws IOException { out.flush(); }

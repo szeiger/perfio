@@ -5,7 +5,7 @@ import java.io.IOException;
 abstract class BlockFlushingBufferedOutput extends TopLevelBufferedOutput {
 
   BlockFlushingBufferedOutput(boolean bigEndian, int initialBufferSize) {
-    super(new byte[initialBufferSize], bigEndian, 0, 0, initialBufferSize, initialBufferSize, false, Long.MAX_VALUE, null);
+    super(new byte[initialBufferSize], bigEndian, 0, 0, initialBufferSize, initialBufferSize, false, Long.MAX_VALUE, null, true);
   }
 
   void flushBlocks(boolean forceFlush) throws IOException {
@@ -23,6 +23,4 @@ abstract class BlockFlushingBufferedOutput extends TopLevelBufferedOutput {
   }
 
   abstract void put(BufferedOutput b) throws IOException;
-
-  boolean preferSplit() { return true; }
 }

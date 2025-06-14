@@ -7,8 +7,8 @@ import java.io.InputStream;
 /// retrieved repeatedly with [#toBufferedInput()]  or [#toInputStream()].
 public abstract class AccumulatingBufferedOutput extends TopLevelBufferedOutput {
 
-  AccumulatingBufferedOutput(byte[] buf, boolean bigEndian, int start, int pos, int lim, int initialBufferSize, boolean fixed, long totalLimit) {
-    super(buf, bigEndian, start, pos, lim, initialBufferSize, fixed, totalLimit, null);
+  AccumulatingBufferedOutput(byte[] buf, boolean bigEndian, int start, int pos, int lim, int initialBufferSize, boolean fixed, long totalLimit, boolean preferSplit) {
+    super(buf, bigEndian, start, pos, lim, initialBufferSize, fixed, totalLimit, null, preferSplit);
   }
 
   /// Create a new [BufferedInput] that can read the data. This method does not consume the data

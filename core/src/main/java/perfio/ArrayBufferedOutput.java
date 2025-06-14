@@ -19,7 +19,7 @@ import java.util.Arrays;
 public final class ArrayBufferedOutput extends AccumulatingBufferedOutput {
 
   ArrayBufferedOutput(byte[] buf, boolean bigEndian, int start, int pos, int lim, int initialBufferSize, boolean fixed) {
-    super(buf, bigEndian, start, pos, lim, initialBufferSize, fixed, Long.MAX_VALUE);
+    super(buf, bigEndian, start, pos, lim, initialBufferSize, fixed, Long.MAX_VALUE, false);
   }
 
   private byte[] outbuf = null;
@@ -74,8 +74,6 @@ public final class ArrayBufferedOutput extends AccumulatingBufferedOutput {
     var buflen = BufferUtil.growBuffer(outbuf.length, target, 1);
     if(buflen > outbuf.length) outbuf = Arrays.copyOf(outbuf, buflen);
   }
-
-  boolean preferSplit() { return false; }
 
   @Override
   void closeUpstream() throws IOException {

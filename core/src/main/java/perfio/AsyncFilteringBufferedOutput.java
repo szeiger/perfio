@@ -209,7 +209,7 @@ public abstract class AsyncFilteringBufferedOutput<Data> extends FilteringBuffer
 
   private BufferedOutput allocTargetBlock(BufferedOutput from) {
     var b = (NestedBufferedOutput)allocBlock();
-    b.reinit(b.buf, from.bigEndian, 0, 0, b.buf.length, SHARING_EXCLUSIVE, b.buf.length, 0, true, from.rootBlock, b, from.topLevel);
+    b.reinit(b.buf, from.bigEndian, 0, 0, b.buf.length, SHARING_EXCLUSIVE, b.buf.length, 0, true, from.rootBlock, b, from.topLevel, preferSplit);
     b.next = b.prev = b;
     return b;
   }
@@ -217,7 +217,7 @@ public abstract class AsyncFilteringBufferedOutput<Data> extends FilteringBuffer
   // safe to call from worker threads
   private BufferedOutput allocUncachedTargetBlock(BufferedOutput from) {
     var b = (NestedBufferedOutput)allocUncachedBlock();
-    b.reinit(b.buf, from.bigEndian, 0, 0, b.buf.length, SHARING_EXCLUSIVE, b.buf.length, 0, true, from.rootBlock, b, from.topLevel);
+    b.reinit(b.buf, from.bigEndian, 0, 0, b.buf.length, SHARING_EXCLUSIVE, b.buf.length, 0, true, from.rootBlock, b, from.topLevel, preferSplit);
     b.next = b.prev = b;
     return b;
   }

@@ -19,7 +19,7 @@ public abstract class FilteringBufferedOutput extends TopLevelBufferedOutput {
   private NestedBufferedOutput cachedBlock;
 
   protected FilteringBufferedOutput(BufferedOutput parent, boolean flushPartial) {
-    super(null, parent.bigEndian, 0, 0, 0, parent.topLevel.initialBufferSize, false, Long.MAX_VALUE, parent.cache);
+    super(null, parent.bigEndian, 0, 0, 0, parent.topLevel.initialBufferSize, false, Long.MAX_VALUE, parent.cache, !flushPartial);
     cachedBlock = cache.getExclusiveBlock();
     buf = cachedBlock.buf;
     lim = buf.length;
@@ -27,8 +27,6 @@ public abstract class FilteringBufferedOutput extends TopLevelBufferedOutput {
     this.parent = parent;
     this.flushPartial = flushPartial;
   }
-
-  @Override boolean preferSplit() { return !flushPartial; }
 
   @Override void closeUpstream() throws IOException {
     super.closeUpstream();
