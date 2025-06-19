@@ -19,7 +19,7 @@ public abstract class FilteringBufferedOutput extends TopLevelBufferedOutput {
   private NestedBufferedOutput cachedBlock;
 
   protected FilteringBufferedOutput(BufferedOutput parent, boolean flushPartial) {
-    super(null, parent.bigEndian, 0, 0, 0, parent.topLevel.initialBufferSize, false, Long.MAX_VALUE, parent.cache, !flushPartial);
+    super(null, parent.bigEndian, 0, 0, 0, parent.cache.initialBufferSize, false, Long.MAX_VALUE, parent.cache, !flushPartial);
     cachedBlock = cache.getExclusiveBlock();
     buf = cachedBlock.buf;
     lim = buf.length;
@@ -145,7 +145,7 @@ public abstract class FilteringBufferedOutput extends TopLevelBufferedOutput {
       parent.rootBlock.totalFlushed += blen;
       b.insertBefore(parent);
       b.state = STATE_CLOSED;
-      if(b.prev == parent.rootBlock) parent.rootBlock.flushBlocks(false);
+      if(b.prev == parent.topLevel) parent.topLevel.flushBlocks(false);
       //System.out.println(parent.rootBlock.showList());
     } else if(parent.available() >= b.pos - b.start || parent.fixed) {
       //System.out.println("Copy to parent");
@@ -203,6 +203,6 @@ public abstract class FilteringBufferedOutput extends TopLevelBufferedOutput {
     bt.topLevel = parent.topLevel;
     bt.insertBefore(parent);
     bt.state = STATE_CLOSED;
-    if(bt.prev == parent.rootBlock) parent.rootBlock.flushBlocks(false);
+    if(bt.prev == parent.topLevel) parent.topLevel.flushBlocks(false);
   }
 }

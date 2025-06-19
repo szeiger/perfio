@@ -186,6 +186,8 @@ public abstract class BufferedOutput extends WritableBuffer<BufferedOutput> impl
   BufferedOutput rootBlock = this;
 
   /// The top-level BufferedOutput which is responsible for flushing the written data.
+  /// Always the same as `this` in a [TopLevelBufferedOutput] and `parent.topLevel` in
+  /// a [NestedBufferedOutput].
   TopLevelBufferedOutput topLevel;
 
   /// The top-level BufferedOutput that manages the cache.
@@ -216,8 +218,8 @@ public abstract class BufferedOutput extends WritableBuffer<BufferedOutput> impl
     if(preferSplit && lim-pos <= topLevel.initialBufferSize/2 && count <= topLevel.initialBufferSize) { //TODO try to flush first?
       // switch to a new buffer if this one is sufficiently filled
       newBuffer();
-    } else if(prev == rootBlock) {
-      rootBlock.flushBlocks(rootBlock == topLevel); //TODO should this really forceFlush?
+    } else if(prev == topLevel) {
+      topLevel.flushBlocks(false);
       if(lim < pos + count) {
         if(pos == start) growBufferClear(count);
         else growBufferCopy(count);
@@ -237,7 +239,7 @@ public abstract class BufferedOutput extends WritableBuffer<BufferedOutput> impl
     pos = 0;
     lim = buf.length;
     sharing = SHARING_EXCLUSIVE;
-    if(pre == rootBlock) rootBlock.flushBlocks(false);
+    if(pre == topLevel) topLevel.flushBlocks(false);
   }
 
   private IOException underflow(long len, long exp) {
@@ -325,9 +327,6 @@ public abstract class BufferedOutput extends WritableBuffer<BufferedOutput> impl
     next.prev = prev;
   }
 
-  /// Flush and unlink all closed blocks and optionally flush the root block. Must only be called on the root block.
-  abstract void flushBlocks(boolean forceFlush) throws IOException;
-
   /// Force flush to the upstream after flushBlocks. Must only be called on the root block.
   void flushUpstream() throws IOException {}
 
@@ -339,8 +338,8 @@ public abstract class BufferedOutput extends WritableBuffer<BufferedOutput> impl
   public final void flush() throws IOException {
     checkState();
     if(rootBlock == topLevel) {
-      rootBlock.flushBlocks(true);
-      rootBlock.flushUpstream();
+      topLevel.flushBlocks(true);
+      topLevel.flushUpstream();
     }
   }
 
@@ -368,9 +367,9 @@ public abstract class BufferedOutput extends WritableBuffer<BufferedOutput> impl
       n.start = start;
       n.totalFlushed -= (pos - start);
       var pre = prev;
-      var r = rootBlock;
+      var t = topLevel;
       unlinkAndReturn();
-      if(pre == r) r.flushBlocks(false);
+      if(pre == t) t.flushBlocks(false);
     } else {
       if(rootBlock == this) {
         for(var b = next; b != this;) {
@@ -388,8 +387,8 @@ public abstract class BufferedOutput extends WritableBuffer<BufferedOutput> impl
           }
           b = bn;
         }
-        if(this == topLevel) flushBlocks(true);
-      } else if(prev == rootBlock) rootBlock.flushBlocks(false);
+        if(this == topLevel) topLevel.flushBlocks(true);
+      } else if(prev == topLevel) topLevel.flushBlocks(false);
       assert state == STATE_CLOSED;
       assert(pos == lim);
       closeUpstream();
@@ -482,7 +481,7 @@ public abstract class BufferedOutput extends WritableBuffer<BufferedOutput> impl
         return true;
       }
       b.unlinkAndReturn();
-      r.totalFlushed -= blen;
+      //r.totalFlushed -= blen;
       b = bn;
     }
   }
@@ -496,7 +495,7 @@ public abstract class BufferedOutput extends WritableBuffer<BufferedOutput> impl
     var blen = b.pos - b.start;
     if(totalBytesWritten() + b.totalBytesWritten() > totalLimit) throw new EOFException();
     totalFlushed += b.totalFlushed + len;
-    b.totalFlushed += blen - len;
+    //b.totalFlushed += blen - len;
     buf = b.buf;
     start = b.start;
     pos = b.pos;
@@ -511,7 +510,7 @@ public abstract class BufferedOutput extends WritableBuffer<BufferedOutput> impl
     var bp = b.prev;
     bp.insertAllBefore(this);
     assert b.state != STATE_OPEN;
-    if(bp.prev == this) flushBlocks(false);
+    if(bp.prev == topLevel) topLevel.flushBlocks(false);
     //System.out.println("root.numBlocks: "+root.numBlocks());
   }
 
@@ -628,8 +627,6 @@ final class NestedBufferedOutput extends BufferedOutput {
     return b;
   }
 
-  void flushBlocks(boolean forceFlush) {}
-
   @Override
   void closeUpstream() throws IOException {
     if(parent != null) parent.appendNested(this);
@@ -646,6 +643,9 @@ abstract class TopLevelBufferedOutput extends BufferedOutput {
   }
 
   private NestedBufferedOutput cachedExclusive, cachedShared = null; // single-linked lists (via `next`) of blocks cached for reuse
+
+  /// Flush and unlink all closed blocks and optionally flush the root block.
+  abstract void flushBlocks(boolean forceFlush) throws IOException;
 
   void closeUpstream() throws IOException {
     cachedExclusive = null;
