@@ -20,7 +20,8 @@ import static perfio.internal.BufferUtil.growBuffer;
 /// The behaviour after writing more than [Long#MAX_VALUE] (8 exabytes) is undefined.
 ///
 /// A freshly created BufferedOutput always uses [ByteOrder#BIG_ENDIAN]. This can be changed with
-/// [#order(ByteOrder)]. Unless specified explicitly, the initial buffer size is 32768.
+/// [#order(ByteOrder)]. Unless specified explicitly, the initial buffer size is
+/// [#DEFAULT_BUFFER_SIZE].
 public abstract class BufferedOutput extends WritableBuffer<BufferedOutput> implements Closeable, Flushable {
 
   /// Write data to an [OutputStream].
@@ -28,7 +29,7 @@ public abstract class BufferedOutput extends WritableBuffer<BufferedOutput> impl
   /// @param out               Stream to write to.
   /// @param initialBufferSize Initial buffer size. The buffer is expanded later if necessary.
   public static BufferedOutput of(OutputStream out, int initialBufferSize) {
-    var buf = new byte[Math.max(initialBufferSize, MinBufferSize)];
+    var buf = new byte[Math.max(initialBufferSize, MIN_BUFFER_SIZE)];
     return new FlushingBufferedOutput(buf, true, 0, 0, buf.length, initialBufferSize, false, Long.MAX_VALUE, out);
   }
 
@@ -36,7 +37,7 @@ public abstract class BufferedOutput extends WritableBuffer<BufferedOutput> impl
   ///
   /// @param out               Stream to write to.
   /// @see #of(OutputStream, int)
-  public static BufferedOutput of(OutputStream out) { return of(out, DefaultBufferSize); }
+  public static BufferedOutput of(OutputStream out) { return of(out, DEFAULT_BUFFER_SIZE); }
 
   /// Write data to an internal byte array buffer that can be accessed directly or copied after
   /// closing the BufferedOutput (similar to [ByteArrayOutputStream]). The size is limited to 2 GB
@@ -46,10 +47,10 @@ public abstract class BufferedOutput extends WritableBuffer<BufferedOutput> impl
   ///   necessary. This size is automatically expanded to `initialBufferSize` if the specified size
   ///   is lower.
   /// @param initialBufferSize Initial buffer size for additional buffers that may need to be
-  ///   created. This size is automatically expanded to [#MinBufferSize] if the specified size is
+  ///   created. This size is automatically expanded to [#MIN_BUFFER_SIZE] if the specified size is
   ///   lower.
   public static ArrayBufferedOutput growing(int initialRootBufferSize, int initialBufferSize) {
-    var ibs = Math.max(initialBufferSize, MinBufferSize);
+    var ibs = Math.max(initialBufferSize, MIN_BUFFER_SIZE);
     var buf = new byte[Math.max(initialRootBufferSize, ibs)];
     return new ArrayBufferedOutput(buf, true, 0, 0, buf.length, ibs, false);
   }
@@ -63,7 +64,7 @@ public abstract class BufferedOutput extends WritableBuffer<BufferedOutput> impl
   ///   is lower.
   /// @see #growing(int, int)
   public static ArrayBufferedOutput growing(int initialRootBufferSize) {
-    return growing(initialRootBufferSize, DefaultBufferSize);
+    return growing(initialRootBufferSize, DEFAULT_BUFFER_SIZE);
   }
 
   /// Write data to an internal byte array buffer that can be accessed directly or copied after
@@ -71,7 +72,7 @@ public abstract class BufferedOutput extends WritableBuffer<BufferedOutput> impl
   /// buffer size and default initial root buffer size. The size is limited to 2 GB (the maximum
   /// size of a byte array).
   /// @see #growing(int, int)
-  public static ArrayBufferedOutput growing() { return growing(DefaultBufferSize); }
+  public static ArrayBufferedOutput growing() { return growing(DEFAULT_BUFFER_SIZE); }
 
   /// Write data to an internal buffer that can be read as an [InputStream] or [BufferedInput]
   /// after closing the BufferedOutput.
@@ -84,7 +85,7 @@ public abstract class BufferedOutput extends WritableBuffer<BufferedOutput> impl
   /// Write data to an internal buffer that can be read as an [InputStream] or [BufferedInput]
   /// after closing the BufferedOutput using the default initial buffer size.
   /// @see #ofBlocks(int)
-  public static AccumulatingBufferedOutput ofBlocks() { return ofBlocks(DefaultBufferSize); }
+  public static AccumulatingBufferedOutput ofBlocks() { return ofBlocks(DEFAULT_BUFFER_SIZE); }
 
   /// Write data to a buffered pipe that can be read concurrently from another thread as an
   /// [InputStream] or [BufferedInput]. Blocks of data are buffered and then transferred to the
@@ -102,7 +103,7 @@ public abstract class BufferedOutput extends WritableBuffer<BufferedOutput> impl
   /// Write data to a buffered pipe that can be read concurrently from another thread as an
   /// [InputStream] or [BufferedInput] using the default initial buffer size.
   /// @see #pipe(int)
-  public static PipeBufferedOutput pipe() { return pipe(DefaultBufferSize); }
+  public static PipeBufferedOutput pipe() { return pipe(DEFAULT_BUFFER_SIZE); }
 
 
   /// Write data to a given region of an existing byte array. The BufferedOutput is limited to the
@@ -117,11 +118,11 @@ public abstract class BufferedOutput extends WritableBuffer<BufferedOutput> impl
 
   /// Write data to a given byte array. Same as `ofArray(buf, 0, buf.length)`.
   /// @see #ofArray(byte[], int, int, int)
-  public static ArrayBufferedOutput ofArray(byte[] buf) { return ofArray(buf, 0, buf.length, DefaultBufferSize); }
+  public static ArrayBufferedOutput ofArray(byte[] buf) { return ofArray(buf, 0, buf.length, DEFAULT_BUFFER_SIZE); }
 
   /// Write data to a given region of an existing byte array.
   /// @see #ofArray(byte[], int, int, int)
-  public static ArrayBufferedOutput ofArray(byte[] buf, int start, int len) { return ofArray(buf, start, len, DefaultBufferSize); }
+  public static ArrayBufferedOutput ofArray(byte[] buf, int start, int len) { return ofArray(buf, start, len, DEFAULT_BUFFER_SIZE); }
 
   /// Write data to a file.
   ///
@@ -141,11 +142,11 @@ public abstract class BufferedOutput extends WritableBuffer<BufferedOutput> impl
   ///                          `TRUNCATE_EXISTING`, `WRITE`) is used.
   /// @see #ofFile(Path, int, OpenOption...)
   public static BufferedOutput ofFile(Path path, OpenOption... option) throws IOException {
-    return ofFile(path, DefaultBufferSize);
+    return ofFile(path, DEFAULT_BUFFER_SIZE);
   }
 
-  public static final int MinBufferSize = 16;
-  public static final int DefaultBufferSize = 32768;
+  public static final int MIN_BUFFER_SIZE = 16;
+  public static final int DEFAULT_BUFFER_SIZE = 32768;
 
   static final byte SHARING_EXCLUSIVE = (byte)0; // buffer is not shared
   static final byte SHARING_LEFT      = (byte)1; // buffer is shared with next block
@@ -203,6 +204,10 @@ public abstract class BufferedOutput extends WritableBuffer<BufferedOutput> impl
     bigEndian = order == ByteOrder.BIG_ENDIAN;
     return this;
   }
+  
+  /// Return the initial buffer size. No block of this BufferedOutput will be smaller than this
+  /// size (but larger blocks can be allocated if they are requested for large writes).
+  public int initialBufferSize() { return topLevel.initialBufferSize; }
 
   void checkState() throws IOException {
     if(state != STATE_OPEN) throw new IOException("BufferedOutput has already been closed");

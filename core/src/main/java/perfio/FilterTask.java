@@ -19,9 +19,9 @@ public abstract class FilterTask<Data> {
   /// be empty.
   public static final byte STATE_UNDERFLOWED = 2;
 
-  /// The output block to which the filter should write. Filters implementations can use the
-  /// primitive writing methods, or write directly to `to.buf` and set `to.start` and `to.pos`
-  /// accordingly.
+  /// The output block to which the filter should write. Filter implementations can use the
+  /// primitive writing methods, or write directly (using [UncheckedOutput]) to `to.buf` and set
+  /// `to.start` and `to.pos` accordingly.
   public WritableBuffer<?> to;
 
   /// The input block's buffer.
@@ -56,7 +56,7 @@ public abstract class FilterTask<Data> {
   /// Check if the input block is empty. Unless the filter implementation caused this on its
   /// own by updating [#start] or [#end], this can only happen in non-batched partitioned mode
   /// where an empty block is used to terminate the last partition before the end of the stream
-  /// or an explicit [#flush()].
+  /// or an explicit [BufferedOutput#flush()].
   public boolean isEmpty() { return start == end; }
   
   /// Check if the input block is new (i.e. `state != STATE_OVERFLOWED`)

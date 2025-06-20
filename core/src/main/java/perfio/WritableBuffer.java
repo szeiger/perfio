@@ -11,6 +11,11 @@ import java.nio.charset.StandardCharsets;
 import java.util.Objects;
 
 
+/// A WritableBuffer contains a byte array, start/position/limit indices and an endian flag.
+/// It provides all the methods for writing data to a single block. Operations that can span
+/// multiple blocks (like creating views or flushing data) are part of [BufferedOutput].
+/// 
+/// @param <Self> The self-type that is returned by most methods for chaining operations.
 public abstract class WritableBuffer<Self extends WritableBuffer<Self>> {
   byte[] buf;
   boolean bigEndian;
@@ -309,4 +314,3 @@ public abstract class WritableBuffer<Self extends WritableBuffer<Self>> {
 
   protected abstract void flushAndGrow(int count) throws IOException;
 }
-

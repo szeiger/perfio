@@ -1,5 +1,6 @@
 package perfio
 
+import com.example.SimpleParallelGzipBufferedOutput
 import org.junit.Assert.*
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -174,6 +175,7 @@ object BufferedOutputTest:
         ("_GzipAsync", gzipOutputTester(GzipBufferedOutput.async)),
         ("_GzipParallel", gzipOutputTester(GzipBufferedOutput.parallel)),
         ("_GzipParallelNoPart", gzipOutputTester(GzipBufferedOutput.parallel(_, -1, 0, 0, false, null, Deflater.DEFAULT_COMPRESSION))),
+        ("_SimpleParallelGzip", gzipOutputTester(new SimpleParallelGzipBufferedOutput(_))),
       )
     yield Array[Any](n+fn, c.andThen(tr))
     java.util.List.of(a*)

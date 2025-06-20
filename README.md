@@ -13,6 +13,7 @@ perfIO provides buffered streaming I/O abstractions for both binary and text dat
 | ArrayBufferedOutput        | ByteArrayOutputStream                                                           |
 | LineTokenizer              | BufferedReader + InputStreamReader                                              |
 | TextOutput                 | PrintWriter + BufferedWriter + OutputStreamWriter                               |
+| GzipBufferedOutput         | GZIPOutputStream                                                                |
 
 ## How fast is it?
 
@@ -155,8 +156,12 @@ Output filters should extend `FilteringBufferedOutput` (synchronous filtering on
 
 The relative performance of sync/async/parallel filtering depends primarily on the speed of the main thread that writes the data.
 
-The `chunks` data set writes the same 1 kB byte array repeatedly at maximum speed. This is the ideal case for `java.io.GZIPOutputStream` because it can pass this byte array directly to zlib instead of copying it first. Due to a more efficient hand-off of the output into the underlying `BufferedOutput` and some optimizations, perfIO is still a bit faster in synchronous mode. Async has slightly more overhead and comes out at about the same speed as `GZIPOutputStream`. Parallel filtering (using up to 31 threads in this benchmark) is much faster. In the `chunksSlow50` data set we artificially slow down writing from 10ms to 21ms for uncompressed perfIO. Now asynchronous filtering is starting to show its advantage. Slowing down the main thread much further (`chunksVerySlow`) lets both async and parallel filtering do all work in the background so that the compression does not cause any slowdown compared to the uncompressed reference.
+The `chunks` data set writes the same 1 kB byte array repeatedly at maximum speed. This is the ideal case for `java.io.GZIPOutputStream` because it can pass this byte array directly to zlib instead of copying it first. Due to a more efficient hand-off of the output into the underlying `BufferedOutput` and some optimizations, perfIO is still a bit faster in synchronous mode. Async has slightly more overhead and comes out at about the same speed as `GZIPOutputStream`. Parallel filtering (using up to 31 threads in this benchmark) is much faster. In the `chunksSlow50` data set we artificially slow down writing from 10ms to 21ms for uncompressed perfIO. Now asynchronous filtering is starting to show its advantage. Slowing down the main thread much further (`chunksVerySlow`) lets both async and parallel filtering do all the work in the background so that the compression does not cause any slowdown compared to the uncompressed reference.
 
 The `numSmall` benchmark shows a more realistic case where we perform mixed int8/int32/int64 writes. This is much faster in general with perfIO, and so fast in fact that sync vs async filtering makes no difference. (Note that we do not use a `BufferedOutputStream` on top of the `GZIPOutputStream` in any benchmark because it would be slower in the chunk-based ones. The additional buffering would benefit `GZIPOutputStream` in `numSmall` but the difference is less than 5%).
 
 When tuning the async and parallel filters for performance (by using the overloaded factory methods that let you customize all parameters) the main focus should be on avoiding stalls of the filter threads. Even in the case of gzip, which is generally very slow compared to uncompressed writing with perfIO, uneven write performance can lead to stalls that require expensive rescheduling on the thread pool (usually the common `ForkJoinPool`). This can be solved by increasing the filter's partition size and/or queue depth.
+
+### Unchecked Buffer Access
+
+The `UncheckedOutput` class contains static methods that allow you to access the byte array inside a `BufferedOutput` directly. This can be used to implement abstractions on top of perfIO without any performance penalty, but it is especially useful when implementing filters.
