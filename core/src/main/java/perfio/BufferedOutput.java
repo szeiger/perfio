@@ -338,8 +338,10 @@ public abstract class BufferedOutput extends WritableBuffer<BufferedOutput> impl
   /// Called at the end of the first [#close()].
   void closeUpstream() throws IOException {}
 
-  /// Flush the written data as far as possible. Note that not all data may be flushed if there is a previous
-  /// BufferedOutput created with [#reserve(long)] that has not been fully written and closed yet.
+  /// Flush the written data as far as possible. Note that not all data may be flushed if there is
+  /// a previous BufferedOutput created with [#reserve(long)] that has not been fully written and
+  /// closed yet. Subclasses of [FilteringBufferedOutput] may have further limitations on flushing
+  /// open blocks.
   public final void flush() throws IOException {
     checkState();
     if(rootBlock == topLevel) {

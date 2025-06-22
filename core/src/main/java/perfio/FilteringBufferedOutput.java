@@ -18,6 +18,12 @@ public abstract class FilteringBufferedOutput extends TopLevelBufferedOutput {
   /// which require a standard NestedBufferedOutput block).
   private NestedBufferedOutput cachedBlock;
 
+  /// Constructor to be called by subclasses.
+  ///
+  /// @param parent The parent buffer to write to.
+  /// @param flushPartial When set to `true`, the first open block can be partially flushed. This
+  ///   is generally desirable for flushing, but the filter implementation must support it, and
+  ///   it can be less efficient than only flushing closed blocks.
   protected FilteringBufferedOutput(BufferedOutput parent, boolean flushPartial) {
     super(null, parent.bigEndian, 0, 0, 0, parent.cache.initialBufferSize, false, Long.MAX_VALUE, parent.cache, !flushPartial);
     cachedBlock = cache.getExclusiveBlock();
@@ -124,7 +130,7 @@ public abstract class FilteringBufferedOutput extends TopLevelBufferedOutput {
   protected final BufferedOutput allocBlock() { return cache.getExclusiveBlock(); }
   
   /// Allocate a new, uncached block. Unlike [#allocBlock()] this method is safe to call from
-  /// other threads. It should not be used from the main threads.
+  /// other threads. It should not be used from the main thread.
   protected final BufferedOutput allocUncachedBlock() {
     var b = new NestedBufferedOutput(new byte[initialBufferSize], false, this);
     b.nocache = true;
