@@ -1,5 +1,7 @@
 package perfio;
 
+import perfio.internal.BufferUtil;
+
 import java.io.*;
 import java.nio.ByteOrder;
 import java.nio.charset.Charset;
@@ -145,8 +147,8 @@ public abstract class BufferedOutput extends WritableBuffer<BufferedOutput> impl
     return ofFile(path, DEFAULT_BUFFER_SIZE);
   }
 
-  public static final int MIN_BUFFER_SIZE = 16;
-  public static final int DEFAULT_BUFFER_SIZE = 32768;
+  public static final int MIN_BUFFER_SIZE = BufferUtil.VECTOR_LENGTH * 2;
+  public static final int DEFAULT_BUFFER_SIZE = BufferUtil.DEFAULT_BUFFER_SIZE;
 
   static final byte SHARING_EXCLUSIVE = (byte)0; // buffer is not shared
   static final byte SHARING_LEFT      = (byte)1; // buffer is shared with next block

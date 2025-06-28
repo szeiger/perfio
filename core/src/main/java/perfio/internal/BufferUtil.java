@@ -69,6 +69,8 @@ public class BufferUtil {
     }
   }
 
+  public static final int DEFAULT_BUFFER_SIZE = 32768;
+
   public static final boolean VECTOR_ENABLED;
   public static final int VECTOR_LENGTH;
   static {
@@ -84,6 +86,8 @@ public class BufferUtil {
     VECTOR_ENABLED = e;
     VECTOR_LENGTH = vlen;
   }
+  
+  public static final byte[] EMPTY_BUFFER = new byte[0];
   
   public static VarHandle findVarHandle(MethodHandles.Lookup l, Class<?> recv, String name, Class<?> type) {
     try { return l.findVarHandle(recv, name, type); }

@@ -17,9 +17,9 @@ import java.util.Objects;
 /// 
 /// @param <Self> The self-type that is returned by most methods for chaining operations.
 public abstract class WritableBuffer<Self extends WritableBuffer<Self>> {
-  byte[] buf;
-  boolean bigEndian;
-  int start, pos, lim;
+  protected byte[] buf;
+  protected boolean bigEndian;
+  protected int start, pos, lim;
 
   /// Return the byte order of this buffer.
   public final ByteOrder order() { return bigEndian ? ByteOrder.BIG_ENDIAN : ByteOrder.LITTLE_ENDIAN; }

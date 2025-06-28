@@ -7,7 +7,7 @@ import java.io.Closeable;
 import java.io.IOException;
 import java.nio.charset.Charset;
 
-sealed abstract class HeapBufferedInput extends BufferedInput permits StreamingHeapBufferedInput, SwitchingHeapBufferedInput {
+abstract non-sealed class HeapBufferedInput extends BufferedInput {
   byte[] buf;
 
   HeapBufferedInput(byte[] buf, int pos, int lim, long totalReadLimit, Closeable closeable, BufferedInput parent, boolean bigEndian) {

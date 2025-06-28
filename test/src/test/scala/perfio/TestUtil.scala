@@ -47,17 +47,6 @@ class TestData(val bytes: Array[Byte], val name: String, owner: Class[?]):
 
   def createDataInput() = new DataInputStream(new ByteArrayInputStream(bytes))
 
-  def createBufferedInputFromByteArrayInputStream(initialBufferSize: Int = 64, limit: Int = -1): BufferedInput =
-    var in: InputStream = new ByteArrayInputStream(bytes)
-    if(limit > 0) in = new LimitedInputStream(in, limit)
-    BufferedInput.of(in, initialBufferSize)
-
-  def createBufferedInputFromMappedFile(maxDirectBufferSize: Int = 128): BufferedInput =
-    BufferedInput.MaxDirectBufferSize = maxDirectBufferSize // ensure that we test rebuffering
-    BufferedInput.ofMappedFile(getFile().toPath)
-
-  def createBufferedInputFromArray(): BufferedInput = BufferedInput.ofArray(bytes)
-
   def createBufferedOutputToOutputStream(initialBufferSize: Int = 64): OutputTester =
     val bout = new ByteArrayOutputStream()
     val bo = BufferedOutput.of(bout, initialBufferSize)
@@ -85,6 +74,23 @@ class TestData(val bytes: Array[Byte], val name: String, owner: Class[?]):
         Assert.assertArrayEquals("Array prefix should be empty", new Array[Byte](start), buf.slice(0, start))
         Assert.assertArrayEquals("Array suffix should be empty", new Array[Byte](buf.length-start-checkLen), buf.slice(start + checkLen, buf.length))
 
+  def createStreamingHeapBufferedInput: InputTester =
+    InputTester(this, bytes)(BufferedInput.ofArray)
+
+  def createInputTesterFromArray(): InputTester = InputTester(this, bytes)(BufferedInput.ofArray)
+
+  def createInputTesterFromByteArrayInputStream(initialBufferSize: Int = 64, limit: Int = -1): InputTester =
+    InputTester(this, bytes): bytes =>
+      var in: InputStream = new ByteArrayInputStream(bytes)
+      if(limit > 0) in = new LimitedInputStream(in, limit)
+      BufferedInput.of(in, initialBufferSize)
+
+  def createInputTesterFromMappedFile(maxDirectBufferSize: Int = 128): InputTester =
+    InputTester(this, bytes): bytes =>
+      assert(bytes eq this.bytes)
+      BufferedInput.MaxDirectBufferSize = maxDirectBufferSize // ensure that we test rebuffering
+      BufferedInput.ofMappedFile(getFile().toPath)
+
 
 class LimitedInputStream(in: InputStream, limit: Int) extends InputStream:
   def read(): Int = in.read()
@@ -99,3 +105,9 @@ class OutputTester(td: TestData, var bo: BufferedOutput)(extract: => Array[Byte]
   def apply(f: BufferedOutput => Unit): Unit =
     f(bo)
     check()
+
+
+class InputTester(val td: TestData, val data: Array[Byte])(val build: Array[Byte] => BufferedInput):
+  def apply(f: BufferedInput => Unit): Unit =
+    val bi = build(data)
+    try f(bi) finally bi.close()

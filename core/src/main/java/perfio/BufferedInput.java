@@ -25,12 +25,12 @@ import java.util.Objects;
 /// otherwise [ByteOrder#BIG_ENDIAN]. This can be changed with [#order(ByteOrder)].
 public abstract sealed class BufferedInput implements Closeable permits HeapBufferedInput, DirectBufferedInput {
 
-  /// Read data from an [InputStream] using the default buffer size and [ByteOrder#BIG_ENDIAN].
-  /// Same as `of(in, 32768)`.
+  /// Read data from an [InputStream] using the [#DEFAULT_BUFFER_SIZE] and [ByteOrder#BIG_ENDIAN].
+  /// Same as `of(in, DEFAULT_BUFFER_SIZE)`.
   ///
   /// @param in         InputStream from which to read data.
   /// @see #of(InputStream, int)
-  public static BufferedInput of(InputStream in) { return of(in, 32768); }
+  public static BufferedInput of(InputStream in) { return of(in, DEFAULT_BUFFER_SIZE); }
 
   /// Read data from an [InputStream] using the default [ByteOrder#BIG_ENDIAN].
   ///
@@ -101,7 +101,9 @@ public abstract sealed class BufferedInput implements Closeable permits HeapBuff
     return new DirectBufferedInput(bb, bbSegment, bb.position(), bb.limit(), ms.byteSize(), ms, closeable, null, new LineBuffer());
   }
 
-  private static final int MIN_BUFFER_SIZE = BufferUtil.VECTOR_LENGTH * 2;
+  public static final int MIN_BUFFER_SIZE = BufferUtil.VECTOR_LENGTH * 2;
+  public static final int DEFAULT_BUFFER_SIZE = BufferUtil.DEFAULT_BUFFER_SIZE;
+
   static int MaxDirectBufferSize = Integer.MAX_VALUE-15; //modified by unit tests
 
   private static final int STATE_LIVE        = 0;
@@ -115,16 +117,18 @@ public abstract sealed class BufferedInput implements Closeable permits HeapBuff
   int lim; // last used byte + 1 in buffer
   long totalReadLimit; // max number of bytes that may be returned
   private final Closeable closeable;
-  private final BufferedInput parent;
+  private final BufferedInput viewParent;
+  final BufferedInput viewRoot;
 
-  BufferedInput(int pos, int lim, long totalReadLimit, Closeable closeable, BufferedInput parent, boolean bigEndian) {
+  BufferedInput(int pos, int lim, long totalReadLimit, Closeable closeable, BufferedInput viewParent, boolean bigEndian) {
     this.pos = pos;
     this.lim = lim;
     this.totalReadLimit = totalReadLimit;
     this.closeable = closeable;
-    this.parent = parent;
+    this.viewParent = viewParent;
     this.bigEndian = bigEndian;
     this.totalBuffered = lim - pos;
+    this.viewRoot = viewParent == null ? this : viewParent.viewRoot;
   }
 
   long totalBuffered; // total number of bytes read from input
@@ -168,7 +172,7 @@ public abstract sealed class BufferedInput implements Closeable permits HeapBuff
     this.totalBuffered = lim-pos;
     this.parentTotalOffset = parentTotalOffset;
     this.bigEndian = bigEndian;
-    copyBufferFrom(parent);
+    copyBufferFrom(viewParent);
   }
 
   int available() { return lim - pos; }
@@ -279,9 +283,9 @@ public abstract sealed class BufferedInput implements Closeable permits HeapBuff
   public final long uint32() throws IOException { return int32() & 0xFFFFFFFFL; }
   /// Read an unsigned 32-bit integer into the lower 32 bits of a `long` in the native byte order.
   public final long uint32n() throws IOException { return int32n() & 0xFFFFFFFFL; }
-  /// Read an unsigned 32-bit integer into the lower 32 bits of a `long` in the big endian byte order.
+  /// Read an unsigned 32-bit integer into the lower 32 bits of a `long` in big endian byte order.
   public final long uint32b() throws IOException { return int32b() & 0xFFFFFFFFL; }
-  /// Read an unsigned 32-bit integer into the lower 32 bits of a `long` in the little endian byte order.
+  /// Read an unsigned 32-bit integer into the lower 32 bits of a `long` in little endian byte order.
   public final long uint32l() throws IOException { return int32l() & 0xFFFFFFFFL; }
 
   /// Read a signed 64-bit integer (`long`) in the current byte [#order(ByteOrder)].
@@ -319,12 +323,12 @@ public abstract sealed class BufferedInput implements Closeable permits HeapBuff
   public void close() throws IOException {
     if(state != STATE_CLOSED) {
       if(activeView != null) activeView.markClosed();
-      if(parent != null) {
+      if(viewParent != null) {
         if(skipOnClose) skip(Long.MAX_VALUE);
-        parent.closedView(pos, lim + excessRead, totalBuffered + excessRead, detachOnClose);
+        viewParent.closedView(pos, lim + excessRead, totalBuffered + excessRead, detachOnClose);
       }
       markClosed();
-      if(parent == null && closeable != null) closeable.close();
+      if(viewParent == null && closeable != null) closeable.close();
     }
   }
 
