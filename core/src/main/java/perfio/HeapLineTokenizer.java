@@ -16,15 +16,6 @@ abstract sealed class HeapLineTokenizer extends LineTokenizer implements Closeab
 
   abstract String makeString(byte[] buf, int start, int len);
 
-  // The view is already positioned at the start of the line so we can simply return control to the parent
-  public BufferedInput end() throws IOException {
-    if(!closed) {
-      bin.close();
-      markClosed();
-    }
-    return parentBin;
-  }
-
   @Override
   public void markClosed() {
     super.markClosed();
@@ -41,9 +32,10 @@ abstract sealed class HeapLineTokenizer extends LineTokenizer implements Closeab
     return start == end ? "" : makeString(bin.buf, start, end-start);
   }
 
-  public void close() throws IOException {
+  public void close(boolean closeUpstream) throws IOException {
     if(!closed) {
-      parentBin.close();
+      if(closeUpstream) parentBin.close();
+      else bin.close();
       markClosed();
     }
   }

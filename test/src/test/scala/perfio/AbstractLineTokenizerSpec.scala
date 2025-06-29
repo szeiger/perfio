@@ -48,7 +48,7 @@ abstract class AbstractLineTokenizerSpec[T] extends Properties with TestUtil:
         buf += s.length
         i += 1
         if(i % 2 == 0)
-          t.end()
+          t.close(false)
           assertException[IOException](t.readLine())
           t = createTok(in, cs)
         true

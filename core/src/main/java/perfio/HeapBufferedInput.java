@@ -10,8 +10,8 @@ import java.nio.charset.Charset;
 abstract non-sealed class HeapBufferedInput extends BufferedInput {
   byte[] buf;
 
-  HeapBufferedInput(byte[] buf, int pos, int lim, long totalReadLimit, Closeable closeable, BufferedInput parent, boolean bigEndian) {
-    super(pos, lim, totalReadLimit, closeable, parent, bigEndian);
+  HeapBufferedInput(byte[] buf, int pos, int lim, long totalReadLimit, BufferedInput parent, boolean bigEndian) {
+    super(pos, lim, totalReadLimit, parent, bigEndian);
     this.buf = buf;
   }
 

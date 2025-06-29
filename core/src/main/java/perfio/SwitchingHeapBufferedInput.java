@@ -14,13 +14,13 @@ class SwitchingHeapBufferedInput extends HeapBufferedInput {
   // The number of bytes that have already been copied from the iterator's current buffer.
   private int seamOverlap = 0;
 
-  SwitchingHeapBufferedInput(BufferIterator it, Closeable closeable, boolean bigEndian) {
-    super(BufferUtil.EMPTY_BUFFER, 0, 0, Long.MAX_VALUE, closeable, null, bigEndian);
+  SwitchingHeapBufferedInput(BufferIterator it, boolean bigEndian) {
+    super(BufferUtil.EMPTY_BUFFER, 0, 0, Long.MAX_VALUE, null, bigEndian);
     this.it = it;
   }
 
   protected SwitchingHeapBufferedInput(SwitchingHeapBufferedInput parent) {
-    super(null, 0, 0, 0, null, parent, parent.bigEndian);
+    super(null, 0, 0, 0, parent, parent.bigEndian);
     this.it = parent.it;
   }
 

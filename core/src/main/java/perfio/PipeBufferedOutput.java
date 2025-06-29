@@ -35,8 +35,9 @@ public final class PipeBufferedOutput extends BlockFlushingBufferedOutput {
   }
 
   @Override
-  void closeUpstream() throws IOException {
-    super.closeUpstream();
+  void bufferClosed(boolean closeUpstream) throws IOException {
+    super.bufferClosed(closeUpstream);
+    //TODO can we support closeUpstream=false and connect a new BufferedOutput to the pipe?
     put(QueuedBufferIterator.END_MARKER);
   }
 
@@ -49,7 +50,7 @@ public final class PipeBufferedOutput extends BlockFlushingBufferedOutput {
   /// Create a new [BufferedInput] that reads the data as it is written. This method is
   /// thread-safe. Only one call to [#toInputStream()] or [#toBufferedInput()] is allowed.
   public BufferedInput toBufferedInput() throws IOException {
-    return new SwitchingHeapBufferedInput(bufferIterator(), null, bigEndian);
+    return new SwitchingHeapBufferedInput(bufferIterator(), bigEndian);
   }
 
   BufferIterator bufferIterator() throws IOException {

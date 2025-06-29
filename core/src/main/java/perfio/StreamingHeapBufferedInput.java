@@ -9,9 +9,14 @@ final class StreamingHeapBufferedInput extends HeapBufferedInput {
   final int minRead;
 
   StreamingHeapBufferedInput(byte[] buf, int pos, int lim, long totalReadLimit, InputStream in, int minRead, BufferedInput parent, boolean bigEndian) {
-    super(buf, pos, lim, totalReadLimit, in, parent, bigEndian);
+    super(buf, pos, lim, totalReadLimit, parent, bigEndian);
     this.in = in;
     this.minRead = minRead;
+  }
+
+  @Override
+  void bufferClosed(boolean closeUpstream) throws IOException {
+    if(in != null && closeUpstream) in.close();
   }
 
   private int fillBuffer() throws IOException {

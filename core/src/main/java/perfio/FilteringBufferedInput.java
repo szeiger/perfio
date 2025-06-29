@@ -3,7 +3,7 @@ package perfio;
 import java.io.IOException;
 
 public abstract class FilteringBufferedInput extends SwitchingHeapBufferedInput {
-  protected final BufferedInput parentView;
+  private final BufferedInput parent, parentView;
   protected final FilteringBufferedInput rootFilter;
   private final int blockSize;
   private OutputBlock cache;
@@ -17,7 +17,8 @@ public abstract class FilteringBufferedInput extends SwitchingHeapBufferedInput 
   ///   [FilteringBufferedInput] or a view of one.
   FilteringBufferedInput(BufferedInput parent, int blockSize) throws IOException {
     //TODO auto buffer size from parent
-    super(new It(), parent, parent.bigEndian);
+    super(new It(), parent.bigEndian);
+    this.parent = parent;
     this.parentView = parent.identicalView();
     if(parent.viewRoot instanceof FilteringBufferedInput i) {
       this.rootFilter = i.rootFilter;
@@ -27,9 +28,16 @@ public abstract class FilteringBufferedInput extends SwitchingHeapBufferedInput 
       this.blockSize = blockSize;
     }
     ((It)it).outer = this;
+    parentView.closeableView = (It)it;
   }
   
-  private static class It extends BufferIterator {
+  @Override
+  void bufferClosed(boolean closeUpstream) throws IOException {
+    parentView.close();
+    if(closeUpstream) parent.close();
+  }
+
+  private static class It extends BufferIterator implements CloseableView  {
     private FilteringBufferedInput outer;
     private OutputBlock to;
 
@@ -44,6 +52,8 @@ public abstract class FilteringBufferedInput extends SwitchingHeapBufferedInput 
     public int end() { return to.pos; }
 
     public void returnBuffer(Object id) { outer.rootFilter.releaseBlock((OutputBlock)id); }
+
+    @Override public void markClosed() { outer.markClosed(); }
   }
 
   // Must only be called on the rootFilter

@@ -24,15 +24,6 @@ abstract sealed class DirectLineTokenizer extends LineTokenizer implements Close
 
   private final LineBuffer linebuf = new LineBuffer();
 
-  public BufferedInput end() {
-    if(!closed) {
-      bin.reposition(start);
-      bin.unlock();
-      markClosed();
-    }
-    return bin;
-  }
-
   @Override
   public void markClosed() {
     super.markClosed();
@@ -66,10 +57,15 @@ abstract sealed class DirectLineTokenizer extends LineTokenizer implements Close
     return start == end ? "" : makeString(ms, start, end-start);
   }
 
-  public void close() throws IOException {
+  public void close(boolean closeUpstream) throws IOException {
     if(!closed) {
-      bin.unlock();
-      bin.close();
+      if(closeUpstream) {
+        bin.unlock();
+        bin.close();
+      } else {
+        bin.reposition(start);
+        bin.unlock();
+      }
       markClosed();
     }
   }

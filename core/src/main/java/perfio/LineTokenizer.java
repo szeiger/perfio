@@ -2,6 +2,7 @@ package perfio;
 
 import java.io.Closeable;
 import java.io.IOException;
+import java.io.InputStream;
 import java.nio.charset.Charset;
 
 /// Read text from a [BufferedInput] and split it into lines. If the input ends with a newline, no
@@ -28,13 +29,6 @@ public abstract sealed class LineTokenizer implements Closeable permits HeapLine
   /// Returns the next line of text, or null if the end of the input has been reached.
   public abstract String readLine() throws IOException;
 
-  /// Close this LineTokenizer without closing the underlying BufferedInput. The BufferedInput continues reading
-  /// from the current position of this LineTokenizer (i.e. directly after the last end-of-line character that was
-  /// read). A subsequent call to [#close()] has no effect.
-  ///
-  /// @return The underlying BufferedInput.
-  public abstract BufferedInput end() throws IOException;
-
   void checkState() throws IOException {
     if(closed) throw new IOException("LineTokenizer has already been closed");
   }
@@ -45,6 +39,19 @@ public abstract sealed class LineTokenizer implements Closeable permits HeapLine
   /// Implementation note: LineTokenizer are not currently reused, but they may create an additional BufferedInput
   /// view that can be reused.
   public abstract LineTokenizer detach() throws IOException;
+
+  /// Same as `close(true)`.
+  /// 
+  /// @see #close(boolean)
+  public final void close() throws IOException { close(true); }
+
+  /// Close this LineTokenizer and mark it as closed. Calling this method again has no
+  /// effect, calling most other methods after closing results in an [IOException].
+  /// 
+  /// @param closeUpstream When set to true, the underlying [BufferedInput] is also closed,
+  ///   otherwise it will continue reading from the current position of this LineTokenizer (i.e.
+  ///    directly after the last end-of-line character that was read).
+  public abstract void close(boolean closeUpstream) throws IOException;
 
   void markClosed() {
     closed = true;

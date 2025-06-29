@@ -17,17 +17,24 @@ final class DirectBufferedInput extends BufferedInput {
   MemorySegment bbSegment;
   final MemorySegment ms;
   private final LineBuffer linebuf;
+  private final Closeable closeable;
   private ByteBuffer bb;
 
   DirectBufferedInput(ByteBuffer bb, MemorySegment bbSegment, int pos, int lim, long totalReadLimit, MemorySegment ms, Closeable closeable, BufferedInput parent, LineBuffer linebuf) {
-    super(pos, lim, totalReadLimit, closeable, parent, bb.order() == ByteOrder.BIG_ENDIAN);
+    super(pos, lim, totalReadLimit, parent, bb.order() == ByteOrder.BIG_ENDIAN);
     this.bbSegment = bbSegment;
     this.ms = ms;
     this.linebuf = linebuf;
     this.bb = bb;
+    this.closeable = closeable;
   }
 
   long bbStart = 0L;
+
+  @Override
+  void bufferClosed(boolean closeUpstream) throws IOException {
+    if(closeable != null && closeUpstream) closeable.close();
+  }
 
   void copyBufferFrom(BufferedInput b) {
     var db = (DirectBufferedInput)b;

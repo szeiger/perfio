@@ -338,7 +338,7 @@ public abstract class BufferedOutput extends WritableBuffer<BufferedOutput> impl
   void flushUpstream() throws IOException {}
 
   /// Called at the end of the first [#close()].
-  void closeUpstream() throws IOException {}
+  void bufferClosed(boolean closeUpstream) throws IOException {}
 
   /// Flush the written data as far as possible. Note that not all data may be flushed if there is
   /// a previous BufferedOutput created with [#reserve(long)] that has not been fully written and
@@ -352,19 +352,28 @@ public abstract class BufferedOutput extends WritableBuffer<BufferedOutput> impl
     }
   }
 
-  /// Close this BufferedOutput and mark it as closed. Calling [#close()] again has no effect,
-  /// calling most other methods after closing results in an [IOException].
+  /// Same as `close(true)`.
+  /// 
+  /// @see #close(boolean) 
+  public final void close() throws IOException { close(true); }
+
+  /// Close this BufferedOutput and mark it as closed. Calling this method again has
+  /// no effect, calling most other methods after closing results in an [IOException].
   ///
   /// If this is a root BufferedOutput based on an [OutputStream] or similar data sink, any
-  /// outstanding data is flushed to the sink which is then closed as well. In case of a
-  /// [ArrayBufferedOutput], the data becomes available for reading once it is closed.
+  /// outstanding data is flushed. In case of an [ArrayBufferedOutput], the data becomes
+  /// available for reading once it is closed.
   ///
   /// Closing a nested BufferedOutput created with [#reserve(long)] before writing all the
   /// requested data results in an IOException.
   ///
   /// In all cases any nested BufferedOutputs that have not been closed yet are implicitly
   /// closed when closing this BufferedOutput.
-  public final void close() throws IOException {
+  /// 
+  /// @param closeUpstream If this is a root BufferedOutput based on a data sink that supports
+  ///   closing (like an [OutputStream]), this flag determines whether to close the sink as
+  ///   well. It has no effect on views (which never close their parent).
+  public final void close(boolean closeUpstream) throws IOException {
     if(state != STATE_OPEN) return;
     if(!truncate) checkUnderflow();
     state = STATE_CLOSED;
@@ -400,7 +409,7 @@ public abstract class BufferedOutput extends WritableBuffer<BufferedOutput> impl
       } else if(prev == topLevel) topLevel.flushBlocks(false);
       assert state == STATE_CLOSED;
       assert(pos == lim);
-      closeUpstream();
+      bufferClosed(closeUpstream);
     }
   }
 
@@ -637,7 +646,7 @@ final class NestedBufferedOutput extends BufferedOutput {
   }
 
   @Override
-  void closeUpstream() throws IOException {
+  void bufferClosed(boolean closeUpstream) throws IOException {
     if(parent != null) parent.appendNested(this);
   }
 }
@@ -656,7 +665,7 @@ abstract class TopLevelBufferedOutput extends BufferedOutput {
   /// Flush and unlink all closed blocks and optionally flush the root block.
   abstract void flushBlocks(boolean forceFlush) throws IOException;
 
-  void closeUpstream() throws IOException {
+  void bufferClosed(boolean closeUpstream) throws IOException {
     cachedExclusive = null;
     cachedShared = null;
   }
@@ -717,9 +726,9 @@ final class FlushingBufferedOutput extends TopLevelBufferedOutput {
   void flushUpstream() throws IOException { out.flush(); }
 
   @Override
-  void closeUpstream() throws IOException {
-    super.closeUpstream();
-    out.close();
+  void bufferClosed(boolean closeUpstream) throws IOException {
+    super.bufferClosed(closeUpstream);
+    if(closeUpstream) out.close();
   }
 
   void flushBlocks(boolean forceFlush) throws IOException {

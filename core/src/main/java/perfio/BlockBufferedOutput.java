@@ -27,7 +27,7 @@ final class BlockBufferedOutput extends AccumulatingBufferedOutput {
   }
 
   public BufferedInput toBufferedInput() throws IOException {
-    return new SwitchingHeapBufferedInput(bufferIterator(), null, bigEndian);
+    return new SwitchingHeapBufferedInput(bufferIterator(), bigEndian);
   }
 
   BufferIterator bufferIterator() throws IOException {

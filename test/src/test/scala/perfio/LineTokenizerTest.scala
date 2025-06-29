@@ -86,7 +86,7 @@ abstract class LineTokenizerTest:
         buf += s
         i += 1
         if(i % 2 == 0)
-          t.end()
+          t.close(false)
           t = createTokenizer(in)
         true
     do ()

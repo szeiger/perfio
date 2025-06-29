@@ -76,9 +76,9 @@ public final class ArrayBufferedOutput extends AccumulatingBufferedOutput {
   }
 
   @Override
-  void closeUpstream() throws IOException {
+  void bufferClosed(boolean closeUpstream) throws IOException {
     flushSingle(this, false);
-    super.closeUpstream();
+    super.bufferClosed(closeUpstream);
   }
 
   private void checkClosed() throws IOException {

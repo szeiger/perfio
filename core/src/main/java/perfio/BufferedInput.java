@@ -3,10 +3,7 @@ package perfio;
 import perfio.internal.BufferUtil;
 import perfio.internal.LineBuffer;
 
-import java.io.Closeable;
-import java.io.EOFException;
-import java.io.IOException;
-import java.io.InputStream;
+import java.io.*;
 import java.lang.foreign.MemorySegment;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
@@ -116,15 +113,13 @@ public abstract sealed class BufferedInput implements Closeable permits HeapBuff
   int pos; // first used byte in buffer
   int lim; // last used byte + 1 in buffer
   long totalReadLimit; // max number of bytes that may be returned
-  private final Closeable closeable;
   private final BufferedInput viewParent;
   final BufferedInput viewRoot;
 
-  BufferedInput(int pos, int lim, long totalReadLimit, Closeable closeable, BufferedInput viewParent, boolean bigEndian) {
+  BufferedInput(int pos, int lim, long totalReadLimit, BufferedInput viewParent, boolean bigEndian) {
     this.pos = pos;
     this.lim = lim;
     this.totalReadLimit = totalReadLimit;
-    this.closeable = closeable;
     this.viewParent = viewParent;
     this.bigEndian = bigEndian;
     this.totalBuffered = lim - pos;
@@ -199,7 +194,7 @@ public abstract sealed class BufferedInput implements Closeable permits HeapBuff
   /// Request `count` bytes to be available to read in the buffer, advance the buffer to the position after these
   /// bytes and return the previous position. Throws EOFException if the end of the input is reached before the
   /// requested number of bytes is available. This method may change the buffer references.
-  int fwd(int count) throws IOException {
+  final int fwd(int count) throws IOException {
     if(available() < count) {
       prepareAndFillBuffer(count);
       if(available() < count) throw new EOFException();
@@ -315,12 +310,22 @@ public abstract sealed class BufferedInput implements Closeable permits HeapBuff
   /// Read a 64-bit IEEE-754 floating point value (`double`) in little endian byte order.
   public abstract double float64l() throws IOException;
 
-  /// Close this BufferedInput and mark it as closed. Calling [#close()] again has no effect,
-  /// calling most other methods after closing results in an [IOException].
+  /// Same as `close(true)`.
+  /// 
+  /// @see #close(boolean)
+  public final void close() throws IOException { close(true); }
+
+  /// Close this BufferedInput and mark it as closed. Calling this method again has no
+  /// effect, calling most other methods after closing results in an [IOException].
   ///
-  /// If this object is a view of another BufferedInput, this operation transfers control back to
-  /// the parent, otherwise it closes the underlying InputStream or other input source.
-  public void close() throws IOException {
+  /// If this object is a view of another BufferedInput, this operation transfers control back
+  /// to the parent.
+  /// 
+  /// @param closeUpstream If this is a root BufferedInput based on a data source that supports
+  ///   closing (like an [InputStream]) or a [FilteringBufferedInput], this flag determines
+  ///   whether to close the source as well. It has no effect on views (which never close their
+  ///   parent).
+  public final void close(boolean closeUpstream) throws IOException {
     if(state != STATE_CLOSED) {
       if(activeView != null) activeView.markClosed();
       if(viewParent != null) {
@@ -328,11 +333,14 @@ public abstract sealed class BufferedInput implements Closeable permits HeapBuff
         viewParent.closedView(pos, lim + excessRead, totalBuffered + excessRead, detachOnClose);
       }
       markClosed();
-      if(viewParent == null && closeable != null) closeable.close();
+      if(viewParent == null) bufferClosed(closeUpstream);
     }
   }
 
-  private void markClosed() {
+  /// Called at the end of the first [#close()].
+  void bufferClosed(boolean closeUpstream) throws IOException {}
+  
+  final void markClosed() {
     pos = lim;
     state = STATE_CLOSED;
     clearBuffer();
@@ -402,8 +410,7 @@ public abstract sealed class BufferedInput implements Closeable permits HeapBuff
   /// Create a vectorized or scalar [LineTokenizer] depending on JVM and hardware support.
   ///
   /// The LineTokenizer is treated like a view, i.e. no other access of this BufferedInput (except closing it) is
-  /// allowed until the LineTokenizer is closed with [LineTokenizer#close()] (thus closing this BufferedInput as well)
-  /// or [LineTokenizer#end()] (to keep this BufferedInput open for further reading).
+  /// allowed until the LineTokenizer is closed with [LineTokenizer#close(boolean)].
   ///
   /// With the default values for `eol` and `preEol` a LineTokenizer will recognize both LF (Unix) and CRLF (Windows)
   /// line endings. Automatic recognition of pure CR line endings (classic MacOS) at the same time is not supported but

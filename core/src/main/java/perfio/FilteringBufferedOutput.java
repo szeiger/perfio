@@ -34,20 +34,12 @@ public abstract class FilteringBufferedOutput extends TopLevelBufferedOutput {
     this.flushPartial = flushPartial;
   }
 
-  @Override void closeUpstream() throws IOException {
-    super.closeUpstream();
+  @Override void bufferClosed(boolean closeUpstream) throws IOException {
+    super.bufferClosed(closeUpstream);
     finish();
     cleanUp();
-    parent.close();
+    if(closeUpstream) parent.close();
   }
-
-  ///// Close this FilteringBufferedOutput without closing the parent.
-  //public void end() throws IOException {
-  //  if(state == STATE_OPEN) {
-  //    super.closeUpstream();
-  //    finish();
-  //  }
-  //}
 
   /// Close the filter without closing or flushing the parent.
   protected void finish() throws IOException {}
@@ -106,7 +98,7 @@ public abstract class FilteringBufferedOutput extends TopLevelBufferedOutput {
   /// Since the block was already unlinked before this method is called, an asynchronous
   /// implementation may use block links to keep a list of all pending blocks. It may also use
   /// [#filterState] to store additional information (for example,
-  /// a [#java.util.concurrent.CompletableFuture]).
+  /// a [java.util.concurrent.CompletableFuture]).
   protected abstract void filterBlock(BufferedOutput b) throws IOException;
 
   /// This method is called on [#flush()] or [#close()]. The default implementation does nothing
