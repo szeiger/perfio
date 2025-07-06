@@ -60,12 +60,12 @@ ThisBuild / Test / fork := true
 ThisBuild / run / fork := true
 ThisBuild / run / connectInput := true
 
-Global / scalaVersion := "3.5.2"
+Global / scalaVersion := "3.3.6"
 
 val hedgehogVersion = "0.10.1"
 
 lazy val root = (project in file("."))
-  .aggregate(LocalProject("core"), LocalProject("bench"), LocalProject("test"), LocalProject("scalaApi"))
+  .aggregate(LocalProject("core"), LocalProject("benchUtil"), LocalProject("bench"), LocalProject("test"), LocalProject("scalaApi"))
   .settings(
     crossPaths := false,
     autoScalaLibrary := false,
@@ -87,15 +87,22 @@ lazy val scalaApi = (project in file("scalaapi"))
     publish / skip := true,
   )
 
-lazy val bench = (project in file("bench"))
+lazy val benchUtil = (project in file("bench-util"))
   .dependsOn(scalaApi)
   .enablePlugins(JmhPlugin)
   .settings(
-    scalacOptions ++= Seq("-feature", "-opt:l:inline", "-opt-inline-from:perfio.*"),
     libraryDependencies ++= Seq(
       "com.google.guava" % "guava" % "33.3.0-jre",
       "com.esotericsoftware" % "kryo" % "5.6.2",
     ),
+    name := "perfio-bench-util",
+    publish / skip := true,
+  )
+
+lazy val bench = (project in file("bench"))
+  .dependsOn(benchUtil)
+  .enablePlugins(JmhPlugin)
+  .settings(
     name := "perfio-bench",
     publish / skip := true,
   )
