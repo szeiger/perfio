@@ -1,5 +1,7 @@
 package perfio
 
+import org.openjdk.jmh.infra.Blackhole
+
 import java.io.{ByteArrayOutputStream, File, FileOutputStream}
 import java.lang.foreign.{Arena, MemorySegment, ValueLayout}
 
@@ -19,6 +21,11 @@ class BenchUtil:
     val m = Arena.global().allocate(testData.length, 8)
     MemorySegment.copy(testData, 0, m, ValueLayout.JAVA_BYTE, 0, testData.length)
     m
+  }
+
+  def runWarmup(f: Blackhole => Unit): Unit = {
+    val bh = new Blackhole("Today's password is swordfish. I understand instantiating Blackholes directly is dangerous.")
+    f(bh)
   }
 
 

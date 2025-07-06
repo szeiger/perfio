@@ -13,53 +13,64 @@ import java.util.concurrent.TimeUnit
 @Measurement(iterations = 7, time = 1)
 @OutputTimeUnit(TimeUnit.MILLISECONDS)
 @State(Scope.Benchmark)
-class BufferedInputStringBenchmark {
+class BufferedInputStringBenchmark extends BenchUtil:
 
   private var testData: Array[Byte] = null
+  private var diskTestData: File = null
+
   val count = 10000000
 
+  @Param(Array("false", "true"))
+  var mixedWarmUp: Boolean = true
+
   @Setup(Level.Trial)
-  def buildTestData(): Unit = {
+  def buildTestData(): Unit =
     val out = new ByteArrayOutputStream()
     val dout = new DataOutputStream(out)
-    for(i <- 0 until count) {
-      dout.writeUTF("abcdefghijklmnopqrstuvwxyz")
-    }
-    testData = out.toByteArray
-  }
-
-  @Benchmark
-  def array_DataInputStream(bh: Blackhole): Unit = {
-    val din = new DataInputStream(new ByteArrayInputStream(testData))
     var i = 0
-    while(i < count) {
+    while(i < count)
+      dout.writeUTF("abcdefghijklmnopqrstuvwxyz")
+      i += 1
+    testData = out.toByteArray
+    diskTestData = writeFileIfMissing("strings", testData)
+    if(mixedWarmUp) runWarmup: bh =>
+      var i = 0
+      while(i < 5)
+        run(bh, BufferedInput.ofArray(testData))
+        run(bh, BufferedInput.ofMappedFile(diskTestData.toPath))
+        i += 1
+
+  private def run(bh: Blackhole, bin: BufferedInput): Unit =
+    var i = 0
+    while(i < count)
+      val len = bin.uint16()
+      bh.consume(bin.string(len))
+      i += 1
+    bin.close()
+  
+  private def run(bh: Blackhole, din: DataInputStream): Unit =
+    var i = 0
+    while(i < count)
       bh.consume(din.readUTF())
       i += 1
-    }
     din.close()
-  }
 
   @Benchmark
-  def array_BufferedInput(bh: Blackhole): Unit = {
-    val bin = BufferedInput.of(new ByteArrayInputStream(testData))
-    var i = 0
-    while(i < count) {
-      val len = bin.uint16()
-      bh.consume(bin.string(len))
-      i += 1
-    }
-    bin.close()
-  }
+  def array_DataInputStream(bh: Blackhole): Unit =
+    run(bh, new DataInputStream(new ByteArrayInputStream(testData)))
 
   @Benchmark
-  def array_BufferedInput_fromArray(bh: Blackhole): Unit = {
-    val bin = BufferedInput.ofArray(testData)
-    var i = 0
-    while(i < count) {
-      val len = bin.uint16()
-      bh.consume(bin.string(len))
-      i += 1
-    }
-    bin.close()
-  }
-}
+  def array_BufferedInput(bh: Blackhole): Unit =
+    run(bh, BufferedInput.of(new ByteArrayInputStream(testData)))
+
+  @Benchmark
+  def array_BufferedInput_fromArray(bh: Blackhole): Unit =
+    run(bh, BufferedInput.ofArray(testData))
+
+  @Benchmark
+  def file_BufferedInput(bh: Blackhole): Unit =
+    run(bh, BufferedInput.of(new FileInputStream(diskTestData)))
+
+  @Benchmark
+  def file_BufferedInput_mapped(bh: Blackhole): Unit =
+    run(bh, BufferedInput.ofMappedFile(diskTestData.toPath))
