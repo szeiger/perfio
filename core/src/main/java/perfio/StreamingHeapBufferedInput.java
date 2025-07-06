@@ -8,8 +8,8 @@ final class StreamingHeapBufferedInput extends HeapBufferedInput {
   final InputStream in;
   final int minRead;
 
-  StreamingHeapBufferedInput(byte[] buf, int pos, int lim, long totalReadLimit, InputStream in, int minRead, BufferedInput parent, boolean bigEndian) {
-    super(buf, pos, lim, totalReadLimit, parent, bigEndian);
+  StreamingHeapBufferedInput(byte[] buf, int pos, int lim, long totalReadLimit, InputStream in, int minRead, BufferedInput viewParent, boolean bigEndian) {
+    super(buf, pos, lim, totalReadLimit, viewParent, bigEndian);
     this.in = in;
     this.minRead = minRead;
   }
@@ -43,6 +43,11 @@ final class StreamingHeapBufferedInput extends HeapBufferedInput {
     }
   }
 
+  BufferedInput createEmptyView() {
+    return new StreamingHeapBufferedInput(null, 0, 0, 0, in, minRead, this, bigEndian);
+  }
+
+  @Override
   public void bytes(byte[] a, int off, int len) throws IOException {
     var tot = totalBytesRead() + len;
     if(tot < 0 || tot > totalReadLimit) throw new EOFException();
@@ -52,6 +57,7 @@ final class StreamingHeapBufferedInput extends HeapBufferedInput {
       pos += copied;
     }
     var rem = len - copied;
+    // Copy directly without buffering
     while(rem >= minRead && in != null) {
       var r = in.read(a, off + copied, rem);
       if(r <= 0) throw new EOFException();
@@ -65,10 +71,7 @@ final class StreamingHeapBufferedInput extends HeapBufferedInput {
     }
   }
 
-  BufferedInput createEmptyView() {
-    return new StreamingHeapBufferedInput(null, 0, 0, 0, in, minRead, this, bigEndian);
-  }
-
+  @Override
   public long skip(long bytes) throws IOException {
     checkState();
     var base = 0L;
@@ -80,6 +83,7 @@ final class StreamingHeapBufferedInput extends HeapBufferedInput {
       if(rem <= 0 || in == null) return base + skipAv;
       var remTotal = totalReadLimit - totalBuffered;
       rem = Math.min(rem, remTotal);
+      // Skip directly without buffering
       rem -= trySkipIn(rem); //TODO have a minSkip similar to minRead?
       if(rem <= 0) return base + bytes;
       request((int)Math.min(rem, buf.length));

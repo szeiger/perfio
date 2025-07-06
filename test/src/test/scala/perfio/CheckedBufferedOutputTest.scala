@@ -12,17 +12,6 @@ import java.util.zip.{CRC32, CheckedOutputStream}
 class CheckedBufferedOutputTest(params: CheckedBufferedOutputTest.Params) extends TestUtil:
   val count = 1000
 
-  lazy val numTestData = createTestData("num"): dout =>
-    for i <- 0 until count do
-      dout.writeByte(i)
-      dout.writeInt(i+2)
-      dout.writeLong(i+3)
-
-  lazy val stringTestData = createTestData("string"): dout =>
-    for i <- 0 until count do
-      val s = "abcdefghijklmnopqrstuvwxyz"
-      dout.writeUTF(s)
-
   def writeNum(cbuf: CheckedBufferedOutput, dout: DataOutputStream, i: Int): Unit =
     cbuf.int8(i.toByte).int32(i+2).int64(i+3)
     dout.writeByte(i)
@@ -31,7 +20,7 @@ class CheckedBufferedOutputTest(params: CheckedBufferedOutputTest.Params) extend
 
   def writeString(cbuf: CheckedBufferedOutput, dout: DataOutputStream, i: Int): Unit =
     val s = "abcdefghijklmnopqrstuvwxyz"
-    cbuf.string(s)
+    cbuf.int16(s.length.toShort).string(s)
     dout.writeUTF(s)
 
   @Test def num: Unit = runTest(writeNum)
@@ -45,10 +34,10 @@ class CheckedBufferedOutputTest(params: CheckedBufferedOutputTest.Params) extend
     val cout = new CheckedOutputStream(out, crc2)
     val dout = new DataOutputStream(cout)
     for i <- 0 until count do
-      writeNum(cbuf, dout, i)
+      write(cbuf, dout, i)
       if(i % (count/10) == 0)
         if(params.update) cbuf.updateChecksum()
-        if(params.flush) cbuf.updateChecksum()
+        if(params.flush) cbuf.flush()
     dout.close()
     if(params.close) cbuf.close()
     else cbuf.updateChecksum()

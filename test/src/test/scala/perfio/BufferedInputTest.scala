@@ -7,6 +7,7 @@ import org.junit.runners.Parameterized
 
 import java.io.DataInputStream
 import java.nio.ByteOrder
+import java.util.zip.CRC32
 
 @RunWith(classOf[Parameterized])
 class BufferedInputTest(_name: String, create: TestData => InputTester) extends TestUtil:
@@ -154,13 +155,19 @@ object BufferedInputTest:
       (fn, tr) <- Array(
         ("", identity[InputTester]),
         ("_filter_xor", xorInputTester(new XorBufferedInput(_))),
+        ("_checked", checkedInputTester),
       )
-      if !n.contains("mapped") || !fn.contains("filter")
+      if !n.contains("mapped") || (!fn.contains("filter") && !fn.contains("checked"))
     yield Array[Any](n+fn, c.andThen(tr))
     java.util.List.of(a*)
 
   def xorInputTester(f: BufferedInput => BufferedInput)(it: InputTester): InputTester =
     InputTester(it.td, it.data.map(b => (b ^ 85).toByte))(a => f(it.build(a)))
+
+  def checkedInputTester(it: InputTester): InputTester = {
+    val crc = new CRC32
+    InputTester(it.td, it.data)(a => new CheckedHeapBufferedInput(it.build(a).asInstanceOf[HeapBufferedInput], crc))
+  }
 
 
 class XorBufferedInput(parent: BufferedInput) extends FilteringBufferedInput(parent, 32768):

@@ -4,14 +4,15 @@ import perfio.internal.BufferUtil;
 import perfio.internal.MemoryAccessor;
 
 import java.io.Closeable;
+import java.io.EOFException;
 import java.io.IOException;
 import java.nio.charset.Charset;
 
 abstract non-sealed class HeapBufferedInput extends BufferedInput {
   byte[] buf;
 
-  HeapBufferedInput(byte[] buf, int pos, int lim, long totalReadLimit, BufferedInput parent, boolean bigEndian) {
-    super(pos, lim, totalReadLimit, parent, bigEndian);
+  HeapBufferedInput(byte[] buf, int pos, int lim, long totalReadLimit, BufferedInput viewParent, boolean bigEndian) {
+    super(pos, lim, totalReadLimit, viewParent, bigEndian);
     this.buf = buf;
   }
 
@@ -94,5 +95,42 @@ abstract non-sealed class HeapBufferedInput extends BufferedInput {
     }
     pos = offset;
     lim = a + offset;
+  }
+
+  // `bytes` and `skip` are implemented in terms of `request(1)`. This should always
+  // be correct, and it works great for [SwitchingHeapBufferedInput] (because there is no more
+  // direct way to transfer the data, and requesting 1 byte will never create a seam), but it is
+  // not ideal for implementations that can copy/skip directly from the source.
+
+  public void bytes(byte[] a, int off, int len) throws IOException {
+    var tot = totalBytesRead() + len;
+    if(tot < 0 || tot > totalReadLimit) throw new EOFException();
+    while(len > 0) {
+      request(1);
+      if(available() == 0) throw new EOFException();
+      var l = Math.min(len, available());
+      if(l > 0) {
+        System.arraycopy(buf, pos, a, off, l);
+        pos += l;
+        off += l;
+        len -= l;
+      }
+    }
+  }
+
+  public long skip(final long bytes) throws IOException {
+    checkState();
+    final var limited = Math.min(bytes, totalReadLimit - totalBytesRead());
+    var rem = limited;
+    while(rem > 0) {
+      request(1);
+      if(available() == 0) return limited - rem;
+      var l = Math.min(rem, available());
+      if(l > 0) {
+        pos += (int)l;
+        rem -= l;
+      }
+    }
+    return limited;
   }
 }

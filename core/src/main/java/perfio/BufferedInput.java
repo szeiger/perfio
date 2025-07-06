@@ -178,6 +178,8 @@ public abstract sealed class BufferedInput implements Closeable permits HeapBuff
       else if(state == STATE_ACTIVE_VIEW) throw new IOException("Cannot use BufferedInput while a view is active");
     }
   }
+  
+  boolean isClosed() { return state == STATE_CLOSED; }
 
   /// Change the byte order of this BufferedInput.
   /// @return this BufferedInput
@@ -332,8 +334,8 @@ public abstract sealed class BufferedInput implements Closeable permits HeapBuff
         if(skipOnClose) skip(Long.MAX_VALUE);
         viewParent.closedView(pos, lim + excessRead, totalBuffered + excessRead, detachOnClose);
       }
-      markClosed();
       if(viewParent == null) bufferClosed(closeUpstream);
+      markClosed();
     }
   }
 

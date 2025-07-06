@@ -140,40 +140,4 @@ class SwitchingHeapBufferedInput extends HeapBufferedInput {
   }
 
   BufferedInput createEmptyView() { return new SwitchingHeapBufferedInput(this); }
-
-  // `bytes` and `skip` are implemented in terms of `request(1)` so they don't have to interact
-  // with the low-level buffer management. Requesting 1 byte will never create a seam so there
-  // is no unnecessary copying.
-
-  public void bytes(byte[] a, int off, int len) throws IOException {
-    var tot = totalBytesRead() + len;
-    if(tot < 0 || tot > totalReadLimit) throw new EOFException();
-    while(len > 0) {
-      request(1);
-      if(available() == 0) throw new EOFException();
-      var l = Math.min(len, available());
-      if(l > 0) {
-        System.arraycopy(buf, pos, a, off, l);
-        pos += l;
-        off += l;
-        len -= l;
-      }
-    }
-  }
-
-  public long skip(final long bytes) throws IOException {
-    checkState();
-    final var limited = Math.min(bytes, totalReadLimit - totalBytesRead());
-    var rem = limited;
-    while(rem > 0) {
-      request(1);
-      if(available() == 0) return limited - rem;
-      var l = Math.min(rem, available());
-      if(l > 0) {
-        pos += (int)l;
-        rem -= l;
-      }
-    }
-    return limited;
-  }
 }
