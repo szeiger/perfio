@@ -173,7 +173,7 @@ object BufferedInputTest:
 class XorBufferedInput(parent: BufferedInput) extends FilteringBufferedInput(parent, 32768):
   def filterBlock(from: BufferedInput, to: WritableBuffer[?]): Unit =
     val avail = to.available()
-    from.request(1)
+    from.tryFwd(1)
     val l = Math.min(from.available(), avail)
     from.bytes(to.buf, to.pos, l)
     for(i <- to.pos until to.pos + l)

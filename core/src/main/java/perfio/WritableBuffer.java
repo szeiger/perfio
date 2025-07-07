@@ -28,7 +28,7 @@ public abstract class WritableBuffer<Self extends WritableBuffer<Self>> {
 
   /// Advance the position in the buffer by `count` and return the previous position.
   /// Throws an IOException if the buffer's size limit would be exceeded.
-  final int fwd(int count) throws IOException {
+  protected final int fwd(int count) throws IOException {
     ensureAvailable(count);
     var p = pos;
     pos += count;
@@ -36,7 +36,7 @@ public abstract class WritableBuffer<Self extends WritableBuffer<Self>> {
   }
 
   /// Ensure `count` bytes are available in the buffer without advancing the position.
-  final void ensureAvailable(int count) throws IOException {
+  protected final void ensureAvailable(int count) throws IOException {
     // The goal here is to allow HotSpot to elide range checks in some scenarios (e.g.
     // `BufferedOutputUncheckedBenchmark`). The condition should be `available() < count`,
     // i.e. `lim - pos < count` but this does not elide range checks. `pos + count > lim` does,
@@ -51,7 +51,7 @@ public abstract class WritableBuffer<Self extends WritableBuffer<Self>> {
 
   /// Try to advance the position by `count` and return the previous position. May advance by less
   /// (or even 0) if the buffer's size limit would be exceeded. The caller must check [#available()].
-  final int tryFwd(int count) throws IOException {
+  protected final int tryFwd(int count) throws IOException {
     if(pos+count > lim || pos+count < 0) flushAndGrow(count);
     var p = pos;
     pos += Math.min(count, available());

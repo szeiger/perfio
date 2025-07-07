@@ -33,7 +33,7 @@ final class StreamingHeapBufferedInput extends HeapBufferedInput {
     return read;
   }
 
-  void prepareAndFillBuffer(int count) throws IOException {
+  protected void prepareAndFillBuffer(int count) throws IOException {
     checkState();
     if(in != null && totalBuffered < totalReadLimit) {
       if(pos + count > buf.length || pos >= buf.length - minRead)
@@ -86,7 +86,7 @@ final class StreamingHeapBufferedInput extends HeapBufferedInput {
       // Skip directly without buffering
       rem -= trySkipIn(rem); //TODO have a minSkip similar to minRead?
       if(rem <= 0) return base + bytes;
-      request((int)Math.min(rem, buf.length));
+      tryFwd((int)Math.min(rem, buf.length));
       if(available() <= 0) return base + bytes - rem;
       base = base + bytes - rem;
       bytes = rem;

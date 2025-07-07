@@ -51,7 +51,7 @@ class SwitchingHeapBufferedInput extends HeapBufferedInput {
     return b.append("]").toString();
   }
 
-  void prepareAndFillBuffer(int count) throws IOException {
+  protected void prepareAndFillBuffer(int count) throws IOException {
     checkState();
     //System.out.println("prepareAndFillBuffer("+count+") "+show()+", bufLen="+buf.length+", seamOverlap="+seamOverlap+", bufferId1="+bufferId1);
     if(totalBuffered < totalReadLimit) {

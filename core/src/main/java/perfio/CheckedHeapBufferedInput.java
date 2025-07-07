@@ -47,7 +47,7 @@ public class CheckedHeapBufferedInput extends HeapBufferedInput {
   }
 
   @Override
-  void prepareAndFillBuffer(int count) throws IOException {
+  protected void prepareAndFillBuffer(int count) throws IOException {
     update();
     //System.out.println("prepareAndFillBuffer("+count+") "+show());
     if(totalBuffered < totalReadLimit) {

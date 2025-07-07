@@ -20,7 +20,7 @@ import java.util.Objects;
 ///
 /// A BufferedInput created from a ByteBuffer defaults to the same byte order as the ByteBuffer,
 /// otherwise [ByteOrder#BIG_ENDIAN]. This can be changed with [#order(ByteOrder)].
-public abstract sealed class BufferedInput implements Closeable permits HeapBufferedInput, DirectBufferedInput {
+public abstract class BufferedInput extends ReadableBuffer implements Closeable {
 
   /// Read data from an [InputStream] using the [#DEFAULT_BUFFER_SIZE] and [ByteOrder#BIG_ENDIAN].
   /// Same as `of(in, DEFAULT_BUFFER_SIZE)`.
@@ -110,13 +110,12 @@ public abstract sealed class BufferedInput implements Closeable permits HeapBuff
 
   // ======================================================= non-static parts:
 
-  int pos; // first used byte in buffer
-  int lim; // last used byte + 1 in buffer
   long totalReadLimit; // max number of bytes that may be returned
   private final BufferedInput viewParent;
   final BufferedInput viewRoot;
-
-  BufferedInput(int pos, int lim, long totalReadLimit, BufferedInput viewParent, boolean bigEndian) {
+  final LineBuffer linebuf; // null in array-based buffers
+  
+  BufferedInput(int pos, int lim, long totalReadLimit, BufferedInput viewParent, boolean bigEndian, LineBuffer linebuf) {
     this.pos = pos;
     this.lim = lim;
     this.totalReadLimit = totalReadLimit;
@@ -124,10 +123,10 @@ public abstract sealed class BufferedInput implements Closeable permits HeapBuff
     this.bigEndian = bigEndian;
     this.totalBuffered = lim - pos;
     this.viewRoot = viewParent == null ? this : viewParent.viewRoot;
+    this.linebuf = linebuf;
   }
 
   long totalBuffered; // total number of bytes read from input
-  boolean bigEndian;
   int excessRead = 0; // number of bytes read into buf beyond lim if totalReadLimit was reached
   private int state = STATE_LIVE;
   private BufferedInput activeView = null;
@@ -137,22 +136,17 @@ public abstract sealed class BufferedInput implements Closeable permits HeapBuff
   CloseableView closeableView = null;
 
   abstract BufferedInput createEmptyView();
-  abstract void clearBuffer();
-  abstract void copyBufferFrom(BufferedInput b);
 
-  /// Fill the buffer as much as possible without blocking (starting at [#lim]), but at least
-  /// until `count` bytes are available starting at [#pos] even if this requires blocking or
-  /// growing the buffer. Less data may only be made available when the end of the input has been
-  /// reached or nothing more can be read without exceeding the [#totalReadLimit]. The fields
-  /// [#totalBuffered] and [#lim] are updated accordingly.
-  ///
-  /// If [#totalBuffered] would exceed [#totalReadLimit] after filling the buffer, any excess
-  /// bytes must be counted as [#excessRead] and subtracted from [#totalBuffered] and [#lim].
-  ///
-  /// This method may change the buffer references when requesting more than
-  /// [#MIN_BUFFER_SIZE] / 2 bytes.
-  abstract void prepareAndFillBuffer(int count) throws IOException;
+  void copyBufferFrom(BufferedInput b) {
+    buf = b.buf;
+    bb = b.bb;
+  }
 
+  void clearBuffer() {
+    buf = null;
+    bb = null;
+  }
+  
   String show() {
     return "pos="+pos+", lim="+lim+", totalReadLim="+totalReadLimit+", totalBuf="+totalBuffered+", excessRead="+excessRead+", parentTotalOff="+parentTotalOffset;
   }
@@ -170,8 +164,6 @@ public abstract sealed class BufferedInput implements Closeable permits HeapBuff
     copyBufferFrom(viewParent);
   }
 
-  int available() { return lim - pos; }
-
   void checkState() throws IOException {
     if(state != STATE_LIVE) {
       if(state == STATE_CLOSED) throw new IOException("BufferedInput has already been closed");
@@ -188,33 +180,47 @@ public abstract sealed class BufferedInput implements Closeable permits HeapBuff
     return this;
   }
 
-  /// Request `count` bytes to be available to read in the buffer. Less may be available if the end of the input
-  /// is reached. This method may change the buffer references when requesting more than
-  /// [#MIN_BUFFER_SIZE] / 2 bytes.
-  void request(int count) throws IOException { if(available() < count) prepareAndFillBuffer(count); }
-
-  /// Request `count` bytes to be available to read in the buffer, advance the buffer to the position after these
-  /// bytes and return the previous position. Throws EOFException if the end of the input is reached before the
-  /// requested number of bytes is available. This method may change the buffer references.
-  final int fwd(int count) throws IOException {
-    if(available() < count) {
-      prepareAndFillBuffer(count);
-      if(available() < count) throw new EOFException();
-    }
-    var p = pos;
-    pos += count;
-    return p;
-  }
-
   /// The total number of bytes read from this BufferedInput, including child views but excluding the parent.
   public long totalBytesRead() throws IOException {
     checkState();
     return totalBuffered - available();
   }
 
-  public abstract void bytes(byte[] a, int off, int len) throws IOException;
+  /// Fill the buffer as much as possible without blocking (starting at [#lim]), but at least
+  /// until `count` bytes are available starting at [#pos] even if this requires blocking or
+  /// growing the buffer. Less data may only be made available when the end of the input has been
+  /// reached or nothing more can be read without exceeding the [#totalReadLimit]. The fields
+  /// [#totalBuffered] and [#lim] are updated accordingly.
+  ///
+  /// If [#totalBuffered] would exceed [#totalReadLimit] after filling the buffer, any excess
+  /// bytes must be counted as [#excessRead] and subtracted from [#totalBuffered] and [#lim].
+  ///
+  /// This method may change the buffer references.
+  protected abstract void prepareAndFillBuffer(int count) throws IOException;
 
-  public byte[] bytes(int len) throws IOException {
+  // `bytes` and `skip` are implemented in terms of `request(1)`. This should always
+  // be correct, and it works great for [SwitchingHeapBufferedInput] (because there is no more
+  // direct way to transfer the data, and requesting 1 byte will never create a seam), but it is
+  // not ideal for implementations that can copy/skip directly from the source.
+
+  public void bytes(byte[] a, int off, int len) throws IOException {
+    var tot = totalBytesRead() + len;
+    if(tot < 0 || tot > totalReadLimit) throw new EOFException();
+    while(len > 0) {
+      tryFwd(1);
+      if(available() == 0) throw new EOFException();
+      var l = Math.min(len, available());
+      if(l > 0) {
+        if(buf != null) System.arraycopy(buf, pos, a, off, l);
+        else bb.get(pos, a, off, l);
+        pos += l;
+        off += l;
+        len -= l;
+      }
+    }
+  }
+
+  public final byte[] bytes(int len) throws IOException {
     var a = new byte[len];
     bytes(a, 0, len);
     return a;
@@ -223,94 +229,67 @@ public abstract sealed class BufferedInput implements Closeable permits HeapBuff
   /// Skip over n bytes, or until the end of the input if it occurs first.
   ///
   /// @return The number of skipped bytes. It is equal to the requested number unless the end of the input was reached.
-  public abstract long skip(long bytes) throws IOException;
+  public long skip(final long bytes) throws IOException {
+    checkState();
+    final var limited = Math.min(bytes, totalReadLimit - totalBytesRead());
+    var rem = limited;
+    while(rem > 0) {
+      tryFwd(1);
+      if(available() == 0) return limited - rem;
+      var l = Math.min(rem, available());
+      if(l > 0) {
+        pos += (int)l;
+        rem -= l;
+      }
+    }
+    return limited;
+  }
 
   /// Read a non-terminated UTF-8 string.
   public final String string(int len) throws IOException { return string(len, StandardCharsets.UTF_8); }
 
   /// Read a non-terminated string of the specified encoded length.
-  public abstract String string(int len, Charset charset) throws IOException;
+  public String string(int len, Charset charset) throws IOException {
+    if(len == 0) {
+      checkState();
+      return "";
+    } else {
+      var p = fwd(len);
+      return buf != null ? new String(buf, p, len, charset) : makeDirectString(p, len, charset);
+    }
+  }
 
   /// Read a \0-terminated UTF-8 string.
   public final String zstring(int len) throws IOException { return zstring(len, StandardCharsets.UTF_8); }
 
   /// Read a \0-terminated string of the specified encoded length (including the \0).
-  public abstract String zstring(int len, Charset charset) throws IOException;
+  public String zstring(int len, Charset charset) throws IOException {
+    if(len == 0) {
+      checkState();
+      return "";
+    } else {
+      var p = fwd(len);
+      if(buf != null) {
+        if(buf[pos-1] != 0) throw new IOException("Missing \\0 terminator in string");
+        return len == 1 ? "" : new String(buf, p, len-1, charset);
+      } else {
+        if(bb.get(pos-1) != 0) throw new IOException("Missing \\0 terminator in string");
+        return len == 1 ? "" : makeDirectString(p, len-1, charset);
+      }
+    }
+  }
+
+  private String makeDirectString(int start, int len, Charset charset) {
+    var lb = linebuf.get(len);
+    bb.get(start, lb, 0, len);
+    return new String(lb, 0, len, charset);
+  }
 
   public boolean hasMore() throws IOException {
     if(pos < lim) return true;
     prepareAndFillBuffer(1);
     return pos < lim;
   }
-
-  /// Read a signed 8-bit integer (`byte`).
-  public abstract byte int8() throws IOException;
-
-  /// Read an unsigned 8-bit integer into the lower 8 bits of an `int`.
-  public final int uint8() throws IOException { return int8() & 0xFF; }
-
-  /// Read a signed 16-bit integer (`short`) in the current byte [#order(ByteOrder)].
-  public abstract short int16() throws IOException;
-  /// Read a signed 16-bit integer (`short`) in the native byte order.
-  public abstract short int16n() throws IOException;
-  /// Read a signed 16-bit integer (`short`) in big endian byte order.
-  public abstract short int16b() throws IOException;
-  /// Read a signed 16-bit integer (`short`) in little endian byte order.
-  public abstract short int16l() throws IOException;
-
-  /// Read an unsigned 16-bit integer (`char`) in the current byte [#order(ByteOrder)].
-  public abstract char uint16() throws IOException;
-  /// Read an unsigned 16-bit integer (`char`) in the native byte order.
-  public abstract char uint16n() throws IOException;
-  /// Read an unsigned 16-bit integer (`char`) in big endian byte order.
-  public abstract char uint16b() throws IOException;
-  /// Read an unsigned 16-bit integer (`char`) in little endian byte order.
-  public abstract char uint16l() throws IOException;
-
-  /// Read a signed 32-bit integer (`int`) in the current byte [#order(ByteOrder)].
-  public abstract int int32() throws IOException;
-  /// Read a signed 32-bit integer (`int`) in the native byte order.
-  public abstract int int32n() throws IOException;
-  /// Read a signed 32-bit integer (`int`) in big endian byte order.
-  public abstract int int32b() throws IOException;
-  /// Read a signed 32-bit integer (`int`) in little endian byte order.
-  public abstract int int32l() throws IOException;
-
-  /// Read an unsigned 32-bit integer into the lower 32 bits of a `long` in the current byte [#order(ByteOrder)].
-  public final long uint32() throws IOException { return int32() & 0xFFFFFFFFL; }
-  /// Read an unsigned 32-bit integer into the lower 32 bits of a `long` in the native byte order.
-  public final long uint32n() throws IOException { return int32n() & 0xFFFFFFFFL; }
-  /// Read an unsigned 32-bit integer into the lower 32 bits of a `long` in big endian byte order.
-  public final long uint32b() throws IOException { return int32b() & 0xFFFFFFFFL; }
-  /// Read an unsigned 32-bit integer into the lower 32 bits of a `long` in little endian byte order.
-  public final long uint32l() throws IOException { return int32l() & 0xFFFFFFFFL; }
-
-  /// Read a signed 64-bit integer (`long`) in the current byte [#order(ByteOrder)].
-  public abstract long int64() throws IOException;
-  /// Read a signed 64-bit integer (`long`) in the native byte order.
-  public abstract long int64n() throws IOException;
-  /// Read a signed 64-bit integer (`long`) in big endian byte order.
-  public abstract long int64b() throws IOException;
-  /// Read a signed 64-bit integer (`long`) in little endian byte order.
-  public abstract long int64l() throws IOException;
-
-  /// Read a 32-bit IEEE-754 floating point value (`float`) in the current byte [#order(ByteOrder)].
-  public abstract float float32() throws IOException;
-  /// Read a 32-bit IEEE-754 floating point value (`float`) in the native byte order.
-  public abstract float float32n() throws IOException;
-  /// Read a 32-bit IEEE-754 floating point value (`float`) in big endian byte order.
-  public abstract float float32b() throws IOException;
-  /// Read a 32-bit IEEE-754 floating point value (`float`) in little endian byte order.
-  public abstract float float32l() throws IOException;
-
-  /// Read a 64-bit IEEE-754 floating point value (`double`) in the current byte [#order(ByteOrder)].
-  public abstract double float64() throws IOException;
-  /// Read a 64-bit IEEE-754 floating point value (`double`) in the native byte order.
-  public abstract double float64n() throws IOException;
-  /// Read a 64-bit IEEE-754 floating point value (`double`) in big endian byte order.
-  public abstract double float64b() throws IOException;
-  /// Read a 64-bit IEEE-754 floating point value (`double`) in little endian byte order.
-  public abstract double float64l() throws IOException;
 
   /// Same as `close(true)`.
   /// 
