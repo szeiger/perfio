@@ -166,7 +166,7 @@ object BufferedInputTest:
 
   def checkedInputTester(it: InputTester): InputTester = {
     val crc = new CRC32
-    InputTester(it.td, it.data)(a => new CheckedBufferedInput(it.build(a), crc))
+    InputTester(it.td, it.data)(a => TracingBufferedInput.checked(it.build(a), crc))
   }
 
 

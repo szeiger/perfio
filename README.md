@@ -4,16 +4,21 @@
 
 perfIO provides buffered streaming I/O abstractions for both binary and text data. The design is optimized for performance. The public perfIO classes correspond roughly to the following standard library abstractions:
 
-| perfIO                     | JDK (* and common 3rd-party additions)                                          |
-|----------------------------|---------------------------------------------------------------------------------|
-| BufferedInput              | BufferedInputStream, ByteArrayInputStream, DataInputStream, LimitedInputStream* |
-| BufferedOutput             | BufferedOutputStream, DataOutputStream                                          |
-| AccumulatingBufferedOutput | -                                                                               |
-| PipeBufferedOutput         | PipeOutputStream                                                                |
-| ArrayBufferedOutput        | ByteArrayOutputStream                                                           |
-| LineTokenizer              | BufferedReader + InputStreamReader                                              |
-| TextOutput                 | PrintWriter + BufferedWriter + OutputStreamWriter                               |
-| GzipBufferedOutput         | GZIPOutputStream                                                                |
+| perfIO                       | JDK (* and common 3rd-party additions)                                          |
+|------------------------------|---------------------------------------------------------------------------------|
+| BufferedInput                | BufferedInputStream, ByteArrayInputStream, DataInputStream, LimitedInputStream* |
+| BufferedOutput               | BufferedOutputStream, DataOutputStream                                          |
+| AccumulatingBufferedOutput   | -                                                                               |
+| PipeBufferedOutput           | PipeOutputStream                                                                |
+| ArrayBufferedOutput          | ByteArrayOutputStream                                                           |
+| LineTokenizer                | BufferedReader + InputStreamReader                                              |
+| TextOutput                   | PrintWriter + BufferedWriter + OutputStreamWriter                               |
+| GzipBufferedOutput           | GZIPOutputStream                                                                |
+| FilteringBufferedInput       | FilterInputStream                                                               |
+| FilteringBufferedOutput      | FilterOutputStream                                                              |
+| AsyncFilteringBufferedOutput | -                                                                               |
+| TracingBufferedInput         | CheckedInputStream                                                              |
+| TracingBufferedOutput        | CheckedOutputStream                                                             |
 
 ## How fast is it?
 

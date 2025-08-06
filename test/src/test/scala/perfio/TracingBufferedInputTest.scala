@@ -9,7 +9,7 @@ import java.io.{ByteArrayInputStream, DataInputStream}
 import java.util.zip.{CRC32, CheckedInputStream}
 
 @RunWith(classOf[Parameterized])
-class CheckedBufferedInputTest(params: CheckedBufferedInputTest.Params) extends TestUtil:
+class TracingBufferedInputTest(params: TracingBufferedInputTest.Params) extends TestUtil:
   val count = 1000
 
   lazy val numTestData = createTestData("num"): dout =>
@@ -50,10 +50,10 @@ class CheckedBufferedInputTest(params: CheckedBufferedInputTest.Params) extends 
         val pad = Array.tabulate(10)(_.toByte)
         val buf = createBI(pad ++ td.bytes ++ pad)
         buf.bytes(10)
-        new CheckedBufferedInput(buf.limitedView(td.bytes.length), crc1)
+        TracingBufferedInput.checked(buf.limitedView(td.bytes.length), crc1)
       else
         val buf = createBI(td.bytes)
-        new CheckedBufferedInput(buf, crc1)
+        TracingBufferedInput.checked(buf, crc1)
     val in = new ByteArrayInputStream(td.bytes)
     val cin = new CheckedInputStream(in, crc2)
     val din = new DataInputStream(cin)
@@ -65,13 +65,13 @@ class CheckedBufferedInputTest(params: CheckedBufferedInputTest.Params) extends 
       else
         read(cbuf, din, i)
       if(i % (count/10) == 0)
-        if(params.update) cbuf.updateChecksum()
+        if(params.update) cbuf.updateTrace()
     din.close()
     if(params.close) cbuf.close()
-    else cbuf.updateChecksum()
+    else cbuf.updateTrace()
     assertEquals(crc2.getValue, crc1.getValue)
 
-object CheckedBufferedInputTest:
+object TracingBufferedInputTest:
   case class Params(close: Boolean, blockSize: Int, update: Boolean, view1: Boolean, view2: Boolean, direct: Boolean):
     override def toString = s"close=$close,bs=$blockSize,update=$update,view1=$view1,view2=$view2,direct=$direct"
 

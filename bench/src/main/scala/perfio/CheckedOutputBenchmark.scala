@@ -47,7 +47,7 @@ class CheckedOutputBenchmark extends BenchUtil:
   def perfioCRC32(bh: Blackhole): Unit =
     val out = BufferedOutput.growing(byteSize, blockSize)
     val crc = new CRC32
-    val cout = new CheckedBufferedOutput(out, crc)
+    val cout = TracingBufferedOutput.checked(out, crc)
     writeTo(cout)
     bh.consume(out.buffer)
     bh.consume(out.length)
