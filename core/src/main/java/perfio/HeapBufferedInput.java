@@ -2,10 +2,11 @@ package perfio;
 
 import perfio.internal.BufferUtil;
 
+import java.io.Closeable;
+
 abstract class HeapBufferedInput extends BufferedInput {
-  HeapBufferedInput(byte[] buf, int pos, int lim, long totalReadLimit, BufferedInput viewParent, boolean bigEndian) {
-    super(pos, lim, totalReadLimit, viewParent, bigEndian, null, null);
-    this.buf = buf;
+  HeapBufferedInput(byte[] buf, int pos, int lim, long totalReadLimit, BufferedInput viewParent, boolean bigEndian, Closeable closeable) {
+    super(buf, pos, lim, totalReadLimit, viewParent, bigEndian, null, null, null, closeable);
   }
 
   /// Shift the remaining buffer data to the left and/or reallocate the buffer to make room for

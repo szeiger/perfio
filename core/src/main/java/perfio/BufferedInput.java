@@ -115,8 +115,10 @@ public abstract class BufferedInput extends ReadableBuffer implements Closeable 
   final BufferedInput viewRoot;
   final LineBuffer linebuf; // null in array-based buffers
   final MemorySegment ms;
+  final Closeable closeable;
   
-  BufferedInput(int pos, int lim, long totalReadLimit, BufferedInput viewParent, boolean bigEndian, LineBuffer linebuf, MemorySegment ms) {
+  BufferedInput(byte[] buf, int pos, int lim, long totalReadLimit, BufferedInput viewParent, boolean bigEndian, LineBuffer linebuf, MemorySegment ms, ByteBuffer bb, Closeable closeable) {
+    this.buf = buf;
     this.pos = pos;
     this.lim = lim;
     this.totalReadLimit = totalReadLimit;
@@ -126,6 +128,8 @@ public abstract class BufferedInput extends ReadableBuffer implements Closeable 
     this.viewRoot = viewParent == null ? this : viewParent.viewRoot;
     this.linebuf = linebuf;
     this.ms = ms;
+    this.bb = bb;
+    this.closeable = closeable;
   }
 
   long totalBuffered; // total number of bytes read from input
@@ -323,7 +327,9 @@ public abstract class BufferedInput extends ReadableBuffer implements Closeable 
   }
 
   /// Called at the end of the first [#close()].
-  void bufferClosed(boolean closeUpstream) throws IOException {}
+  void bufferClosed(boolean closeUpstream) throws IOException {
+    if(closeable != null && closeUpstream) closeable.close();
+  }
   
   final void markClosed() {
     pos = lim;

@@ -32,6 +32,9 @@ trait TestUtil:
     try f catch
       case t: Throwable if ct.runtimeClass.isInstance(t) => caught = true
     if(!caught) Assert.fail(s"Expected exception ${ct.runtimeClass.getName}")
+    
+  def directBB(buf: Array[Byte]): ByteBuffer =
+    ByteBuffer.allocateDirect(buf.length).put(buf).position(0)
 
 
 class TestData(val bytes: Array[Byte], val name: String, owner: Class[?]):

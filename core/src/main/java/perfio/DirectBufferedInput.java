@@ -11,17 +11,9 @@ import java.nio.ByteOrder;
 // This could be a lot simpler if we didn't have to do pagination but ByteBuffer is limited
 // to 2 GB and direct MemorySegment access is much, much slower as of JDK 22.
 final class DirectBufferedInput extends BufferedInput {
-  private final Closeable closeable;
 
   DirectBufferedInput(ByteBuffer bb, int pos, int lim, long totalReadLimit, MemorySegment ms, Closeable closeable, BufferedInput parent, LineBuffer linebuf) {
-    super(pos, lim, totalReadLimit, parent, bb.order() == ByteOrder.BIG_ENDIAN, linebuf, ms);
-    this.bb = bb;
-    this.closeable = closeable;
-  }
-
-  @Override
-  void bufferClosed(boolean closeUpstream) throws IOException {
-    if(closeable != null && closeUpstream) closeable.close();
+    super(null, pos, lim, totalReadLimit, parent, bb.order() == ByteOrder.BIG_ENDIAN, linebuf, ms, bb, closeable);
   }
 
   void copyBufferFrom(BufferedInput b) {

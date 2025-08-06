@@ -3,30 +3,30 @@ package perfio;
 import java.io.IOException;
 import java.util.zip.Checksum;
 
-public class CheckedHeapBufferedInput extends HeapBufferedInput {
-  private final HeapBufferedInput parent;
+public class CheckedBufferedInput extends BufferedInput {
+  private final BufferedInput parent;
   private final Checksum checksum;
   private long checked = 0;
 
-  public CheckedHeapBufferedInput(HeapBufferedInput parent, Checksum checksum) {
-    super(parent.buf, parent.pos, parent.lim, Long.MAX_VALUE, null, parent.bigEndian);
+  public CheckedBufferedInput(BufferedInput parent, Checksum checksum) {
+    super(parent.buf, parent.pos, parent.lim, Long.MAX_VALUE, null, parent.bigEndian, parent.linebuf, parent.ms, parent.bb, parent);
     this.parent = parent;
     this.checksum = checksum;
   }
 
-  private CheckedHeapBufferedInput(CheckedHeapBufferedInput viewParent) {
-    super(null, 0, 0, 0, viewParent, viewParent.bigEndian);
+  private CheckedBufferedInput(CheckedBufferedInput viewParent) {
+    super(null, 0, 0, 0, viewParent, viewParent.bigEndian, viewParent.linebuf, viewParent.ms, viewParent.bb, null);
     this.parent = viewParent.parent;
     this.checksum = viewParent.checksum;
   }
 
   @Override
-  BufferedInput createEmptyView() { return new CheckedHeapBufferedInput(this); }
+  BufferedInput createEmptyView() { return new CheckedBufferedInput(this); }
 
   @Override
   void copyBufferFrom(BufferedInput b) {
     super.copyBufferFrom(b);
-    var bb = (CheckedHeapBufferedInput)b;
+    var bb = (CheckedBufferedInput)b;
     checked = bb.checked;
   }
 
@@ -42,7 +42,8 @@ public class CheckedHeapBufferedInput extends HeapBufferedInput {
       var bstart = lim - (int)(tbuf - checked);
       var bend = lim;
       checked = tbuf;
-      checksum.update(buf, bstart, bend-bstart);
+      if(buf != null) checksum.update(buf, bstart, bend-bstart);
+      else checksum.update(bb.slice(bstart, bend-bstart));
     }
   }
 

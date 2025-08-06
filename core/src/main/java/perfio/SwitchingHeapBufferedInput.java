@@ -2,8 +2,6 @@ package perfio;
 
 import perfio.internal.BufferUtil;
 
-import java.io.Closeable;
-import java.io.EOFException;
 import java.io.IOException;
 
 class SwitchingHeapBufferedInput extends HeapBufferedInput {
@@ -15,12 +13,12 @@ class SwitchingHeapBufferedInput extends HeapBufferedInput {
   private int seamOverlap = 0;
 
   SwitchingHeapBufferedInput(BufferIterator it, boolean bigEndian) {
-    super(BufferUtil.EMPTY_BUFFER, 0, 0, Long.MAX_VALUE, null, bigEndian);
+    super(BufferUtil.EMPTY_BUFFER, 0, 0, Long.MAX_VALUE, null, bigEndian, null);
     this.it = it;
   }
 
   protected SwitchingHeapBufferedInput(SwitchingHeapBufferedInput parent) {
-    super(null, 0, 0, 0, parent, parent.bigEndian);
+    super(null, 0, 0, 0, parent, parent.bigEndian, null);
     this.it = parent.it;
   }
 

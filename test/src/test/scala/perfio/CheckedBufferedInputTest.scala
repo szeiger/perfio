@@ -5,8 +5,8 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.junit.runners.Parameterized
 
-import java.io.{ByteArrayInputStream, ByteArrayOutputStream, DataInputStream, DataOutputStream}
-import java.util.zip.{CRC32, CheckedInputStream, CheckedOutputStream}
+import java.io.{ByteArrayInputStream, DataInputStream}
+import java.util.zip.{CRC32, CheckedInputStream}
 
 @RunWith(classOf[Parameterized])
 class CheckedBufferedInputTest(params: CheckedBufferedInputTest.Params) extends TestUtil:
@@ -42,15 +42,18 @@ class CheckedBufferedInputTest(params: CheckedBufferedInputTest.Params) extends 
 
   def runTest(td: TestData, read: (BufferedInput, DataInputStream, Int) => Unit): Unit =
     val crc1, crc2 = new CRC32
+    def createBI(buf: Array[Byte]) =
+      if(params.direct) BufferedInput.ofByteBuffer(directBB(buf))
+      else BufferedInput.ofArray(buf)
     val cbuf =
       if(params.view1)
         val pad = Array.tabulate(10)(_.toByte)
-        val buf = BufferedInput.ofArray(pad ++ td.bytes ++ pad)
+        val buf = createBI(pad ++ td.bytes ++ pad)
         buf.bytes(10)
-        new CheckedHeapBufferedInput(buf.limitedView(td.bytes.length).asInstanceOf[HeapBufferedInput], crc1)
+        new CheckedBufferedInput(buf.limitedView(td.bytes.length), crc1)
       else
-        val buf = BufferedInput.ofArray(td.bytes)
-        new CheckedHeapBufferedInput(buf.asInstanceOf[HeapBufferedInput], crc1)
+        val buf = createBI(td.bytes)
+        new CheckedBufferedInput(buf, crc1)
     val in = new ByteArrayInputStream(td.bytes)
     val cin = new CheckedInputStream(in, crc2)
     val din = new DataInputStream(cin)
@@ -69,8 +72,8 @@ class CheckedBufferedInputTest(params: CheckedBufferedInputTest.Params) extends 
     assertEquals(crc2.getValue, crc1.getValue)
 
 object CheckedBufferedInputTest:
-  case class Params(close: Boolean, blockSize: Int, update: Boolean, view1: Boolean, view2: Boolean):
-    override def toString = s"close=$close,bs=$blockSize,update=$update,view1=$view1,view2=$view2"
+  case class Params(close: Boolean, blockSize: Int, update: Boolean, view1: Boolean, view2: Boolean, direct: Boolean):
+    override def toString = s"close=$close,bs=$blockSize,update=$update,view1=$view1,view2=$view2,direct=$direct"
 
   @Parameterized.Parameters(name = "{0}")
   def parameters: java.util.List[Array[Any]] =
@@ -80,5 +83,6 @@ object CheckedBufferedInputTest:
       update <- Array(false, true)
       view1 <- Array(false, true)
       view2 <- Array(false, true)
-    yield Array[Any](Params(close, blockSize, update, view1, view2))
+      direct <- Array(false, true)
+    yield Array[Any](Params(close, blockSize, update, view1, view2, direct))
     java.util.List.of(a*)
