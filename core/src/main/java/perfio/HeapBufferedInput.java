@@ -4,7 +4,7 @@ import perfio.internal.BufferUtil;
 
 abstract class HeapBufferedInput extends BufferedInput {
   HeapBufferedInput(byte[] buf, int pos, int lim, long totalReadLimit, BufferedInput viewParent, boolean bigEndian) {
-    super(pos, lim, totalReadLimit, viewParent, bigEndian, null);
+    super(pos, lim, totalReadLimit, viewParent, bigEndian, null, null);
     this.buf = buf;
   }
 

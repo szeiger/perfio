@@ -4,10 +4,10 @@ import java.io.IOException;
 
 
 abstract sealed class HeapLineTokenizer extends LineTokenizer implements CloseableView permits HeapScalarLineTokenizer, HeapVectorizedLineTokenizer {
-  final HeapBufferedInput parentBin;
-  final HeapBufferedInput bin;
+  final BufferedInput parentBin;
+  final BufferedInput bin;
 
-  HeapLineTokenizer(HeapBufferedInput parentBin, byte eolChar, byte preEolChar) throws IOException {
+  HeapLineTokenizer(BufferedInput parentBin, byte eolChar, byte preEolChar) throws IOException {
     super(eolChar, preEolChar);
     this.parentBin = parentBin;
     this.bin = (HeapBufferedInput)parentBin.identicalView();

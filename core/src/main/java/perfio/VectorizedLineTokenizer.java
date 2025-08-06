@@ -52,7 +52,7 @@ abstract non-sealed class HeapVectorizedLineTokenizer extends HeapLineTokenizer 
   private long mask = 0L; // vector mask that marks the LFs
   private final ByteVector eolVector;
 
-  HeapVectorizedLineTokenizer(HeapBufferedInput parentBin, byte eolChar, byte preEolChar) throws IOException {
+  HeapVectorizedLineTokenizer(BufferedInput parentBin, byte eolChar, byte preEolChar) throws IOException {
     super(parentBin, eolChar, preEolChar);
     this.vpos = bin.pos - VLEN;
     this.mask = 0L;
@@ -146,7 +146,7 @@ abstract non-sealed class DirectVectorizedLineTokenizer extends DirectLineTokeni
   private long mask = 0L;
   private final ByteVector eolVector;
 
-  DirectVectorizedLineTokenizer(DirectBufferedInput bin, byte eolChar, byte preEolChar) throws IOException {
+  DirectVectorizedLineTokenizer(BufferedInput bin, byte eolChar, byte preEolChar) throws IOException {
     super(bin, eolChar, preEolChar);
     this.vpos = start - VLEN;
     this.limit = ms.byteSize();

@@ -86,10 +86,15 @@ abstract non-sealed class DirectScalarLineTokenizer extends DirectLineTokenizer 
   private long pos;
   private final long limit;
 
-  DirectScalarLineTokenizer(DirectBufferedInput bin, byte eolChar, byte preEolChar) throws IOException {
+  DirectScalarLineTokenizer(BufferedInput bin, byte eolChar, byte preEolChar) throws IOException {
     super(bin, eolChar, preEolChar);
     this.pos = start;
     limit = bin.totalReadLimit;
+    //System.out.println("  Created "+show());
+  }
+
+  String show() {
+    return "start="+start+", pos="+pos+", limit="+limit;
   }
 
   @Override

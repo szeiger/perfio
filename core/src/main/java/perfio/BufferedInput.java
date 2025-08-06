@@ -81,7 +81,7 @@ public abstract class BufferedInput extends ReadableBuffer implements Closeable 
       bb.position(0);
       var ms = MemorySegment.ofBuffer(bb);
       bb.position(p);
-      return new DirectBufferedInput(bb, ms, p, bb.limit(), bb.limit(), ms, null, null, new LineBuffer());
+      return new DirectBufferedInput(bb, p, bb.limit(), bb.limit(), ms, null, null, new LineBuffer());
     }
     else return new StreamingHeapBufferedInput(bb.array(), bb.position(), bb.limit(), Long.MAX_VALUE, null, 0, null, bb.order() == ByteOrder.BIG_ENDIAN);
   }
@@ -95,7 +95,7 @@ public abstract class BufferedInput extends ReadableBuffer implements Closeable 
 
   private static DirectBufferedInput create(MemorySegment bbSegment, MemorySegment ms, Closeable closeable) {
     var bb = bbSegment.asByteBuffer().order(ByteOrder.BIG_ENDIAN);
-    return new DirectBufferedInput(bb, bbSegment, bb.position(), bb.limit(), ms.byteSize(), ms, closeable, null, new LineBuffer());
+    return new DirectBufferedInput(bb, bb.position(), bb.limit(), ms.byteSize(), ms, closeable, null, new LineBuffer());
   }
 
   public static final int MIN_BUFFER_SIZE = BufferUtil.VECTOR_LENGTH * 2;
@@ -114,8 +114,9 @@ public abstract class BufferedInput extends ReadableBuffer implements Closeable 
   private final BufferedInput viewParent;
   final BufferedInput viewRoot;
   final LineBuffer linebuf; // null in array-based buffers
+  final MemorySegment ms;
   
-  BufferedInput(int pos, int lim, long totalReadLimit, BufferedInput viewParent, boolean bigEndian, LineBuffer linebuf) {
+  BufferedInput(int pos, int lim, long totalReadLimit, BufferedInput viewParent, boolean bigEndian, LineBuffer linebuf, MemorySegment ms) {
     this.pos = pos;
     this.lim = lim;
     this.totalReadLimit = totalReadLimit;
@@ -124,6 +125,7 @@ public abstract class BufferedInput extends ReadableBuffer implements Closeable 
     this.totalBuffered = lim - pos;
     this.viewRoot = viewParent == null ? this : viewParent.viewRoot;
     this.linebuf = linebuf;
+    this.ms = ms;
   }
 
   long totalBuffered; // total number of bytes read from input
@@ -134,12 +136,14 @@ public abstract class BufferedInput extends ReadableBuffer implements Closeable 
   private boolean detachOnClose, skipOnClose = false;
   long parentTotalOffset = 0L;
   CloseableView closeableView = null;
+  long bbStart = 0L; // offset of bb within ms
 
   abstract BufferedInput createEmptyView();
 
   void copyBufferFrom(BufferedInput b) {
     buf = b.buf;
     bb = b.bb;
+    bbStart = b.bbStart;
   }
 
   void clearBuffer() {

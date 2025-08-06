@@ -296,7 +296,7 @@ public abstract class AsyncFilteringBufferedOutput<Data> extends FilteringBuffer
     var t = firstPending;
     if(t.asyncError != null) handleAsyncError(t.asyncError);
     while(true) {
-      //System.err.println("flushFirst "+t);
+      //System.out.println("flushFirst "+t);
       if(t.to != null) {
         var n = ((BufferedOutput)t.to).next;
         while(true) {
@@ -324,7 +324,7 @@ public abstract class AsyncFilteringBufferedOutput<Data> extends FilteringBuffer
   @Override protected void flushPending() throws IOException {
     if(asyncError != null) throw new IOException(asyncError);
 
-    //System.err.println("flushPending: firstUnsubmitted="+firstUnsubmitted+", activePartition="+activePartition);
+    //System.out.println("flushPending: firstUnsubmitted="+firstUnsubmitted+", activePartition="+activePartition);
     if(firstUnsubmitted != null) {
       activePartition.isLastInPartition = true;
       scheduleNew(firstUnsubmitted);

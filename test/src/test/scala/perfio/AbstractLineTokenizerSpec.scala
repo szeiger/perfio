@@ -29,6 +29,7 @@ abstract class AbstractLineTokenizerSpec[T] extends Properties with TestUtil:
   def createProp(min: Int, max: Int, cs: Charset, split: Boolean, params: T): Property
 
   def run(s: String, in: BufferedInput, cs: Charset, split: Boolean): Result =
+    //println(s"run(\"$s\", $cs, $split)")
     try
       val (buf, next) = if(split) buildSplit(in, cs) else buildNormal(in, cs)
       val exp = s.lines().toList.asScala.map(_.length)
@@ -36,6 +37,7 @@ abstract class AbstractLineTokenizerSpec[T] extends Properties with TestUtil:
         (buf: mutable.Buffer[Int]) ==== exp,
         next ==== null
       ))
+    catch { case ex: AssertionError => Result.failure }
     finally in.close()
 
   def buildSplit(in: BufferedInput, cs: Charset): (mutable.ArrayBuffer[Int], String) =

@@ -9,15 +9,18 @@ import java.lang.foreign.ValueLayout;
 
 
 abstract sealed class DirectLineTokenizer extends LineTokenizer implements CloseableView permits DirectScalarLineTokenizer, DirectVectorizedLineTokenizer {
-  final DirectBufferedInput bin;
+  final BufferedInput bin;
   final MemorySegment ms;
   long start;
+  final int initialPos;
 
-  DirectLineTokenizer(DirectBufferedInput bin, byte eolChar, byte preEolChar) throws IOException {
+  DirectLineTokenizer(BufferedInput bin, byte eolChar, byte preEolChar) throws IOException {
     super(eolChar, preEolChar);
+    //System.out.println("Creating LineTokenizer from "+bin.show());
     this.bin = bin;
     this.ms = bin.ms;
     this.start = bin.bbStart + bin.pos;
+    this.initialPos = bin.pos;
     bin.lock();
     bin.closeableView = this;
   }
@@ -59,12 +62,13 @@ abstract sealed class DirectLineTokenizer extends LineTokenizer implements Close
 
   public void close(boolean closeUpstream) throws IOException {
     if(!closed) {
+      bin.unlock();
+      bin.pos = initialPos;
       if(closeUpstream) {
-        bin.unlock();
         bin.close();
       } else {
-        bin.reposition(start);
-        bin.unlock();
+        var origStart = bin.bbStart + bin.pos;
+        bin.skip(start-origStart);
       }
       markClosed();
     }
