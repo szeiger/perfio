@@ -34,7 +34,7 @@ class BufferedInputUncheckedBenchmark extends BenchUtil:
 
   @Benchmark
   def internal8(bh: Blackhole): Unit =
-    val in = BufferedInput.ofArray(data).asInstanceOf[HeapBufferedInput]
+    val in = BufferedInput.ofArray(data)
     var i = 0
     while i < count do
       val p = in.fwd(8)
@@ -53,7 +53,7 @@ class BufferedInputUncheckedBenchmark extends BenchUtil:
 
   @Benchmark
   def internal16(bh: Blackhole): Unit =
-    val in = BufferedInput.ofArray(data).asInstanceOf[HeapBufferedInput]
+    val in = BufferedInput.ofArray(data)
     var i = 0
     while i < count do
       val p = in.fwd(8)

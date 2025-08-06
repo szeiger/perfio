@@ -4,12 +4,12 @@ import java.io.EOFException;
 import java.io.IOException;
 import java.io.InputStream;
 
-final class StreamingHeapBufferedInput extends HeapBufferedInput {
+final class StreamingHeapBufferedInput extends BufferedInput {
   final InputStream in;
   final int minRead;
 
   StreamingHeapBufferedInput(byte[] buf, int pos, int lim, long totalReadLimit, InputStream in, int minRead, BufferedInput viewParent, boolean bigEndian) {
-    super(buf, pos, lim, totalReadLimit, viewParent, bigEndian, in);
+    super(buf, pos, lim, totalReadLimit, viewParent, bigEndian, null, null, null, in);
     this.in = in;
     this.minRead = minRead;
   }
@@ -32,7 +32,7 @@ final class StreamingHeapBufferedInput extends HeapBufferedInput {
     checkState();
     if(in != null && totalBuffered < totalReadLimit) {
       if(pos + count > buf.length || pos >= buf.length - minRead)
-        shiftOrGrow(count);
+        shiftOrGrowBuf(count);
       while(fillBuffer() >= 0 && available() < count) {}
     }
   }

@@ -72,28 +72,28 @@ class LineTokenizerBenchmark extends BenchUtil:
     bh.consume(count(new BufferedReader(new InputStreamReader(new ByteArrayInputStream(testData), cs))))
   @Benchmark
   def array_HeapScalarLineTokenizer_fromInputStream(bh: Blackhole): Unit =
-    bh.consume(count(ScalarLineTokenizer.of(BufferedInput.of(new ByteArrayInputStream(testData)), cs)))
+    bh.consume(count(LineTokenizer.scalar(BufferedInput.of(new ByteArrayInputStream(testData)), cs, '\n', '\r')))
   @Benchmark
   def array_HeapScalarLineTokenizer_fromArray(bh: Blackhole): Unit =
-    bh.consume(count(ScalarLineTokenizer.of(BufferedInput.ofArray(testData), cs)))
+    bh.consume(count(LineTokenizer.scalar(BufferedInput.ofArray(testData), cs, '\n', '\r')))
   @Benchmark
   def array_DirectScalarLineTokenizer(bh: Blackhole): Unit =
-    bh.consume(count(ScalarLineTokenizer.of(BufferedInput.ofMemorySegment(MemorySegment.ofArray(testData)), cs)))
+    bh.consume(count(LineTokenizer.scalar(BufferedInput.ofMemorySegment(MemorySegment.ofArray(testData)), cs, '\n', '\r')))
   @Benchmark
   def offHeap_DirectScalarLineTokenizer(bh: Blackhole): Unit =
-    bh.consume(count(ScalarLineTokenizer.of(BufferedInput.ofMemorySegment(testDataOffHeap), cs)))
+    bh.consume(count(LineTokenizer.scalar(BufferedInput.ofMemorySegment(testDataOffHeap), cs, '\n', '\r')))
   @Benchmark
   def array_HeapVectorizedLineTokenizer_fromInputStream(bh: Blackhole): Unit =
-    bh.consume(count(VectorizedLineTokenizer.of(BufferedInput.of(new ByteArrayInputStream(testData)), cs)))
+    bh.consume(count(LineTokenizer.vectorized(BufferedInput.of(new ByteArrayInputStream(testData)), cs, '\n', '\r')))
   @Benchmark
   def array_HeapVectorizedLineTokenizer_fromArray(bh: Blackhole): Unit =
-    bh.consume(count(VectorizedLineTokenizer.of(BufferedInput.ofArray(testData), cs)))
+    bh.consume(count(LineTokenizer.vectorized(BufferedInput.ofArray(testData), cs, '\n', '\r')))
   @Benchmark
   def array_DirectVectorizedLineTokenizer(bh: Blackhole): Unit =
-    bh.consume(count(VectorizedLineTokenizer.of(BufferedInput.ofMemorySegment(MemorySegment.ofArray(testData)), cs)))
+    bh.consume(count(LineTokenizer.vectorized(BufferedInput.ofMemorySegment(MemorySegment.ofArray(testData)), cs, '\n', '\r')))
   @Benchmark
   def offHeap_DirectVectorizedLineTokenizer(bh: Blackhole): Unit =
-    bh.consume(count(VectorizedLineTokenizer.of(BufferedInput.ofMemorySegment(testDataOffHeap), cs)))
+    bh.consume(count(LineTokenizer.vectorized(BufferedInput.ofMemorySegment(testDataOffHeap), cs, '\n', '\r')))
 
   @Benchmark
   def mediumFile_BufferedReader(bh: Blackhole): Unit =
@@ -103,16 +103,16 @@ class LineTokenizerBenchmark extends BenchUtil:
     bh.consume(Files.lines(diskTestDataMedium.toPath, cs).count())
   @Benchmark
   def mediumFile_HeapScalarLineTokenizer(bh: Blackhole): Unit =
-    bh.consume(count(ScalarLineTokenizer.of(BufferedInput.of(new FileInputStream(diskTestDataMedium)), cs)))
+    bh.consume(count(LineTokenizer.scalar(BufferedInput.of(new FileInputStream(diskTestDataMedium)), cs, '\n', '\r')))
   @Benchmark
   def mediumFile_DirectScalarLineTokenizer(bh: Blackhole): Unit =
-    bh.consume(count(ScalarLineTokenizer.of(BufferedInput.ofMappedFile(diskTestDataMedium.toPath), cs)))
+    bh.consume(count(LineTokenizer.scalar(BufferedInput.ofMappedFile(diskTestDataMedium.toPath), cs, '\n', '\r')))
   @Benchmark
   def mediumFile_HeapVectorizedLineTokenizer(bh: Blackhole): Unit =
-    bh.consume(count(VectorizedLineTokenizer.of(BufferedInput.of(new FileInputStream(diskTestDataMedium)), cs)))
+    bh.consume(count(LineTokenizer.vectorized(BufferedInput.of(new FileInputStream(diskTestDataMedium)), cs, '\n', '\r')))
   @Benchmark
   def mediumFile_DirectVectorizedLineTokenizer(bh: Blackhole): Unit =
-    bh.consume(count(VectorizedLineTokenizer.of(BufferedInput.ofMappedFile(diskTestDataMedium.toPath), cs)))
+    bh.consume(count(LineTokenizer.vectorized(BufferedInput.ofMappedFile(diskTestDataMedium.toPath), cs, '\n', '\r')))
 
   @Benchmark
   def largeFile_BufferedReader(bh: Blackhole): Unit =
@@ -122,13 +122,13 @@ class LineTokenizerBenchmark extends BenchUtil:
     bh.consume(Files.lines(diskTestDataLarge.toPath, cs).count())
   @Benchmark
   def largeFile_HeapScalarLineTokenizer(bh: Blackhole): Unit =
-    bh.consume(count(ScalarLineTokenizer.of(BufferedInput.of(new FileInputStream(diskTestDataLarge)), cs)))
+    bh.consume(count(LineTokenizer.scalar(BufferedInput.of(new FileInputStream(diskTestDataLarge)), cs, '\n', '\r')))
   @Benchmark
   def largeFile_DirectScalarLineTokenizer(bh: Blackhole): Unit =
-    bh.consume(count(ScalarLineTokenizer.of(BufferedInput.ofMappedFile(diskTestDataLarge.toPath), cs)))
+    bh.consume(count(LineTokenizer.scalar(BufferedInput.ofMappedFile(diskTestDataLarge.toPath), cs, '\n', '\r')))
   @Benchmark
   def largeFile_HeapVectorizedLineTokenizer(bh: Blackhole): Unit =
-    bh.consume(count(VectorizedLineTokenizer.of(BufferedInput.of(new FileInputStream(diskTestDataLarge)), cs)))
+    bh.consume(count(LineTokenizer.vectorized(BufferedInput.of(new FileInputStream(diskTestDataLarge)), cs, '\n', '\r')))
   @Benchmark
   def largeFile_DirectVectorizedLineTokenizer(bh: Blackhole): Unit =
-    bh.consume(count(VectorizedLineTokenizer.of(BufferedInput.ofMappedFile(diskTestDataLarge.toPath), cs)))
+    bh.consume(count(LineTokenizer.vectorized(BufferedInput.ofMappedFile(diskTestDataLarge.toPath), cs, '\n', '\r')))

@@ -413,8 +413,8 @@ public abstract class BufferedInput extends ReadableBuffer implements Closeable 
   ///                  disable this feature.
   public LineTokenizer lines(Charset charset, byte eol, byte preEol) throws IOException {
     return BufferUtil.VECTOR_ENABLED
-        ? VectorizedLineTokenizer.of(this, charset, eol, preEol)
-        : ScalarLineTokenizer.of(this, charset, eol, preEol);
+        ? LineTokenizer.vectorized(this, charset, eol, preEol)
+        : LineTokenizer.scalar(this, charset, eol, preEol);
   }
 
   /// Same as `lines(charset, (byte)'\n', (byte)'\r')`.
@@ -445,5 +445,25 @@ public abstract class BufferedInput extends ReadableBuffer implements Closeable 
 
   void unlock() {
     state = STATE_LIVE;
+  }
+
+  /// Shift the remaining buffer data to the left and/or reallocate the buffer to make room for
+  /// `count` bytes past the current `pos`.
+  void shiftOrGrowBuf(int count) {
+    var a = available();
+    // Buffer shifts must be aligned to the vector size, otherwise VectorizedLineTokenizer
+    // performance will tank after rebuffering even when all vector reads are aligned.
+    var offset = a > 0 ? pos % BufferUtil.VECTOR_LENGTH : 0;
+    if(count + offset > buf.length) {
+      var buflen = buf.length;
+      while(buflen < count + offset) buflen *= 2;
+      var buf2 = new byte[buflen];
+      if(a > 0) System.arraycopy(buf, pos, buf2, offset, a);
+      buf = buf2;
+    } else if(a > 0 && pos != offset) {
+      System.arraycopy(buf, pos, buf, offset, a);
+    }
+    pos = offset;
+    lim = a + offset;
   }
 }

@@ -4,7 +4,7 @@ import perfio.internal.BufferUtil;
 
 import java.io.IOException;
 
-class SwitchingHeapBufferedInput extends HeapBufferedInput {
+class SwitchingHeapBufferedInput extends BufferedInput {
   protected final BufferIterator it;
   // bufferId1 is the currently used buffer. When there is a seam, the iterator has already been
   // advanced to the next buffer and bufferId2 holds its ID, otherwise null.
@@ -13,12 +13,12 @@ class SwitchingHeapBufferedInput extends HeapBufferedInput {
   private int seamOverlap = 0;
 
   SwitchingHeapBufferedInput(BufferIterator it, boolean bigEndian) {
-    super(BufferUtil.EMPTY_BUFFER, 0, 0, Long.MAX_VALUE, null, bigEndian, null);
+    super(BufferUtil.EMPTY_BUFFER, 0, 0, Long.MAX_VALUE, null, bigEndian, null, null, null, null);
     this.it = it;
   }
 
   protected SwitchingHeapBufferedInput(SwitchingHeapBufferedInput parent) {
-    super(null, 0, 0, 0, parent, parent.bigEndian, null);
+    super(null, 0, 0, 0, parent, parent.bigEndian, null, null, null, null);
     this.it = parent.it;
   }
 
@@ -74,7 +74,7 @@ class SwitchingHeapBufferedInput extends HeapBufferedInput {
         } else {
           assert(bufferId1 != null);
           if(pos + count > buf.length)
-            shiftOrGrow(count);
+            shiftOrGrowBuf(count);
           if(seamOverlap == 0) {
             //System.out.println("  has rest, no seam: "+show()+", bufLen="+buf.length+", seamOverlap="+seamOverlap);
             //System.out.println("    "+showContent());

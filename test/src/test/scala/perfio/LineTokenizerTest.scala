@@ -119,8 +119,8 @@ object LineTokenizerTest:
   def params: java.util.List[Array[Any]] =
     val a: Array[Array[Any]] = for
       (n, c) <- Array(
-        ("vectorized", { (in: BufferedInput) => VectorizedLineTokenizer.of(in, StandardCharsets.UTF_8, '\n'.toByte, '\r'.toByte) }),
-        ("scalar", { (in: BufferedInput) => ScalarLineTokenizer.of(in, StandardCharsets.UTF_8, '\n'.toByte, '\r'.toByte) }),
+        ("vectorized", { (in: BufferedInput) => LineTokenizer.vectorized(in, StandardCharsets.UTF_8, '\n'.toByte, '\r'.toByte) }),
+        ("scalar", { (in: BufferedInput) => LineTokenizer.scalar(in, StandardCharsets.UTF_8, '\n'.toByte, '\r'.toByte) }),
       )
       m <- Array("heap", "direct")
     yield Array[Any](s"${n}_$m", c, m)

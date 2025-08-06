@@ -2,7 +2,6 @@ package perfio;
 
 import java.io.Closeable;
 import java.io.IOException;
-import java.io.InputStream;
 import java.nio.charset.Charset;
 
 /// Read text from a [BufferedInput] and split it into lines. If the input ends with a newline, no
@@ -17,6 +16,18 @@ import java.nio.charset.Charset;
 /// A LineTokenizer is created by calling [BufferedInput#lines(Charset, byte, byte)] or one of its
 /// overloads.
 public abstract sealed class LineTokenizer implements Closeable permits HeapLineTokenizer, DirectLineTokenizer {
+  static LineTokenizer vectorized(BufferedInput in, Charset charset, byte eol, byte preEol) throws IOException {
+    return in.buf != null
+      ? HeapVectorizedLineTokenizer.of(in, charset, eol, preEol)
+      : DirectVectorizedLineTokenizer.of(in, charset, eol, preEol);
+  }
+
+  static LineTokenizer scalar(BufferedInput in, Charset charset, byte eol, byte preEol) throws IOException {
+    return in.buf != null
+      ? HeapScalarLineTokenizer.of(in, charset, eol, preEol)
+      : DirectScalarLineTokenizer.of(in, charset, eol, preEol);
+  }
+
   final byte eolChar, preEolChar;
 
   LineTokenizer(byte eolChar, byte preEolChar) {

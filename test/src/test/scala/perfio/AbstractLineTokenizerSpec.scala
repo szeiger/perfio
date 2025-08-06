@@ -93,7 +93,7 @@ object HeapScalarLineTokenizerSpec extends SimpleLineTokenizerSpec[Int]:
 
   def createBI(s: String, cs: Charset, ib: Int): BufferedInput =
     BufferedInput.of(new ByteArrayInputStream(s.getBytes(cs)), ib)
-  def createTok(in: BufferedInput, cs: Charset): LineTokenizer = ScalarLineTokenizer.of(in, cs, '\n'.toByte, '\r'.toByte)
+  def createTok(in: BufferedInput, cs: Charset): LineTokenizer = LineTokenizer.scalar(in, cs, '\n'.toByte, '\r'.toByte)
 
 
 object HeapVectorizedLineTokenizerSpec extends SimpleLineTokenizerSpec[(Int, Int)]:
@@ -116,7 +116,7 @@ object HeapVectorizedLineTokenizerSpec extends SimpleLineTokenizerSpec[(Int, Int
   def createBI(s: String, cs: Charset, params: (Int, Int)): BufferedInput =
     val (ib, maxRead) = params
     BufferedInput.of(new LimitedInputStream(new ByteArrayInputStream(s.getBytes(cs)), maxRead), ib)
-  def createTok(in: BufferedInput, cs: Charset): LineTokenizer = VectorizedLineTokenizer.of(in, cs, '\n'.toByte, '\r'.toByte)
+  def createTok(in: BufferedInput, cs: Charset): LineTokenizer = LineTokenizer.vectorized(in, cs, '\n'.toByte, '\r'.toByte)
 
 
 abstract class FromArraySpec extends AbstractLineTokenizerSpec[(Int, Int)]:
@@ -162,16 +162,16 @@ abstract class ForeignSpec extends FromArraySpec:
 
 object ScalarLineTokenizerFromArraySpec extends FromArraySpec:
   def createBI(a: Array[Byte], off: Int, len: Int): BufferedInput = BufferedInput.ofArray(a, off, len-off)
-  def createTok(in: BufferedInput, cs: Charset): LineTokenizer = ScalarLineTokenizer.of(in, cs, '\n'.toByte, '\r'.toByte)
+  def createTok(in: BufferedInput, cs: Charset): LineTokenizer = LineTokenizer.scalar(in, cs, '\n'.toByte, '\r'.toByte)
 
 object VectorizedLineTokenizerFromArraySpec extends FromArraySpec:
   def createBI(a: Array[Byte], off: Int, len: Int): BufferedInput = BufferedInput.ofArray(a, off, len-off)
-  def createTok(in: BufferedInput, cs: Charset): LineTokenizer = VectorizedLineTokenizer.of(in, cs, '\n'.toByte, '\r'.toByte)
+  def createTok(in: BufferedInput, cs: Charset): LineTokenizer = LineTokenizer.vectorized(in, cs, '\n'.toByte, '\r'.toByte)
 
 object DirectScalarLineTokenizerSpec extends ForeignSpec:
   def createBI(a: Array[Byte], off: Int, len: Int): BufferedInput = BufferedInput.ofMemorySegment(MemorySegment.ofArray(a))
-  def createTok(in: BufferedInput, cs: Charset): LineTokenizer = ScalarLineTokenizer.of(in, cs, '\n'.toByte, '\r'.toByte)
+  def createTok(in: BufferedInput, cs: Charset): LineTokenizer = LineTokenizer.scalar(in, cs, '\n'.toByte, '\r'.toByte)
 
 object DirectVectorizedLineTokenizerSpec extends ForeignSpec:
   def createBI(a: Array[Byte], off: Int, len: Int): BufferedInput = BufferedInput.ofMemorySegment(MemorySegment.ofArray(a))
-  def createTok(in: BufferedInput, cs: Charset): LineTokenizer = VectorizedLineTokenizer.of(in, cs, '\n'.toByte, '\r'.toByte)
+  def createTok(in: BufferedInput, cs: Charset): LineTokenizer = LineTokenizer.vectorized(in, cs, '\n'.toByte, '\r'.toByte)
