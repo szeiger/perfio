@@ -29,8 +29,7 @@ abstract sealed class DirectLineTokenizer extends LineTokenizer implements Close
     this.ms = bin.ms;
     this.start = bin.bbStart + bin.pos;
     this.initialPos = bin.pos;
-    bin.lock();
-    bin.closeableView = this;
+    bin.lock(this);
   }
 
   private final LineBuffer linebuf = new LineBuffer();
@@ -38,7 +37,6 @@ abstract sealed class DirectLineTokenizer extends LineTokenizer implements Close
   @Override
   public void markClosed() {
     super.markClosed();
-    bin.closeableView = null;
   }
 
   public LineTokenizer detach() { return this; }

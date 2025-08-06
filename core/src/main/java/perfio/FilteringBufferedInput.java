@@ -19,7 +19,7 @@ public abstract class FilteringBufferedInput extends SwitchingHeapBufferedInput 
     //TODO auto buffer size from parent
     super(new It(), parent.bigEndian);
     this.parent = parent;
-    this.parentView = parent.identicalView();
+    this.parentView = parent.identicalView((It)it);
     if(parent.viewRoot instanceof FilteringBufferedInput i) {
       this.rootFilter = i.rootFilter;
       this.blockSize = i.rootFilter.blockSize;
@@ -28,7 +28,6 @@ public abstract class FilteringBufferedInput extends SwitchingHeapBufferedInput 
       this.blockSize = blockSize;
     }
     ((It)it).outer = this;
-    parentView.closeableView = (It)it;
   }
   
   @Override

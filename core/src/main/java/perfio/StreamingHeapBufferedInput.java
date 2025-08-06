@@ -19,11 +19,7 @@ final class StreamingHeapBufferedInput extends BufferedInput {
     if(read > 0) {
       totalBuffered += read;
       lim += read;
-      if(totalBuffered >= totalReadLimit) {
-        excessRead = (int)(totalBuffered - totalReadLimit);
-        lim -= excessRead;
-        totalBuffered -= excessRead;
-      }
+      clampToLimit();
     }
     return read;
   }

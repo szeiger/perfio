@@ -127,12 +127,7 @@ class SwitchingHeapBufferedInput extends BufferedInput {
           }
         }
       }
-      if(totalBuffered > totalReadLimit) {
-        var e = (int)(totalBuffered - totalReadLimit);
-        excessRead += e;
-        totalBuffered -= e;
-        lim -= e;
-      }
+      clampToLimit();
     }
     //System.out.println("done: "+showContent()+", bufferId1="+bufferId1);
   }

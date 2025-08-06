@@ -33,11 +33,7 @@ final class DirectBufferedInput extends BufferedInput {
       pos = 0;
       lim = (int)newLen;
       totalBuffered += newLen - a;
-      if(totalBuffered >= totalReadLimit) {
-        excessRead = (int)(totalBuffered-totalReadLimit);
-        lim -= excessRead;
-        totalBuffered -= excessRead;
-      }
+      clampToLimit();
     }
   }
 

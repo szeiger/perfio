@@ -133,13 +133,13 @@ public abstract class BufferedInput extends ReadableBuffer implements Closeable 
   }
 
   long totalBuffered; // total number of bytes read from input
-  int excessRead = 0; // number of bytes read into buf beyond lim if totalReadLimit was reached
+  private int excessRead = 0; // number of bytes read into buf beyond lim if totalReadLimit was reached
   private int state = STATE_LIVE;
   private BufferedInput activeView = null;
   private int activeViewInitialBuffered = 0;
   private boolean detachOnClose, skipOnClose = false;
+  private CloseableView closeableView = null;
   long parentTotalOffset = 0L;
-  CloseableView closeableView = null;
   long bbStart = 0L; // offset of bb within ms
 
   abstract BufferedInput createEmptyView();
@@ -347,11 +347,7 @@ public abstract class BufferedInput extends ReadableBuffer implements Closeable 
       pos = vpos;
       lim = vlim;
       totalBuffered += vTotalBuffered;
-      if(totalBuffered >= totalReadLimit) {
-        excessRead = (int)(totalBuffered-totalReadLimit);
-        lim -= excessRead;
-        totalBuffered -= excessRead;
-      }
+      clampToLimit();
     }
     if(vDetach) activeView = null;
     state = STATE_LIVE;
@@ -427,24 +423,27 @@ public abstract class BufferedInput extends ReadableBuffer implements Closeable 
 
   /// Create a view that is identical to this buffer (including [#totalBytesRead()]) so that this
   /// buffer can be protected against accidental access while reading from the view.
-  BufferedInput identicalView() throws IOException {
+  BufferedInput identicalView(CloseableView forView) throws IOException {
     checkState();
     if(activeView == null) activeView = createEmptyView();
     activeView.reinitView(pos, lim, totalReadLimit, false, parentTotalOffset, bigEndian);
     activeViewInitialBuffered = 0;
     state = STATE_ACTIVE_VIEW;
     pos = lim;
+    closeableView = forView;
     return activeView;
   }
 
-  void lock() throws IOException {
+  void lock(CloseableView forView) throws IOException {
     checkState();
     state = STATE_ACTIVE_VIEW;
     pos = lim;
+    closeableView = forView;
   }
 
   void unlock() {
     state = STATE_LIVE;
+    closeableView = null;
   }
 
   /// Shift the remaining buffer data to the left and/or reallocate the buffer to make room for
@@ -465,5 +464,13 @@ public abstract class BufferedInput extends ReadableBuffer implements Closeable 
     }
     pos = offset;
     lim = a + offset;
+  }
+  
+  void clampToLimit() {
+    if(totalBuffered > totalReadLimit) {
+      excessRead = (int)(totalBuffered - totalReadLimit);
+      lim -= excessRead;
+      totalBuffered -= excessRead;
+    }
   }
 }

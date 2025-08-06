@@ -60,12 +60,7 @@ public class CheckedBufferedInput extends BufferedInput {
       buf = parent.buf;
       var rem1 = lim-pos;
       totalBuffered += (rem1-rem0);
-      if(totalBuffered > totalReadLimit) {
-        var off = (int)(totalBuffered-totalReadLimit);
-        lim -= off;
-        totalBuffered = totalReadLimit;
-        excessRead += off;
-      }
+      clampToLimit();
     }
   }
 

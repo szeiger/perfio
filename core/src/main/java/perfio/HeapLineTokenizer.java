@@ -18,8 +18,7 @@ abstract sealed class HeapLineTokenizer extends LineTokenizer implements Closeab
   HeapLineTokenizer(BufferedInput parentBin, byte eolChar, byte preEolChar) throws IOException {
     super(eolChar, preEolChar);
     this.parentBin = parentBin;
-    this.bin = parentBin.identicalView();
-    bin.closeableView = this;
+    this.bin = parentBin.identicalView(this);
   }
 
   abstract String makeString(byte[] buf, int start, int len);
@@ -27,7 +26,6 @@ abstract sealed class HeapLineTokenizer extends LineTokenizer implements Closeab
   @Override
   public void markClosed() {
     super.markClosed();
-    bin.closeableView = null;
   }
 
   public LineTokenizer detach() throws IOException {
