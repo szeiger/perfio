@@ -7,6 +7,7 @@ import org.junit.runners.Parameterized
 
 import java.io.DataInputStream
 import java.nio.ByteOrder
+import java.nio.charset.StandardCharsets
 import java.util.zip.CRC32
 
 @RunWith(classOf[Parameterized])
@@ -33,6 +34,15 @@ class BufferedInputTest(_name: String, create: TestData => InputTester) extends 
   lazy val stringTestData = createTestData("string-"+count): dout =>
     for i <- 0 until count do
       dout.writeUTF("abcdefghijklmnopqrstuvwxyz")
+
+  lazy val zstringTestData = createTestData("zstring-"+count): dout =>
+    val s = "abcdefghijklmnopqrstuvwxyz".getBytes(StandardCharsets.ISO_8859_1)
+    for i <- 0 until count do
+      dout.write(s)
+      dout.writeByte(0)
+      dout.writeByte(0)
+      dout.writeByte('a'.toByte)
+      dout.writeByte(0)
 
   @Test def simple(): Unit =
     run(testData): (din, bin) =>
@@ -142,6 +152,14 @@ class BufferedInputTest(_name: String, create: TestData => InputTester) extends 
         assertEquals(str1, str2)
       assert(!bin.hasMore)
 
+  @Test def zstring(): Unit =
+    run(zstringTestData): (din, bin) =>
+      for i <- 1 to count do
+        assertEquals("abcdefghijklmnopqrstuvwxyz", bin.zstring())
+        assertEquals("", bin.zstring())
+        assertEquals("a", bin.zstring())
+      assert(!bin.hasMore)
+
 object BufferedInputTest:
   @Parameterized.Parameters(name = "{0}")
   def params: java.util.List[Array[Any]] =
@@ -173,7 +191,7 @@ object BufferedInputTest:
 class XorBufferedInput(parent: BufferedInput) extends FilteringBufferedInput(parent, 32768):
   def filterBlock(from: BufferedInput, to: WritableBuffer[?]): Unit =
     val avail = to.available()
-    from.tryFwd(1)
+    from.requestAvailable(1)
     val l = Math.min(from.available(), avail)
     from.bytes(to.buf, to.pos, l)
     for(i <- to.pos until to.pos + l)

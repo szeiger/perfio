@@ -215,7 +215,7 @@ public abstract class BufferedInput extends ReadableBuffer implements Closeable 
     var tot = totalBytesRead() + len;
     if(tot < 0 || tot > totalReadLimit) throw new EOFException();
     while(len > 0) {
-      tryFwd(1);
+      requestAvailable(1);
       if(available() == 0) throw new EOFException();
       var l = Math.min(len, available());
       if(l > 0) {
@@ -242,7 +242,7 @@ public abstract class BufferedInput extends ReadableBuffer implements Closeable 
     final var limited = Math.min(bytes, totalReadLimit - totalBytesRead());
     var rem = limited;
     while(rem > 0) {
-      tryFwd(1);
+      requestAvailable(1);
       if(available() == 0) return limited - rem;
       var l = Math.min(rem, available());
       if(l > 0) {
@@ -267,7 +267,30 @@ public abstract class BufferedInput extends ReadableBuffer implements Closeable 
     }
   }
 
-  /// Read a \0-terminated UTF-8 string.
+  /// Read a \0-terminated string of arbitrary length using UTF-8.
+  /// The method reads all bytes until the next \0 and positions the buffer after the
+  /// \0. The position is not advanced if no \0 was found.
+  /// 
+  /// @return The string, or `null` of no \0 was found.
+  public final String zstring() throws IOException { return zstring(StandardCharsets.UTF_8); }
+
+  /// Read a \0-terminated string of arbitrary length.
+  /// The method reads all bytes until the next \0 and positions the buffer after the
+  /// \0. The position is not advanced if no \0 was found.
+  /// 
+  /// @return The string, or `null` of no \0 was found.
+  public final String zstring(Charset charset) throws IOException {
+    var i = findNext((byte)0);
+    if(i == -1) return null;
+    String s;
+    if(i == 0) s = "";
+    else if(buf != null) s = new String(buf, pos, i, charset);
+    else s = makeDirectString(pos, i, charset);
+    pos += i + 1;
+    return s;
+  }
+
+  /// Read a \0-terminated string of the specified encoded length (including the \0) using UTF-8.
   public final String zstring(int len) throws IOException { return zstring(len, StandardCharsets.UTF_8); }
 
   /// Read a \0-terminated string of the specified encoded length (including the \0).

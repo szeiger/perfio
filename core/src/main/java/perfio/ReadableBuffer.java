@@ -1,5 +1,6 @@
 package perfio;
 
+import perfio.internal.BufferUtil;
 import perfio.internal.MemoryAccessor;
 
 import java.io.EOFException;
@@ -24,7 +25,9 @@ public abstract class ReadableBuffer {
 
   /// Request `count` bytes to be available to read in the buffer. Less may be available if the end of the input
   /// is reached. This method may change the buffer references.
-  protected final void tryFwd(int count) throws IOException { if(available() < count) prepareAndFillBuffer(count); }
+  protected final void requestAvailable(int count) throws IOException {
+    if(available() < count) prepareAndFillBuffer(count);
+  }
 
   /// Request `count` bytes to be available to read in the buffer, advance the buffer to the position after these
   /// bytes and return the previous position. Throws EOFException if the end of the input is reached before the
@@ -37,6 +40,39 @@ public abstract class ReadableBuffer {
     var p = pos;
     pos += count;
     return p;
+  }
+
+  /// Find the next occurrence of `b` at or after the current position and return its distance.
+  /// All data up to this position is guaranteed to be in the buffer afterward. Returns -1 if the
+  /// end of the input is reached or the maximum buffer size (a bit under 2 GB depending on
+  /// alignment) would be exceeded before a match is found.
+  ///
+  /// This method may change the buffer references.
+  protected final int findNext(byte b) throws IOException {
+    var i = findInRange(pos, lim, b);
+    if(i >= 0) return i-pos;
+    while(true) {
+      var a = available();
+      var m = Math.max(a, 32);
+      var dist = BufferUtil.growBuffer(m, m+1, 1);
+      if(dist <= a) return -1; // buffer size limit reached
+      requestAvailable(dist);
+      if(available() <= a) return -1; // EOF reached
+      i = findInRange(pos+a, lim, b);
+      if(i >= 0) return i-pos;
+    }
+  }
+
+  private int findInRange(int from, int end, byte b) {
+    //System.out.println("findInRange("+from+", "+end+")");
+    if(buf != null) {
+      for(int i=from; i<end; i++)
+        if(MemoryAccessor.INSTANCE.int8(buf, i) == b) return i;
+    } else {
+      for(int i=from; i<end; i++)
+        if(MemoryAccessor.INSTANCE.int8(bb, i) == b) return i;
+    }
+    return -1;
   }
 
   /// Fill the buffer as much as possible without blocking (starting at [#lim]), but at least

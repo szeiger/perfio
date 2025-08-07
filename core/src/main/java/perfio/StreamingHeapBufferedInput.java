@@ -76,7 +76,7 @@ final class StreamingHeapBufferedInput extends BufferedInput {
       // Skip directly without buffering
       rem -= trySkipIn(rem); //TODO have a minSkip similar to minRead?
       if(rem <= 0) return base + bytes;
-      tryFwd((int)Math.min(rem, buf.length));
+      requestAvailable((int)Math.min(rem, buf.length));
       if(available() <= 0) return base + bytes - rem;
       base = base + bytes - rem;
       bytes = rem;
