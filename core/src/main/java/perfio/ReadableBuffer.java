@@ -7,6 +7,7 @@ import java.io.EOFException;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
+import java.util.Objects;
 
 /// A ReadableBuffer contains a byte array or ByteBuffer, position & limit indices and an
 /// endian flag. It provides all the methods for reading data from a single block. Operations
@@ -18,7 +19,9 @@ public abstract class ReadableBuffer {
   protected ByteBuffer bb;
   protected boolean bigEndian;
 
-  final int available() { return lim - pos; }
+  /// Return the number of bytes that are currently available in the buffer and can be read without
+  /// re-buffering or blocking.
+  public final int available() { return lim - pos; }
 
   /// Return the byte order of this buffer.
   public final ByteOrder order() { return bigEndian ? ByteOrder.BIG_ENDIAN : ByteOrder.LITTLE_ENDIAN; }
@@ -225,5 +228,56 @@ public abstract class ReadableBuffer {
   public final double float64l()  throws IOException {
     var p = fwd(4);
     return buf != null ? MemoryAccessor.INSTANCE.float64l(buf, p) : MemoryAccessor.INSTANCE.float64l(bb, p);
+  }
+
+
+  /// Read the next unsigned 8-bit integer if there is more data, or return -1 if the end of the
+  /// input has been reached. See [java.io.InputStream#read()].
+  public int read() throws IOException {
+    requestAvailable(1);
+    if(pos == lim) return -1;
+    var p = pos;
+    pos++;
+    return (buf != null ? MemoryAccessor.INSTANCE.int8(buf, p) : MemoryAccessor.INSTANCE.int8(bb, p)) & 0xFF;
+  }
+
+  /// Read up to `len` bytes into `a` starting at `off`, blocking only if the buffer is currently
+  /// empty. At least 1 byte is returned unless the end of the input has been reached.
+  /// This is equivalent to [java.io.InputStream#read(byte\[\], int, int)].
+  /// 
+  /// @return the number of bytes that were read
+  public int readSome(byte[] a, int off, int len) throws IOException {
+    Objects.checkFromIndexSize(off, len, a.length);
+    requestAvailable(1);
+    if(pos == lim) return 0;
+    var l = Math.min(len, available());
+    if(buf != null) System.arraycopy(buf, pos, a, off, l);
+    else bb.get(pos, a, off, l);
+    return l;
+  }
+
+  /// Read up to `len` bytes into `a` starting at `off`, blocking until all requested data is
+  /// available. Less than `len` bytes can only be returned if the end of the input is reached.
+  /// This is equivalent to [java.io.InputStream#readNBytes(byte\[\], int, int)()].
+  /// 
+  /// @return the number of bytes that were read
+  public int read(byte[] a, int off, int len) throws IOException {
+    // This method is not final so it can be overridden for direct inputs that copy the entire
+    // data in one go.
+    Objects.checkFromIndexSize(off, len, a.length);
+    int l0 = len;
+    while(len > 0) {
+      requestAvailable(1);
+      if(available() == 0) break;
+      var l = Math.min(len, available());
+      if(l > 0) {
+        if(buf != null) System.arraycopy(buf, pos, a, off, l);
+        else bb.get(pos, a, off, l);
+        pos += l;
+        off += l;
+        len -= l;
+      }
+    }
+    return l0-len;
   }
 }

@@ -778,4 +778,9 @@ final class FlushingBufferedOutput extends TopLevelBufferedOutput {
   private void writeToOutput(byte[] buf, int off, int len) throws IOException {
     out.write(buf, off, len);
   }
+
+  /// Return an OutputStream that directly calls methods of this BufferedOutput. Both can be used
+  /// interchangeably. The OutputStream is not thread-safe. Closing the OutputStream also closes
+  /// this BufferedOutput including potential parents via `close(true)`.
+  public OutputStream asOutputStream() { return new OutputStreamAdapter(this); }
 }

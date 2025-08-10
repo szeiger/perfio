@@ -206,40 +206,32 @@ public abstract class BufferedInput extends ReadableBuffer implements Closeable 
   /// This method may change the buffer references.
   protected abstract void prepareAndFillBuffer(int count) throws IOException;
 
-  // `bytes` and `skip` are implemented in terms of `request(1)`. This should always
-  // be correct, and it works great for [SwitchingHeapBufferedInput] (because there is no more
-  // direct way to transfer the data, and requesting 1 byte will never create a seam), but it is
-  // not ideal for implementations that can copy/skip directly from the source.
-
-  public void bytes(byte[] a, int off, int len) throws IOException {
+  /// Read exactly `len` bytes into `a` starting at `off`. If less data is available before the
+  /// end of the input, this method throws an [EOFException].
+  public final void bytes(byte[] a, int off, int len) throws IOException {
     var tot = totalBytesRead() + len;
     if(tot < 0 || tot > totalReadLimit) throw new EOFException();
-    while(len > 0) {
-      requestAvailable(1);
-      if(available() == 0) throw new EOFException();
-      var l = Math.min(len, available());
-      if(l > 0) {
-        if(buf != null) System.arraycopy(buf, pos, a, off, l);
-        else bb.get(pos, a, off, l);
-        pos += l;
-        off += l;
-        len -= l;
-      }
-    }
+    var n = read(a, off, len);
+    if(n < len) throw new EOFException();
   }
 
+  /// Return the next `len` bytes in a freshly allocated byte array. If less data is available
+  /// before the end of the input, this method throws an [EOFException].
   public final byte[] bytes(int len) throws IOException {
     var a = new byte[len];
     bytes(a, 0, len);
     return a;
   }
 
-  /// Skip over n bytes, or until the end of the input if it occurs first.
+  /// Skip over `n` bytes, or until the end of the input if it occurs first.
+  /// This is equivalent to [java.io.InputStream#skipNBytes(long)].
   ///
-  /// @return The number of skipped bytes. It is equal to the requested number unless the end of the input was reached.
-  public long skip(final long bytes) throws IOException {
+  /// @return The number of skipped bytes. It is equal to the requested number unless the end of
+  ///   the input was reached.
+  public long skip(final long n) throws IOException {
     checkState();
-    final var limited = Math.min(bytes, totalReadLimit - totalBytesRead());
+    final var limited = Math.min(n, totalReadLimit - totalBytesRead());
+    if(limited == 0) return 0;
     var rem = limited;
     while(rem > 0) {
       requestAvailable(1);
@@ -251,6 +243,21 @@ public abstract class BufferedInput extends ReadableBuffer implements Closeable 
       }
     }
     return limited;
+  }
+
+  /// Skip over up to `n` bytes, blocking only if the buffer is currently empty. At least 1 byte
+  /// is skipped unless the end of the input has been reached.
+  /// This is equivalent to [java.io.InputStream#skip(long)].
+  ///
+  /// @return The number of skipped bytes.
+  public long skipSome(final long n) throws IOException {
+    checkState();
+    final var limited = Math.min(n, totalReadLimit - totalBytesRead());
+    if(limited == 0) return 0;
+    requestAvailable(1);
+    var l = Math.min(limited, available());
+    pos += (int)l;
+    return l;
   }
 
   /// Read a non-terminated UTF-8 string.
@@ -496,4 +503,9 @@ public abstract class BufferedInput extends ReadableBuffer implements Closeable 
       totalBuffered -= excessRead;
     }
   }
+  
+  /// Return an InputStream that directly calls methods of this BufferedInput. Both can be used
+  /// interchangeably. The InputStream is not thread-safe. Closing the InputStream also closes
+  /// this BufferedInput including potential parents via `close(true)`.
+  public InputStream asInputStream() { return new InputStreamAdapter(this); }
 }

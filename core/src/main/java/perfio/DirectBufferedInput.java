@@ -7,6 +7,7 @@ import java.io.IOException;
 import java.lang.foreign.MemorySegment;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
+import java.util.Objects;
 
 // This could be a lot simpler if we didn't have to do pagination but ByteBuffer is limited
 // to 2 GB and direct MemorySegment access is much, much slower as of JDK 22.
@@ -37,9 +38,12 @@ final class DirectBufferedInput extends BufferedInput {
     }
   }
 
-  public void bytes(byte[] a, int off, int len) throws IOException {
+  @Override
+  public int read(byte[] a, int off, int len) throws IOException {
+    Objects.checkFromIndexSize(off, len, a.length);
     var p = fwd(len);
     bb.get(p, a, off, len);
+    return len;
   }
 
   BufferedInput createEmptyView() { return new DirectBufferedInput(bb, 0, 0, 0L, ms, null, this, linebuf); }

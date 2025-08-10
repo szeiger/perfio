@@ -1,8 +1,8 @@
 package perfio;
 
-import java.io.EOFException;
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.Objects;
 
 final class StreamingHeapBufferedInput extends BufferedInput {
   final InputStream in;
@@ -38,9 +38,8 @@ final class StreamingHeapBufferedInput extends BufferedInput {
   }
 
   @Override
-  public void bytes(byte[] a, int off, int len) throws IOException {
-    var tot = totalBytesRead() + len;
-    if(tot < 0 || tot > totalReadLimit) throw new EOFException();
+  public int read(byte[] a, int off, int len) throws IOException {
+    Objects.checkFromIndexSize(off, len, a.length);
     var copied = Math.min(len, available());
     if(copied > 0) {
       System.arraycopy(buf, pos, a, off, copied);
@@ -50,15 +49,21 @@ final class StreamingHeapBufferedInput extends BufferedInput {
     // Copy directly without buffering
     while(rem >= minRead && in != null) {
       var r = in.read(a, off + copied, rem);
-      if(r <= 0) throw new EOFException();
+      if(r <= 0) return copied;
       totalBuffered += r;
       copied += r;
       rem -= r;
     }
     if(rem > 0) {
-      var p = fwd(rem);
-      System.arraycopy(buf, p, a, off + copied, rem);
+      requestAvailable(rem);
+      var av = available();
+      if(av > 0) {
+        rem = Math.min(rem, available());
+        System.arraycopy(buf, pos, a, off + copied, rem);
+        copied += rem;
+      }
     }
+    return copied;
   }
 
   @Override
