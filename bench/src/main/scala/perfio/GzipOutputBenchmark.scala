@@ -16,7 +16,7 @@ import java.util.zip.{Deflater, GZIPOutputStream}
 @Measurement(iterations = 10, time = 1)
 @OutputTimeUnit(TimeUnit.MILLISECONDS)
 @State(Scope.Benchmark)
-class GzipBenchmark extends BenchUtil:
+class GzipOutputBenchmark extends BenchUtil:
 
   @Param(Array("numSmall", "chunks", "chunksSlow50", "chunksVerySlow", "randomChunks"))
   var dataSet: String = null

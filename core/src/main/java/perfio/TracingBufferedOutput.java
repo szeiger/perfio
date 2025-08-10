@@ -3,10 +3,11 @@ package perfio;
 import java.io.IOException;
 import java.util.zip.Checksum;
 
-/// A [BufferedOutput] that maintains a checksum of the data being written.
+/// A [BufferedOutput] that maintains a trace of the data being written.
 /// 
-/// Note that unlike [java.util.zip.CheckedOutputStream] this class buffers the output. If you
-/// need to read an up-to-date checksum before closing, you have to call [#updateTrace()].
+/// Note that unlike [java.util.zip.CheckedOutputStream] this class buffers the output, and the
+/// trace is usually trailing behind the current position. If you need an up-to-date trace before
+/// closing the stream, you have to call [#updateTrace()] first.
 public abstract class TracingBufferedOutput extends FilteringBufferedOutput {
 
   /// Create a [TracingBufferedOutput] that updates a [Checksum], similar to

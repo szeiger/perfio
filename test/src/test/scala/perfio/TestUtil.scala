@@ -5,6 +5,7 @@ import org.junit.Assert
 import java.io.{ByteArrayInputStream, ByteArrayOutputStream, DataInputStream, DataOutputStream, File, FileOutputStream, InputStream}
 import java.lang.foreign.{Arena, MemorySegment, ValueLayout}
 import java.nio.{ByteBuffer, ByteOrder}
+import java.util.zip.GZIPOutputStream
 import scala.concurrent.duration.Duration
 import scala.concurrent.{Await, ExecutionContext, Future}
 import scala.reflect.ClassTag
@@ -35,6 +36,13 @@ trait TestUtil:
     
   def directBB(buf: Array[Byte]): ByteBuffer =
     ByteBuffer.allocateDirect(buf.length).put(buf).position(0)
+  
+  def gzipCompress(data: Array[Byte]): Array[Byte] =
+    val bout = new ByteArrayOutputStream()
+    val gout = new GZIPOutputStream(bout)
+    gout.write(data)
+    gout.close()
+    bout.toByteArray
 
 
 class TestData(val bytes: Array[Byte], val name: String, owner: Class[?]):

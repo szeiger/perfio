@@ -160,7 +160,7 @@ class BufferedInputTest(_name: String, create: TestData => InputTester) extends 
         assertEquals("a", bin.zstring())
       assert(!bin.hasMore)
 
-object BufferedInputTest:
+object BufferedInputTest extends TestUtil:
   @Parameterized.Parameters(name = "{0}")
   def params: java.util.List[Array[Any]] =
     val a: Array[Array[Any]] = for
@@ -173,6 +173,10 @@ object BufferedInputTest:
       (fn, tr) <- Array(
         ("", identity[InputTester]),
         ("_filter_xor", xorInputTester(new XorBufferedInput(_))),
+        ("_filter_gzip", gzipInputTester(new GzipBufferedInput(_))),
+        ("_filter_gzip_1", gzipInputTester(new GzipBufferedInput(_, 1))),
+        ("_filter_gzip_concat", concatGzipInputTester(new GzipBufferedInput(_))),
+        ("_filter_gzip_concat_1", concatGzipInputTester(new GzipBufferedInput(_, 1))),
         ("_checked", checkedInputTester),
       )
       if !n.contains("mapped") || (!fn.contains("filter") && !fn.contains("checked"))
@@ -181,6 +185,14 @@ object BufferedInputTest:
 
   def xorInputTester(f: BufferedInput => BufferedInput)(it: InputTester): InputTester =
     InputTester(it.td, it.data.map(b => (b ^ 85).toByte))(a => f(it.build(a)))
+
+  def gzipInputTester(f: BufferedInput => BufferedInput)(it: InputTester): InputTester =
+    InputTester(it.td, gzipCompress(it.data))(a => f(it.build(a)))
+
+  def concatGzipInputTester(f: BufferedInput => BufferedInput)(it: InputTester): InputTester =
+    val mid = it.data.length/2
+    val cdata = gzipCompress(it.data.take(mid)) ++ gzipCompress(it.data.drop(mid))
+    InputTester(it.td, cdata)(a => f(it.build(a)))
 
   def checkedInputTester(it: InputTester): InputTester = {
     val crc = new CRC32

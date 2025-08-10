@@ -4,10 +4,11 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.zip.Checksum;
 
-/// A [BufferedInput] that maintains a checksum of the read data.
+/// A [BufferedInput] that maintains a trace of the read data.
 /// 
-/// Note that unlike [java.util.zip.CheckedInputStream] this class buffers the input. If you
-/// need to read an up-to-date checksum before closing, you have to call [#updateTrace()].
+/// Note that unlike [java.util.zip.CheckedInputStream] this class buffers the input, and the trace
+/// is usually trailing behind the current position. If you need an up-to-date trace before
+/// closing the stream, you have to call [#updateTrace()] first.
 public abstract class TracingBufferedInput extends BufferedInput {
 
   /// Create a [TracingBufferedInput] that updates a [Checksum], similar to
@@ -46,7 +47,7 @@ public abstract class TracingBufferedInput extends BufferedInput {
     trace(ByteBuffer.wrap(buf, off, len));
   }
 
-  /// This method is called to uodate the trace to include the specified ByteBuffer's contents/
+  /// This method is called to uodate the trace to include the specified ByteBuffer's contents.
   protected abstract void trace(ByteBuffer bb);
 
   @Override
@@ -66,6 +67,7 @@ public abstract class TracingBufferedInput extends BufferedInput {
   @Override
   void bufferClosed(boolean closeUpstream) throws IOException {
     update();
+    parent.pos = pos;
   }
 
   private void update() {
@@ -91,6 +93,7 @@ public abstract class TracingBufferedInput extends BufferedInput {
       pos = parent.pos;
       lim = parent.lim;
       buf = parent.buf;
+      bb = parent.bb;
       var rem1 = lim-pos;
       totalBuffered += (rem1-rem0);
       clampToLimit();

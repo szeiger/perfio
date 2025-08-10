@@ -2,8 +2,14 @@ package perfio;
 
 import java.io.IOException;
 
+/// Base class for filtering [BufferedInput] implementations that read from another [BufferedInput]
+/// and process the data.
+/// 
+/// Implementations are currently limited to producing heap-based buffers, but they can read from
+/// heap-based or direct buffers.
 public abstract class FilteringBufferedInput extends SwitchingHeapBufferedInput {
-  private final BufferedInput parent, parentView;
+  private final BufferedInput parent;
+  protected final BufferedInput parentView;
   protected final FilteringBufferedInput rootFilter;
   private final int blockSize;
   private OutputBlock cache;
@@ -33,8 +39,12 @@ public abstract class FilteringBufferedInput extends SwitchingHeapBufferedInput 
   @Override
   void bufferClosed(boolean closeUpstream) throws IOException {
     parentView.close();
+    cleanUp();
     if(closeUpstream) parent.close();
   }
+
+  /// Clean up resources when the filter is closed.
+  protected void cleanUp() throws IOException {}
 
   private static class It extends BufferIterator implements CloseableView  {
     private FilteringBufferedInput outer;
