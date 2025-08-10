@@ -170,4 +170,4 @@ When tuning the async and parallel filters for performance (by using the overloa
 
 ### Unchecked Buffer Access
 
-The `UncheckedOutput` class contains static methods that allow you to access the byte array inside a `BufferedOutput` directly. This can be used to implement abstractions on top of perfIO without any performance penalty, but it is especially useful when implementing filters.
+The `UncheckedInput` and `UncheckedOutput` classes contains static methods that allow you to access the raw buffers inside a `BufferedInput` or `BufferedOutput` directly. This can be used to implement abstractions on top of perfIO without any performance penalty, but it is especially useful when implementing filters.

@@ -32,9 +32,10 @@ public abstract class ReadableBuffer {
     if(available() < count) prepareAndFillBuffer(count);
   }
 
-  /// Request `count` bytes to be available to read in the buffer, advance the buffer to the position after these
-  /// bytes and return the previous position. Throws EOFException if the end of the input is reached before the
-  /// requested number of bytes is available. This method may change the buffer references.
+  /// Ensure that `count` bytes are available to read in the buffer, advance the buffer to the
+  /// position after these bytes and return the previous position. Throws [EOFException] if the end
+  /// of the input is reached before the requested number of bytes is available. This method may
+  /// change the buffer references.
   protected final int fwd(int count) throws IOException {
     if(available() < count) {
       prepareAndFillBuffer(count);

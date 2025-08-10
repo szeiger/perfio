@@ -16,7 +16,7 @@ import java.io.IOException;
 /// if(available(out) >= 2) {
 ///   buf(out)[position(out)] = 1;
 ///   buf(out)[position(out) + 1] = 2;
-///   position(out, position(out) + 2)
+///   position(out, position(out) + 2);
 /// }
 /// ```
 /// 
@@ -113,7 +113,8 @@ public class UncheckedOutput {
   public static int used(WritableBuffer<?> out) { return out.pos - out.start; }
 
   /// Returns the current buffer. The result of this method must not be cached. Calls to
-  /// [#advance(WritableBuffer, int)], [#tryAdvance(WritableBuffer, int)], TODO, or other
-  /// buffer operations may change the buffer reference.
+  /// [#advance(WritableBuffer, int)], [#tryAdvance(WritableBuffer, int)],
+  /// [#ensureAvailable(WritableBuffer, int)]], or other buffer operations may change the
+  /// buffer reference.
   public static byte[] buf(WritableBuffer<?> out) { return out.buf; }
 }
