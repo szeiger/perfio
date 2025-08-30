@@ -23,6 +23,7 @@ jobs:
       with:
         java-version: |
           21
+          22
           23
         distribution: 'temurin'
         cache: 'sbt'
@@ -42,9 +43,15 @@ jobs:
         SONATYPE_USER: ${{ secrets.SONATYPE_USER }}
         SONATYPE_PASSWORD: ${{ secrets.SONATYPE_PASSWORD }}
       run: |
-        # Publish binaries with Java 21 (because we can't use --enable-preview for 21 from 23)
-        PATH=$JAVA_HOME_21_X64/bin:$PATH JAVA_HOME=$JAVA_HOME_21_X64 JAVA_OPTS=--enable-preview sbt \
+        # Build multi-release override classes with Java 22
+        PATH=$JAVA_HOME_22_X64/bin:$PATH JAVA_HOME=$JAVA_HOME_22_X64 sbt \
+          core/compile
+        cp -r core/target/classes override-core-j22
+        # Publish binaries with Java 21 with --enable-preview and include Java 22 overrides
+        PATH=$JAVA_HOME_21_X64/bin:$PATH JAVA_HOME=$JAVA_HOME_21_X64 JAVA_OPTS=--enable-preview \
+          OVERRIDE_CORE_J22=`realpath override-core-j22` sbt \
           "set core/Compile/packageDoc/publishArtifact := false" \
+          core/clean \
           core/publishSigned
         ls -lR target/sonatype-staging
         # Publish javadoc with Java 23 (because we need Markdown support)

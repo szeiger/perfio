@@ -1,5 +1,6 @@
+import java.io.FileInputStream
 import java.nio.file.{Files, Path}
-import scala.jdk.CollectionConverters._
+import scala.jdk.CollectionConverters.*
 
 val PROTOBUF_HOME = sys.env.getOrElse("PROTOBUF_HOME", s"${sys.props("user.home")}/protobuf")
 val protobufVersion = "4.29.0-RC2"
@@ -23,6 +24,9 @@ val compileOpts = Seq(
   "--release", javaVersion.toString,
   "--enable-preview",
 ))
+
+// External jar to use instead of `core` for tests and benchmarks
+val overrideTestJar = sys.env.get("OVERRIDE_TEST_JAR")
 
 javaOptions in Global ++= runtimeOpts
 javacOptions in Global ++= compileOpts
@@ -78,13 +82,47 @@ lazy val core = (project in file("core"))
     crossPaths := false,
     autoScalaLibrary := false,
     name := "perfio",
+    // When building the Java 21 version, add multi-release overrides for preview API classes
+    // by copying them from a previously built Java 22 output directory
+    Compile / packageBin / mappings := {
+      val orig = (Compile / packageBin / mappings).value
+      sys.env.get("OVERRIDE_CORE_J22") match {
+        case Some(j22classes) =>
+          println("Building multi-release jar")
+          val overrides = orig.collect {
+            case (f, s) if s.endsWith(".class") && isPreview(f) =>
+            val nf = new File(j22classes, s)
+            assert(nf.exists())
+            val ns = "META-INF/versions/22/" + s
+            println("  Adding override "+ns)
+            (nf, ns)
+          }
+          orig ++ overrides
+        case None => orig
+      }
+    },
+    (Compile / packageBin) / packageOptions +=
+      Package.ManifestAttributes("Multi-Release" -> "true"),
   )
 
 lazy val scalaApi = (project in file("scalaapi"))
-  .dependsOn(core)
+  .dependsOn(
+    (overrideTestJar match {
+      case Some(_) => Nil
+      case None => Seq(core: ClasspathDep[ProjectReference])
+    }): _*
+  )
   .settings(
     name := "perfio-scala",
     publish / skip := true,
+    (Compile / unmanagedJars) ++= {
+      overrideTestJar match {
+        case Some(j) =>
+          println("Using override test jar "+j)
+          Seq(file(j))
+        case None => Nil
+      }
+    },
   )
 
 lazy val benchUtil = (project in file("bench-util"))
@@ -214,4 +252,12 @@ test_ / Test / javap := {
 
   val pb = new ProcessBuilder(Seq("javap", "-cp", cp.iterator.map(_.data).mkString(sys.props.getOrElse("path.separator", ":"))) ++ args: _*).inheritIO()
   pb.start().waitFor()
+}
+
+def isPreview(classFile: File): Boolean = {
+  val in = new FileInputStream(classFile)
+  try {
+    val a = in.readNBytes(5)
+    a(4) != 0
+  } finally in.close()
 }
