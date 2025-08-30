@@ -57,3 +57,38 @@ jobs:
       if: matrix.java == 23
       run: |
         sbt core/doc
+
+  integration:
+    runs-on: ubuntu-latest
+    name: Multi-Release JAR Integration Test
+    steps:
+    - uses: actions/checkout@v4
+    - name: Set up Java
+      uses: actions/setup-java@v4
+      with:
+        java-version: |
+          21
+          22
+        distribution: 'temurin'
+        cache: 'sbt'
+    - name: Set up sbt
+      uses: sbt/setup-sbt@v1
+    - name: Run tests
+      run: |
+        # Build multi-release override classes on Java 22
+        PATH=$JAVA_HOME_22_X64/bin:$PATH JAVA_HOME=$JAVA_HOME_22_X64 sbt \
+          core/compile
+        cp -r core/target/classes override-core-j22
+        # Build jar on Java 21 with --enable-preview and include Java 22 overrides
+        PATH=$JAVA_HOME_21_X64/bin:$PATH JAVA_HOME=$JAVA_HOME_21_X64 JAVA_OPTS=--enable-preview \
+          OVERRIDE_CORE_J22=`realpath override-core-j22` sbt \
+          core/clean \
+          core/packageBin
+        # Run tests with multi-release jar
+        cp `realpath core/target/perfio-*.jar` override-test.jar
+        PATH=$JAVA_HOME_21_X64/bin:$PATH JAVA_HOME=$JAVA_HOME_21_X64 JAVA_OPTS=--enable-preview \
+          OVERRIDE_TEST_JAR=`realpath override-test.jar` sbt \
+          test/test
+        PATH=$JAVA_HOME_22_X64/bin:$PATH JAVA_HOME=$JAVA_HOME_22_X64 \
+          OVERRIDE_TEST_JAR=`realpath override-test.jar` sbt \
+          test/test
